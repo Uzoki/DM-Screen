@@ -1,24 +1,21 @@
 /* =========================================================
    DM SCREEN — INITIATIVE TRACKER
-   This file controls all the behavior of the page:
-   adding combatants, sorting them, tracking whose turn it
-   is, saving data in the browser, and the copy/clear buttons.
+   This file controls everything on the page: adding
+   combatants, sorting them, the round counter, saving data
+   in the browser, and the paste-parser with its pop-ups.
    ========================================================= */
 
 // ---- STATE ----
-// This is the "memory" of the app while the page is open.
-let combatants = [];   // list of { id, name, initiative, type }
-let round = 1;         // current combat round
-let activeId = null;   // id of whoever's turn it currently is
-let idCounter = 0;     // used to give each combatant a unique id
+let combatants = [];   // list of { id, name, initiative }
+let round = 1;          // current round number, controlled by the +/- buttons
+let idCounter = 0;      // used to give each combatant a unique id
 
 const STORAGE_KEY = 'dmScreenInitiativeState';
 
-// ---- SAVING / LOADING (so refreshing the page doesn't lose your list) ----
+// ---- SAVE / LOAD (so refreshing the page doesn't lose your list) ----
 
 function save() {
-  const data = { combatants, round, activeId };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ combatants, round }));
 }
 
 function load() {
@@ -27,8 +24,7 @@ function load() {
     if (raw) {
       const data = JSON.parse(raw);
       combatants = data.combatants || [];
-      round = data.round || 1;
-      activeId = data.activeId || null;
+      round = typeof data.round === 'number' ? data.round : 1;
     }
   } catch (err) {
     console.warn('Could not load saved initiative data:', err);
@@ -37,32 +33,14 @@ function load() {
 
 // ---- HELPERS ----
 
-function makeCombatant(name, initiative, type) {
+function makeCombatant(name, initiative) {
   idCounter += 1;
-  return {
-    id: 'c-' + Date.now() + '-' + idCounter,
-    name: name,
-    initiative: initiative,
-    type: type // 'player' or 'monster'
-  };
+  return { id: 'c-' + Date.now() + '-' + idCounter, name: name, initiative: initiative };
 }
 
 // Returns the list sorted highest initiative first.
 function sortedCombatants() {
   return [...combatants].sort((a, b) => b.initiative - a.initiative);
-}
-
-// Makes sure "activeId" always points at someone who still
-// exists in the list. If not, it defaults to the top of the order.
-function ensureActiveId() {
-  const sorted = sortedCombatants();
-  if (sorted.length === 0) {
-    activeId = null;
-    return;
-  }
-  if (!sorted.some((c) => c.id === activeId)) {
-    activeId = sorted[0].id;
-  }
 }
 
 // Safely inserts text (prevents broken layout if a name contains
@@ -74,11 +52,8 @@ function escapeHtml(str) {
 }
 
 // ---- RENDERING ----
-// Rebuilds the on-screen list to match the current state.
 
 function render() {
-  ensureActiveId();
-
   const list = document.getElementById('trackerList');
   const emptyHint = document.getElementById('emptyHint');
   const sorted = sortedCombatants();
@@ -88,20 +63,21 @@ function render() {
 
   sorted.forEach((c) => {
     const li = document.createElement('li');
-    li.className = 'tracker-row ' + c.type + (c.id === activeId ? ' active' : '');
+    li.className = 'tracker-row';
     li.dataset.id = c.id;
     li.innerHTML = `
-      <span class="turn-marker">➤</span>
       <span class="row-ini">${c.initiative}</span>
       <span class="row-name">${escapeHtml(c.name)}</span>
-      <span class="row-tag">${c.type === 'player' ? 'Player' : 'Monster'}</span>
       <button class="remove-btn" aria-label="Remove ${escapeHtml(c.name)}" data-id="${c.id}">×</button>
     `;
     list.appendChild(li);
   });
 
-  document.getElementById('roundNumber').textContent = round;
   save();
+}
+
+function renderRound() {
+  document.getElementById('roundNumber').textContent = round;
 }
 
 // ---- ACTIONS ----
@@ -111,29 +87,23 @@ function removeCombatant(id) {
   render();
 }
 
-function nextTurn() {
-  const sorted = sortedCombatants();
-  if (sorted.length === 0) return;
-
-  const idx = sorted.findIndex((c) => c.id === activeId);
-  const nextIdx = idx === -1 ? 0 : (idx + 1) % sorted.length;
-
-  // If we wrapped back to the top of the order, a new round begins.
-  if (nextIdx === 0 && idx !== -1) {
-    round += 1;
-  }
-
-  activeId = sorted[nextIdx].id;
-  render();
-}
-
 function clearAll() {
   const confirmed = confirm('Clear the entire initiative list? This cannot be undone.');
   if (!confirmed) return;
   combatants = [];
-  round = 1;
-  activeId = null;
   render();
+}
+
+function incrementRound() {
+  round += 1;
+  renderRound();
+  save();
+}
+
+function decrementRound() {
+  round = Math.max(1, round - 1);
+  renderRound();
+  save();
 }
 
 function copyList() {
@@ -142,54 +112,13 @@ function copyList() {
     showToast('Nothing to copy yet');
     return;
   }
-  const text = sorted
-    .map((c) => `[${c.initiative}] ${c.name}${c.type === 'monster' ? ' (Monster)' : ''}`)
-    .join('\n');
+  // Same "Initiative Name" format used for pasting, e.g. "18 Aragorn"
+  const text = sorted.map((c) => `${c.initiative} ${c.name}`).join('\n');
 
   navigator.clipboard
     .writeText(text)
     .then(() => showToast('List copied to clipboard'))
     .catch(() => showToast('Could not copy — try selecting the text manually'));
-}
-
-// Parses pasted text like:
-//   Aragorn, 18
-//   Goblin, 12
-// One line per combatant. Also tolerates lines without a comma
-// by grabbing the first number it finds on the line.
-function parseDump(text, defaultType) {
-  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-  let added = 0;
-
-  lines.forEach((line) => {
-    let name, ini;
-
-    if (line.includes(',')) {
-      const parts = line.split(',');
-      const last = parts[parts.length - 1].trim();
-      if (last !== '' && !isNaN(parseFloat(last))) {
-        ini = parseFloat(last);
-        name = parts.slice(0, -1).join(',').trim();
-      }
-    }
-
-    if (ini === undefined) {
-      const match = line.match(/-?\d+(\.\d+)?/);
-      if (match) {
-        ini = parseFloat(match[0]);
-        name = (line.slice(0, match.index) + line.slice(match.index + match[0].length))
-          .replace(/[-,:]+/g, ' ')
-          .trim();
-      }
-    }
-
-    if (name && ini !== undefined && !isNaN(ini)) {
-      combatants.push(makeCombatant(name, ini, defaultType));
-      added += 1;
-    }
-  });
-
-  return added;
 }
 
 // ---- TOAST (the little confirmation message at the bottom) ----
@@ -200,51 +129,176 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.remove('hidden');
   clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => toast.classList.add('hidden'), 2200);
+  toastTimeout = setTimeout(() => toast.classList.add('hidden'), 2400);
 }
 
-// ---- TYPE TOGGLE BUTTONS (Player / Monster pills) ----
+// ---- MODAL (pop-up questions) ----
+// Shows a message with one or more buttons and waits for a click.
+// "buttons" looks like: [{ label: 'Advantage', value: 18 }, ...]
+// Returns a Promise that resolves with whichever button's value was clicked.
 
-function setupTypeToggle(container) {
-  if (!container) return;
-  const buttons = container.querySelectorAll('.type-btn');
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      buttons.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
+function showModal(message, buttons) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('modalOverlay');
+    const messageEl = document.getElementById('modalMessage');
+    const buttonsEl = document.getElementById('modalButtons');
+
+    messageEl.textContent = message;
+    buttonsEl.innerHTML = '';
+
+    buttons.forEach((buttonInfo) => {
+      const btn = document.createElement('button');
+      btn.textContent = buttonInfo.label;
+      btn.className = buttonInfo.className || 'btn-secondary';
+      btn.addEventListener('click', () => {
+        overlay.classList.add('hidden');
+        resolve(buttonInfo.value);
+      });
+      buttonsEl.appendChild(btn);
     });
+
+    overlay.classList.remove('hidden');
   });
 }
 
-function getSelectedType(containerId) {
-  const container = document.getElementById(containerId);
-  const activeBtn = container.querySelector('.type-btn.active');
-  return activeBtn ? activeBtn.dataset.type : 'player';
+// ---- PARSING PASTED TEXT ----
+
+// Cleans a raw name: strips emoji/symbols, then keeps only the first word.
+function cleanName(rawName) {
+  let cleaned = rawName.replace(/[\u{1F000}-\u{1FFFF}\u{2190}-\u{2BFF}\uFE0F]/gu, '');
+  cleaned = cleaned.trim();
+  const match = cleaned.match(/[A-Za-zÀ-ÖØ-öø-ÿ0-9'’-]+/);
+  return match ? match[0] : cleaned;
+}
+
+// Reads the pasted text and pulls out { name, initiative } pairs.
+// Understands two styles:
+//   1) A quick one-liner: "Initiative Name", e.g. "18 Aragorn"
+//      (a comma also works: "18, Aragorn")
+//   2) Blocks copied from a dice-roller log, like:
+//        *
+//        Player Name
+//        Initiative: roll
+//        18
+//        7/2/2026 10:14 PM
+function parseDump(text) {
+  const rawLines = text.split('\n').map((l) => l.trim());
+  const entries = [];
+  let pendingName = null;
+
+  const bulletPattern = /^\*\s*$/;
+  const labelPattern = /^initiative\s*:?\s*roll$/i;
+  const timestampPattern = /^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}.*\d{1,2}:\d{2}/;
+  const pureNumberPattern = /^-?\d+(\.\d+)?$/;
+  const inlinePairPattern = /^(-?\d+(?:\.\d+)?)[,\s]+(.+)$/;
+
+  for (const line of rawLines) {
+    if (line === '') continue;
+    if (bulletPattern.test(line)) continue;
+    if (labelPattern.test(line)) continue;
+    if (timestampPattern.test(line)) continue;
+
+    // Style 1: "18 Aragorn" (or "18, Aragorn") all on one line
+    const inlineMatch = line.match(inlinePairPattern);
+    if (inlineMatch) {
+      entries.push({ name: cleanName(inlineMatch[2]), initiative: parseFloat(inlineMatch[1]) });
+      pendingName = null;
+      continue;
+    }
+
+    // A line that's just a number closes out whichever name came before it
+    if (pureNumberPattern.test(line)) {
+      if (pendingName !== null) {
+        entries.push({ name: cleanName(pendingName), initiative: parseFloat(line) });
+        pendingName = null;
+      }
+      continue;
+    }
+
+    // Otherwise, treat this line as a name, waiting for its number
+    pendingName = line;
+  }
+
+  return entries;
+}
+
+// Groups entries by name: { "Zurl": [22], "Dvalin": [10, 16], ... }
+function groupEntriesByName(entries) {
+  const groups = {};
+  entries.forEach((entry) => {
+    if (!groups[entry.name]) groups[entry.name] = [];
+    groups[entry.name].push(entry.initiative);
+  });
+  return groups;
+}
+
+// Walks through every parsed name and decides what to do:
+//   - 1 roll               -> add it directly
+//   - 2 rolls, same value  -> add it once, no pop-up needed
+//   - 2 rolls, different   -> ask Advantage / Disadvantage
+//   - 3+ rolls             -> show an error pop-up, skip that name
+async function processParsedEntries(entries) {
+  const groups = groupEntriesByName(entries);
+  const names = Object.keys(groups);
+  let addedCount = 0;
+
+  for (const name of names) {
+    const values = groups[name];
+
+    if (values.length === 1) {
+      combatants.push(makeCombatant(name, values[0]));
+      addedCount += 1;
+      render();
+    } else if (values.length === 2) {
+      if (values[0] === values[1]) {
+        combatants.push(makeCombatant(name, values[0]));
+        addedCount += 1;
+        render();
+      } else {
+        const high = Math.max(values[0], values[1]);
+        const low = Math.min(values[0], values[1]);
+        const choice = await showModal(
+          name + ' rolled initiative twice: ' + high + ' and ' + low + '. Did they roll with advantage or disadvantage?',
+          [
+            { label: 'Advantage (use ' + high + ')', value: high, className: 'btn-primary' },
+            { label: 'Disadvantage (use ' + low + ')', value: low, className: 'btn-secondary' }
+          ]
+        );
+        combatants.push(makeCombatant(name, choice));
+        addedCount += 1;
+        render();
+      }
+    } else {
+      await showModal(
+        name + ' has ' + values.length + ' initiative rolls pasted in, so it is not clear which one to use. ' +
+          name + ' was not added — please add them manually above with the correct number.',
+        [{ label: 'OK', value: 'ok', className: 'btn-primary' }]
+      );
+    }
+  }
+
+  return addedCount;
 }
 
 // ---- WIRING EVERYTHING UP ----
-// This runs once the page has finished loading.
 
 document.addEventListener('DOMContentLoaded', () => {
   load();
   render();
-
-  setupTypeToggle(document.getElementById('addTypeToggle'));
-  setupTypeToggle(document.getElementById('dumpTypeToggle'));
+  renderRound();
 
   // Manual "Add a combatant" form
   document.getElementById('addForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const nameInput = document.getElementById('nameInput');
     const iniInput = document.getElementById('iniInput');
-    const type = getSelectedType('addTypeToggle');
 
     const name = nameInput.value.trim();
     const ini = parseFloat(iniInput.value);
 
     if (!name || isNaN(ini)) return;
 
-    combatants.push(makeCombatant(name, ini, type));
+    combatants.push(makeCombatant(name, ini));
     nameInput.value = '';
     iniInput.value = '';
     nameInput.focus();
@@ -260,17 +314,22 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // "Parse & add" button for the pasted list
-  document.getElementById('parseBtn').addEventListener('click', () => {
+  document.getElementById('parseBtn').addEventListener('click', async () => {
     const textarea = document.getElementById('dumpInput');
-    const type = getSelectedType('dumpTypeToggle');
-    const added = parseDump(textarea.value, type);
+    const entries = parseDump(textarea.value);
 
-    if (added > 0) {
-      textarea.value = '';
-      render();
-      showToast(added + (added === 1 ? ' combatant added' : ' combatants added'));
+    if (entries.length === 0) {
+      showToast('No valid rolls found in the pasted text');
+      return;
+    }
+
+    const addedCount = await processParsedEntries(entries);
+    textarea.value = '';
+
+    if (addedCount > 0) {
+      showToast(addedCount + (addedCount === 1 ? ' combatant added' : ' combatants added'));
     } else {
-      showToast('No valid lines found — use "Name, Initiative" per line');
+      showToast('No combatants were added');
     }
   });
 
@@ -280,8 +339,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btn) removeCombatant(btn.dataset.id);
   });
 
+  // Round +/- buttons
+  document.getElementById('roundUp').addEventListener('click', incrementRound);
+  document.getElementById('roundDown').addEventListener('click', decrementRound);
+
   // Bottom control bar
-  document.getElementById('nextTurnBtn').addEventListener('click', nextTurn);
   document.getElementById('copyBtn').addEventListener('click', copyList);
   document.getElementById('clearBtn').addEventListener('click', clearAll);
 });
