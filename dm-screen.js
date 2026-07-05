@@ -162,6 +162,20 @@ function showModal(message, buttons) {
 }
 
 // ---- PARSING PASTED TEXT ----
+// This is the part that reads whatever you paste into the box and
+// turns it into a list of { name, initiative } pairs.
+//
+// It works in two stages:
+//   1) Break the pasted text into one "record" per combatant. A record
+//      starts wherever a line begins with "*". Everything until the
+//      NEXT "*" belongs to that same record — no matter whether your
+//      dice-roller put it all on one line, or spread across five lines.
+//      If there are no "*" bullets at all, every line is treated as
+//      its own record instead (for quick manual typing).
+//   2) For each record, strip out the parts we don't need (the words
+//      "Initiative: roll" and the date/time stamp), then whatever
+//      number is left over is the initiative roll, and whatever text
+//      is left over is the name.
 
 // Cleans a raw name: strips emoji/symbols, then keeps only the first word.
 function cleanName(rawName) {
@@ -171,54 +185,69 @@ function cleanName(rawName) {
   return match ? match[0] : cleaned;
 }
 
-// Reads the pasted text and pulls out { name, initiative } pairs.
-// Understands two styles:
-//   1) A quick one-liner: "Initiative Name", e.g. "18 Aragorn"
-//      (a comma also works: "18, Aragorn")
-//   2) Blocks copied from a dice-roller log, like:
-//        *
-//        Player Name
-//        Initiative: roll
-//        18
-//        7/2/2026 10:14 PM
-function parseDump(text) {
-  const rawLines = text.split('\n').map((l) => l.trim());
-  const entries = [];
-  let pendingName = null;
+// Stage 1: break the pasted text into one record per combatant.
+function splitIntoRecords(text) {
+  const lines = text.split('\n').map((l) => l.trim());
+  const records = [];
+  let current = [];
+  let sawBullet = false;
 
-  const bulletPattern = /^\*\s*$/;
-  const labelPattern = /^initiative\s*:?\s*roll$/i;
-  const timestampPattern = /^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}.*\d{1,2}:\d{2}/;
-  const pureNumberPattern = /^-?\d+(\.\d+)?$/;
-  const inlinePairPattern = /^(-?\d+(?:\.\d+)?)[,\s]+(.+)$/;
-
-  for (const line of rawLines) {
-    if (line === '') continue;
-    if (bulletPattern.test(line)) continue;
-    if (labelPattern.test(line)) continue;
-    if (timestampPattern.test(line)) continue;
-
-    // Style 1: "18 Aragorn" (or "18, Aragorn") all on one line
-    const inlineMatch = line.match(inlinePairPattern);
-    if (inlineMatch) {
-      entries.push({ name: cleanName(inlineMatch[2]), initiative: parseFloat(inlineMatch[1]) });
-      pendingName = null;
-      continue;
+  lines.forEach((line) => {
+    if (line === '') return;
+    if (/^\*/.test(line)) {
+      if (current.length > 0) records.push(current.join(' '));
+      current = [line.replace(/^\*\s*/, '')];
+      sawBullet = true;
+    } else {
+      current.push(line);
     }
+  });
+  if (current.length > 0) records.push(current.join(' '));
 
-    // A line that's just a number closes out whichever name came before it
-    if (pureNumberPattern.test(line)) {
-      if (pendingName !== null) {
-        entries.push({ name: cleanName(pendingName), initiative: parseFloat(line) });
-        pendingName = null;
-      }
-      continue;
-    }
-
-    // Otherwise, treat this line as a name, waiting for its number
-    pendingName = line;
+  if (!sawBullet) {
+    // No "*" bullets anywhere — treat every non-empty line as its own record.
+    return lines.filter((l) => l !== '');
   }
 
+  return records.map((r) => r.replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+
+// Stage 2: pull { name, initiative } out of one record's text.
+function parseRecord(record) {
+  let text = record;
+
+  // Remove the "Initiative: roll" label, wherever it appears.
+  text = text.replace(/initiative\s*:?\s*roll/gi, ' ');
+
+  // Remove a date/time stamp like "7/2/2026 10:14 PM", wherever it appears.
+  text = text.replace(/\d{1,4}[/-]\d{1,2}[/-]\d{1,4}\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?/gi, ' ');
+
+  text = text.replace(/\s+/g, ' ').trim();
+  if (text === '') return null;
+
+  // Whatever number is left over is the initiative roll.
+  const numberMatch = text.match(/-?\d+(?:\.\d+)?/);
+  if (!numberMatch) return null;
+
+  const initiative = parseFloat(numberMatch[0]);
+  const rawName = (text.slice(0, numberMatch.index) + text.slice(numberMatch.index + numberMatch[0].length))
+    .replace(/[,:]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!rawName) return null;
+
+  return { name: cleanName(rawName), initiative: initiative };
+}
+
+// Puts stage 1 and stage 2 together.
+function parseDump(text) {
+  const records = splitIntoRecords(text);
+  const entries = [];
+  records.forEach((record) => {
+    const parsed = parseRecord(record);
+    if (parsed) entries.push(parsed);
+  });
   return entries;
 }
 
