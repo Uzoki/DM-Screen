@@ -13,6 +13,8 @@
   />
 
   <style>
+    html { font-size: 14px; }
+
     :root {
       --bg: #16130f;
       --surface: #211c16;
@@ -23,7 +25,7 @@
       --gold: #c9a227;
       --gold-bright: #e6c250;
       --danger: #a3453f;
-      --radius: 10px;
+      --radius: 8px;
       --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
       --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
@@ -36,8 +38,8 @@
       background: radial-gradient(ellipse at top, #1c1811, var(--bg));
       color: var(--text);
       font-family: var(--font-body);
-      line-height: 1.5;
-      padding: 32px 16px 64px;
+      line-height: 1.4;
+      padding: 18px 10px 32px;
     }
 
     .app { max-width: 640px; margin: 0 auto; }
@@ -46,33 +48,32 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 12px;
       flex-wrap: wrap;
-      margin-bottom: 28px;
+      margin-bottom: 16px;
     }
     .app-header h1 {
       font-family: var(--font-display);
-      font-size: 1.6rem;
-      letter-spacing: 0.03em;
+      font-size: 1.2rem;
+      letter-spacing: 0.02em;
       margin: 0;
       color: var(--gold-bright);
     }
-    .subtitle { margin: 4px 0 0; color: var(--text-muted); font-size: 0.85rem; }
 
     .round-control {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       flex-shrink: 0;
     }
     .round-btn {
-      width: 32px;
-      height: 32px;
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
       background: var(--surface-2);
       border: 1px solid var(--border);
       color: var(--text);
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: 700;
       line-height: 1;
       display: flex;
@@ -87,21 +88,21 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      width: 64px;
-      height: 64px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
       background: var(--surface-2);
       border: 2px solid var(--gold);
     }
     .round-label {
-      font-size: 0.6rem;
+      font-size: 0.55rem;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       color: var(--text-muted);
     }
     #roundNumber {
       font-family: var(--font-mono);
-      font-size: 1.3rem;
+      font-size: 1.05rem;
       font-weight: 700;
       color: var(--gold-bright);
     }
@@ -110,44 +111,47 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 20px;
-      margin-bottom: 16px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
     }
     h2 {
       font-family: var(--font-display);
-      font-size: 1rem;
-      letter-spacing: 0.04em;
-      margin: 0 0 14px;
+      font-size: 0.82rem;
+      letter-spacing: 0.03em;
+      margin: 0 0 8px;
       color: var(--text);
     }
 
-    .add-form { display: flex; flex-wrap: wrap; gap: 10px; }
+    .add-form { display: flex; flex-wrap: wrap; gap: 8px; }
 
     input[type="text"], input[type="number"], textarea {
       background: var(--surface-2);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 6px;
       color: var(--text);
-      padding: 10px 12px;
+      padding: 6px 9px;
       font-family: var(--font-body);
-      font-size: 0.95rem;
+      font-size: 0.82rem;
     }
-    #nameInput { flex: 2; min-width: 140px; }
-    #iniInput { flex: 1; min-width: 90px; font-family: var(--font-mono); }
-    textarea { width: 100%; resize: vertical; font-family: var(--font-mono); font-size: 0.9rem; }
+    #nameInput { flex: 2; min-width: 120px; }
+    #iniInput { flex: 1; min-width: 80px; font-family: var(--font-mono); }
+    textarea { width: 100%; resize: vertical; font-family: var(--font-mono); font-size: 0.8rem; }
 
     input:focus-visible, textarea:focus-visible, button:focus-visible {
       outline: 2px solid var(--gold-bright);
-      outline-offset: 2px;
+      outline-offset: 1px;
     }
+
+    .dump-area { display: flex; flex-direction: column; gap: 8px; }
+    .dump-controls { display: flex; justify-content: flex-end; }
 
     button {
       cursor: pointer;
       font-family: var(--font-body);
       border: none;
-      border-radius: 8px;
-      padding: 10px 16px;
-      font-size: 0.9rem;
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: 0.8rem;
       font-weight: 600;
     }
     .btn-primary { background: var(--gold); color: #1a1408; }
@@ -157,63 +161,71 @@
     .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
     .btn-danger:hover { background: var(--danger); color: #fff; }
 
-    .link-btn {
-      background: none;
-      color: var(--gold-bright);
-      padding: 4px 0;
-      font-size: 0.85rem;
-      text-decoration: underline;
-      margin-top: 14px;
-      display: inline-block;
-    }
-
-    .hint { color: var(--text-muted); font-size: 0.82rem; }
-    code {
-      background: var(--surface-2);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: var(--font-mono);
-      font-size: 0.85em;
-    }
-
-    .dump-area { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
-    .dump-area.hidden { display: none; }
-    .dump-controls { display: flex; justify-content: flex-end; }
-
-    .tracker-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .tracker-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
 
     .tracker-row {
       display: grid;
-      grid-template-columns: 52px 1fr 30px;
+      grid-template-columns: 44px 1fr 26px;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       background: var(--surface-2);
       border: 1px solid var(--border);
-      border-left: 4px solid var(--gold);
-      border-radius: 8px;
-      padding: 10px 12px;
+      border-left: 3px solid var(--gold);
+      border-radius: 6px;
+      padding: 6px 9px;
+      cursor: pointer;
+    }
+    .tracker-row.selected {
+      border-color: var(--gold-bright);
+      box-shadow: 0 0 0 2px var(--gold-bright) inset;
+      background: #33291a;
     }
 
-    .row-ini { font-family: var(--font-mono); font-weight: 700; color: var(--gold-bright); text-align: center; }
-    .row-name { font-weight: 500; overflow-wrap: anywhere; }
-    .remove-btn { background: none; border: none; color: var(--text-muted); font-size: 1.1rem; padding: 0; line-height: 1; }
+    .row-ini, .row-name {
+      background: transparent;
+      border: none;
+      color: inherit;
+      padding: 0;
+      width: 100%;
+      cursor: text;
+    }
+    .row-ini {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--gold-bright);
+      text-align: center;
+      font-size: 0.82rem;
+    }
+    .row-name { font-weight: 500; font-size: 0.82rem; }
+    .row-ini:focus-visible, .row-name:focus-visible {
+      outline: 2px solid var(--gold-bright);
+      outline-offset: 1px;
+      border-radius: 4px;
+    }
+    input.row-ini::-webkit-outer-spin-button,
+    input.row-ini::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input.row-ini { -moz-appearance: textfield; }
+
+    .remove-btn { background: none; border: none; color: var(--text-muted); font-size: 1rem; padding: 0; line-height: 1; }
     .remove-btn:hover { color: var(--danger); }
 
-    .controls-panel { display: flex; gap: 10px; flex-wrap: wrap; background: none; border: none; padding: 0; }
-    .controls-panel button { flex: 1; min-width: 120px; }
-
-    .footnote { color: var(--text-muted); font-size: 0.75rem; text-align: center; margin-top: 24px; }
+    .controls-panel { display: flex; gap: 8px; flex-wrap: wrap; background: none; border: none; padding: 0; }
+    .controls-panel button { flex: 1; min-width: 100px; }
+    .hidden { display: none !important; }
 
     .toast {
       position: fixed;
-      bottom: 24px;
+      bottom: 18px;
       left: 50%;
       transform: translateX(-50%);
       background: var(--gold);
       color: #1a1408;
-      padding: 10px 18px;
-      border-radius: 8px;
-      font-size: 0.85rem;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.78rem;
       font-weight: 600;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
       transition: opacity 0.3s ease;
@@ -228,7 +240,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 16px;
       z-index: 50;
     }
     .modal-overlay.hidden { display: none; }
@@ -236,28 +248,25 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 24px;
-      max-width: 380px;
+      padding: 18px;
+      max-width: 340px;
       width: 100%;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
     }
-    #modalMessage { margin: 0 0 18px; color: var(--text); font-size: 0.95rem; line-height: 1.5; }
-    .modal-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+    #modalMessage { margin: 0 0 14px; color: var(--text); font-size: 0.85rem; line-height: 1.45; }
+    .modal-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
     .modal-buttons button { flex: 1; }
 
     @media (max-width: 480px) {
-      .app-header h1 { font-size: 1.3rem; }
-      .tracker-row { grid-template-columns: 44px 1fr 26px; }
+      .app-header h1 { font-size: 1.05rem; }
+      .tracker-row { grid-template-columns: 38px 1fr 22px; }
     }
   </style>
 </head>
 <body>
   <div class="app">
     <header class="app-header">
-      <div>
-        <h1>Initiative Tracker</h1>
-        <p class="subtitle">Track combat turn order at the table.</p>
-      </div>
+      <h1>Initiative Tracker</h1>
       <div class="round-control">
         <button id="roundDown" class="round-btn" type="button" aria-label="Decrease round">−</button>
         <div class="round-badge">
@@ -275,14 +284,12 @@
         <input type="number" id="iniInput" placeholder="Initiative" required />
         <button type="submit" class="btn-primary">Add</button>
       </form>
+    </section>
 
-      <button id="toggleDump" class="link-btn" type="button">+ Paste a list instead</button>
-      <div id="dumpArea" class="dump-area hidden">
-        <p class="hint">
-          Paste your rolls below, one per line, then click "Parse &amp; add."
-          If typing manually, use <code>Initiative Name</code> (e.g. <code>18 Aragorn</code>).
-        </p>
-        <textarea id="dumpInput" rows="6" placeholder="18 Aragorn&#10;12 Goblin&#10;9 Goblin"></textarea>
+    <section class="dump-panel">
+      <h2>Paste a List</h2>
+      <div class="dump-area">
+        <textarea id="dumpInput" rows="4"></textarea>
         <div class="dump-controls">
           <button id="parseBtn" class="btn-secondary" type="button">Parse &amp; add</button>
         </div>
@@ -291,16 +298,14 @@
 
     <section class="tracker-panel">
       <h2>Turn order</h2>
-      <p id="emptyHint" class="hint">Add combatants above to get started.</p>
       <ol id="trackerList" class="tracker-list"></ol>
     </section>
 
     <section class="controls-panel">
+      <button id="swapBtn" class="btn-primary hidden" type="button">Swap</button>
       <button id="copyBtn" class="btn-secondary">Copy list</button>
       <button id="clearBtn" class="btn-danger">Clear all</button>
     </section>
-
-    <p class="footnote">Your list is saved in this browser only. Closing the tab is safe, and refreshing keeps your combatants — but it won't follow you to another device or browser.</p>
   </div>
 
   <p id="toast" class="toast hidden"></p>

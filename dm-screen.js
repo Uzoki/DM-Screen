@@ -1,14 +1,16 @@
 /* =========================================================
    DM SCREEN — INITIATIVE TRACKER
    This file controls everything on the page: adding
-   combatants, sorting them, the round counter, saving data
-   in the browser, and the paste-parser with its pop-ups.
+   combatants, editing them in place, selecting/swapping,
+   the round counter, saving data in the browser, and the
+   paste-parser with its pop-ups.
    ========================================================= */
 
 // ---- STATE ----
-let combatants = [];   // list of { id, name, initiative }
-let round = 1;          // current round number, controlled by the +/- buttons
-let idCounter = 0;      // used to give each combatant a unique id
+let combatants = [];        // list of { id, name, initiative }
+let round = 1;               // current round number, controlled by the +/- buttons
+let idCounter = 0;           // used to give each combatant a unique id
+let selectedIds = new Set(); // ids of the combatant(s) currently highlighted for swapping
 
 const STORAGE_KEY = 'dmScreenInitiativeState';
 
@@ -43,35 +45,41 @@ function sortedCombatants() {
   return [...combatants].sort((a, b) => b.initiative - a.initiative);
 }
 
-// Safely inserts text (prevents broken layout if a name contains
-// special characters like < or &).
+// Makes text safe to drop into HTML (including inside quoted attributes
+// like value="..."), so names with special characters can't break the page.
 function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // ---- RENDERING ----
 
 function render() {
+  // If a selected combatant was removed, drop it from the selection too.
+  selectedIds = new Set([...selectedIds].filter((id) => combatants.some((c) => c.id === id)));
+
   const list = document.getElementById('trackerList');
-  const emptyHint = document.getElementById('emptyHint');
   const sorted = sortedCombatants();
 
   list.innerHTML = '';
-  emptyHint.style.display = sorted.length === 0 ? 'block' : 'none';
 
   sorted.forEach((c) => {
     const li = document.createElement('li');
-    li.className = 'tracker-row';
+    li.className = 'tracker-row' + (selectedIds.has(c.id) ? ' selected' : '');
     li.dataset.id = c.id;
     li.innerHTML = `
-      <span class="row-ini">${c.initiative}</span>
-      <span class="row-name">${escapeHtml(c.name)}</span>
+      <input class="row-ini" type="number" value="${escapeHtml(c.initiative)}" data-id="${c.id}" />
+      <input class="row-name" type="text" value="${escapeHtml(c.name)}" data-id="${c.id}" />
       <button class="remove-btn" aria-label="Remove ${escapeHtml(c.name)}" data-id="${c.id}">×</button>
     `;
     list.appendChild(li);
   });
+
+  document.getElementById('swapBtn').classList.toggle('hidden', selectedIds.size !== 2);
 
   save();
 }
@@ -91,6 +99,7 @@ function clearAll() {
   const confirmed = confirm('Clear the entire initiative list? This cannot be undone.');
   if (!confirmed) return;
   combatants = [];
+  selectedIds = new Set();
   render();
 }
 
@@ -119,6 +128,56 @@ function copyList() {
     .writeText(text)
     .then(() => showToast('List copied to clipboard'))
     .catch(() => showToast('Could not copy — try selecting the text manually'));
+}
+
+// Clicking a row (anywhere except the editable name/initiative fields
+// or the remove button) toggles whether it's selected. Once exactly
+// two rows are selected, the Swap button appears.
+function toggleSelect(id) {
+  if (selectedIds.has(id)) {
+    selectedIds.delete(id);
+  } else {
+    if (selectedIds.size >= 2) {
+      showToast('Only two can be selected — tap one to deselect it first');
+      return;
+    }
+    selectedIds.add(id);
+  }
+  render();
+}
+
+function swapSelected() {
+  const ids = [...selectedIds];
+  if (ids.length !== 2) return;
+  const first = combatants.find((c) => c.id === ids[0]);
+  const second = combatants.find((c) => c.id === ids[1]);
+  if (!first || !second) return;
+
+  const temp = first.initiative;
+  first.initiative = second.initiative;
+  second.initiative = temp;
+
+  selectedIds = new Set();
+  render();
+  showToast('Initiative swapped');
+}
+
+// Called when you click away from (or press Enter in) a name field.
+function commitNameEdit(input) {
+  const combatant = combatants.find((c) => c.id === input.dataset.id);
+  if (!combatant) return;
+  const newName = input.value.trim();
+  if (newName) combatant.name = newName;
+  render();
+}
+
+// Called when you click away from (or press Enter in) an initiative field.
+function commitIniEdit(input) {
+  const combatant = combatants.find((c) => c.id === input.dataset.id);
+  if (!combatant) return;
+  const newIni = parseFloat(input.value);
+  if (!isNaN(newIni)) combatant.initiative = newIni;
+  render();
 }
 
 // ---- TOAST (the little confirmation message at the bottom) ----
@@ -159,6 +218,32 @@ function showModal(message, buttons) {
 
     overlay.classList.remove('hidden');
   });
+}
+
+// Adds a new combatant — unless that name is already in the list, in
+// which case it asks whether to replace their current initiative.
+// Returns true if something was added or replaced, false if cancelled.
+async function addOrReplaceCombatant(name, initiative) {
+  const existing = combatants.find((c) => c.name.toLowerCase() === name.toLowerCase());
+
+  if (!existing) {
+    combatants.push(makeCombatant(name, initiative));
+    return true;
+  }
+
+  const choice = await showModal(
+    name + ' is already in the list (currently ' + existing.initiative + '). Replace their initiative with ' + initiative + '?',
+    [
+      { label: 'Replace', value: 'replace', className: 'btn-primary' },
+      { label: 'Cancel', value: 'cancel', className: 'btn-secondary' }
+    ]
+  );
+
+  if (choice === 'replace') {
+    existing.initiative = initiative;
+    return true;
+  }
+  return false;
 }
 
 // ---- PARSING PASTED TEXT ----
@@ -262,10 +347,12 @@ function groupEntriesByName(entries) {
 }
 
 // Walks through every parsed name and decides what to do:
-//   - 1 roll               -> add it directly
-//   - 2 rolls, same value  -> add it once, no pop-up needed
+//   - 1 roll               -> use it directly
+//   - 2 rolls, same value  -> use it, no pop-up needed
 //   - 2 rolls, different   -> ask Advantage / Disadvantage
 //   - 3+ rolls             -> show an error pop-up, skip that name
+// Whatever value is settled on then goes through addOrReplaceCombatant,
+// which handles the "already in the list" pop-up if needed.
 async function processParsedEntries(entries) {
   const groups = groupEntriesByName(entries);
   const names = Object.keys(groups);
@@ -273,29 +360,23 @@ async function processParsedEntries(entries) {
 
   for (const name of names) {
     const values = groups[name];
+    let finalValue;
 
     if (values.length === 1) {
-      combatants.push(makeCombatant(name, values[0]));
-      addedCount += 1;
-      render();
+      finalValue = values[0];
     } else if (values.length === 2) {
       if (values[0] === values[1]) {
-        combatants.push(makeCombatant(name, values[0]));
-        addedCount += 1;
-        render();
+        finalValue = values[0];
       } else {
         const high = Math.max(values[0], values[1]);
         const low = Math.min(values[0], values[1]);
-        const choice = await showModal(
+        finalValue = await showModal(
           name + ' rolled initiative twice: ' + high + ' and ' + low + '. Did they roll with advantage or disadvantage?',
           [
             { label: 'Advantage (use ' + high + ')', value: high, className: 'btn-primary' },
             { label: 'Disadvantage (use ' + low + ')', value: low, className: 'btn-secondary' }
           ]
         );
-        combatants.push(makeCombatant(name, choice));
-        addedCount += 1;
-        render();
       }
     } else {
       await showModal(
@@ -303,7 +384,12 @@ async function processParsedEntries(entries) {
           name + ' was not added — please add them manually above with the correct number.',
         [{ label: 'OK', value: 'ok', className: 'btn-primary' }]
       );
+      continue;
     }
+
+    const wasAdded = await addOrReplaceCombatant(name, finalValue);
+    if (wasAdded) addedCount += 1;
+    render();
   }
 
   return addedCount;
@@ -317,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderRound();
 
   // Manual "Add a combatant" form
-  document.getElementById('addForm').addEventListener('submit', (e) => {
+  document.getElementById('addForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const nameInput = document.getElementById('nameInput');
     const iniInput = document.getElementById('iniInput');
@@ -327,19 +413,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!name || isNaN(ini)) return;
 
-    combatants.push(makeCombatant(name, ini));
+    await addOrReplaceCombatant(name, ini);
     nameInput.value = '';
     iniInput.value = '';
     nameInput.focus();
     render();
-  });
-
-  // Show/hide the "paste a list" section
-  document.getElementById('toggleDump').addEventListener('click', () => {
-    const area = document.getElementById('dumpArea');
-    const btn = document.getElementById('toggleDump');
-    const nowHidden = area.classList.toggle('hidden');
-    btn.textContent = nowHidden ? '+ Paste a list instead' : '- Hide paste option';
   });
 
   // "Parse & add" button for the pasted list
@@ -362,10 +440,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Clicking the × button on any row
+  // Clicks inside the turn-order list: remove button, or select a row
   document.getElementById('trackerList').addEventListener('click', (e) => {
-    const btn = e.target.closest('.remove-btn');
-    if (btn) removeCombatant(btn.dataset.id);
+    const removeBtn = e.target.closest('.remove-btn');
+    if (removeBtn) {
+      removeCombatant(removeBtn.dataset.id);
+      return;
+    }
+    if (e.target.tagName === 'INPUT') return; // clicking a field edits it, doesn't select the row
+    const row = e.target.closest('.tracker-row');
+    if (row) toggleSelect(row.dataset.id);
+  });
+
+  // Saving edits made to a name or initiative field once you click away
+  document.getElementById('trackerList').addEventListener('focusout', (e) => {
+    if (e.target.classList.contains('row-name')) commitNameEdit(e.target);
+    else if (e.target.classList.contains('row-ini')) commitIniEdit(e.target);
+  });
+
+  // Pressing Enter in a name/initiative field also saves it
+  document.getElementById('trackerList').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.target.classList.contains('row-name') || e.target.classList.contains('row-ini'))) {
+      e.target.blur();
+    }
   });
 
   // Round +/- buttons
@@ -373,6 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('roundDown').addEventListener('click', decrementRound);
 
   // Bottom control bar
+  document.getElementById('swapBtn').addEventListener('click', swapSelected);
   document.getElementById('copyBtn').addEventListener('click', copyList);
   document.getElementById('clearBtn').addEventListener('click', clearAll);
 });
