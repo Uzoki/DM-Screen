@@ -1,10 +1,11 @@
 /* =========================================================
-   DM SCREEN — INITIATIVE TRACKER
+   DM SCREEN — INITIATIVE TRACKER & DICE ROLLER
    This file controls everything on the page: adding
    combatants, editing them in place, selecting/swapping,
    reordering ties, hiding combatants from the copied list,
-   the round counter, saving data in the browser, and the
-   paste-parser with its pop-ups.
+   the round counter, saving data in the browser, the
+   paste-parser with its pop-ups, the dice roller, and the
+   mob attack calculator.
    ========================================================= */
 
 // ---- STATE ----
@@ -474,7 +475,7 @@ async function processParsedEntries(entries) {
     } else {
       await showModal(
         name + ' has ' + values.length + ' initiative rolls pasted in, so it is not clear which one to use. ' +
-          name + ' was not added — please add them manually above with the correct number.',
+        name + ' was not added — please add them manually above with the correct number.',
         [{ label: 'OK', value: 'ok', className: 'btn-primary' }]
       );
       continue;
@@ -486,6 +487,198 @@ async function processParsedEntries(entries) {
   }
 
   return addedCount;
+}
+
+// ---- DICE ROLLER ----
+
+// Rolls one die with the given number of sides.
+function rollDie(sides) {
+  return Math.floor(Math.random() * sides) + 1;
+}
+
+// Rolls "count" dice with the given number of sides, keeping them in
+// the exact order they were rolled (no sorting).
+function rollDice(sides, count) {
+  const rolls = [];
+  for (let i = 0; i < count; i++) {
+    rolls.push(rollDie(sides));
+  }
+  return rolls;
+}
+
+// Reads the "number of dice" field, always returning at least 1.
+function getDiceCount() {
+  const input = document.getElementById('diceCountInput');
+  const val = parseInt(input.value, 10);
+  return isNaN(val) || val < 1 ? 1 : val;
+}
+
+// Builds and displays the result line for a roll:
+// SUM (roll1, roll2, ...) + modifier = TOTAL
+// - the sum and the final total are bold
+// - any individual die that rolled its maximum value is green
+// - any individual die that rolled a 1 is red
+function renderDiceResult(sides, rolls) {
+  const sum = rolls.reduce((a, b) => a + b, 0);
+
+  const modInput = document.getElementById('modifierInput');
+  const modRaw = modInput.value.trim();
+  const modifier = parseFloat(modRaw);
+  const hasModifier = modRaw !== '' && !isNaN(modifier);
+  const total = hasModifier ? sum + modifier : sum;
+
+  const rollsHtml = rolls
+    .map((r) => {
+      let cls = '';
+      if (r === sides) cls = 'die-max';
+      else if (r === 1) cls = 'die-min';
+      return cls ? `<span class="${cls}">${r}</span>` : `<span>${r}</span>`;
+    })
+    .join(', ');
+
+  let html = `<strong>${sum}</strong> (${rollsHtml})`;
+  if (hasModifier) {
+    html += ` + ${modifier} = <strong>${total}</strong>`;
+  }
+
+  document.getElementById('diceResult').innerHTML = html;
+}
+
+// Resets the dice roller back to its starting state: dice count back
+// to 1, modifier field emptied, and the last result cleared.
+function clearDiceRoller() {
+  document.getElementById('diceCountInput').value = 1;
+  document.getElementById('modifierInput').value = '';
+  document.getElementById('diceResult').innerHTML = '';
+}
+
+// ---- MOB ATTACK CALCULATOR ----
+
+// The number of attacks needed to guarantee one hit, based on the
+// target number (the d20 roll needed to hit, after subtracting the
+// attack bonus from the target's AC). This mirrors the mob-attack
+// "how many mooks does it take" table used at the table.
+function attacksNeededPerHit(targetNumber) {
+  if (targetNumber <= 5) return 1;
+  if (targetNumber <= 12) return 2;
+  if (targetNumber <= 14) return 3;
+  if (targetNumber <= 16) return 4;
+  if (targetNumber <= 18) return 5;
+  if (targetNumber === 19) return 10;
+  return 20; // 20 or higher
+}
+
+// Reads the attack bonus field and folds in advantage (+5) or
+// disadvantage (-5), whichever checkbox (if either) is checked.
+function getMobEffectiveBonus() {
+  const rawBonus = parseFloat(document.getElementById('mobBonusInput').value);
+  const baseBonus = isNaN(rawBonus) ? 0 : rawBonus;
+
+  const advChecked = document.getElementById('mobAdvCheck').checked;
+  const disChecked = document.getElementById('mobDisCheck').checked;
+
+  if (advChecked) return baseBonus + 5;
+  if (disChecked) return baseBonus - 5;
+  return baseBonus;
+}
+
+// Recalculates "Automatic hits" / "Attacks wasted" any time the
+// attacks, bonus, AC, advantage, or disadvantage fields change.
+function updateMobAutoResult() {
+  const resultEl = document.getElementById('mobAutoResult');
+
+  const attacks = parseInt(document.getElementById('mobAttacksInput').value, 10);
+  const ac = parseFloat(document.getElementById('mobACInput').value);
+
+  if (isNaN(attacks) || attacks < 1 || isNaN(ac)) {
+    resultEl.innerHTML = '';
+    return;
+  }
+
+  const effectiveBonus = getMobEffectiveBonus();
+  const targetNumber = ac - effectiveBonus;
+  const neededPerHit = attacksNeededPerHit(targetNumber);
+
+  const hits = Math.floor(attacks / neededPerHit);
+  const wasted = attacks % neededPerHit;
+
+  resultEl.innerHTML = `<strong>${hits}</strong> automatic hits &nbsp;/&nbsp; <strong>${wasted}</strong> attacks wasted`;
+}
+
+// Makes sure advantage and disadvantage can't both be checked at once.
+// Whichever one was just checked wins, unchecking the other.
+function handleMobAdvDisChange(justChecked) {
+  if (justChecked === 'adv' && document.getElementById('mobAdvCheck').checked) {
+    document.getElementById('mobDisCheck').checked = false;
+  }
+  if (justChecked === 'dis' && document.getElementById('mobDisCheck').checked) {
+    document.getElementById('mobAdvCheck').checked = false;
+  }
+  updateMobAutoResult();
+}
+
+// Actually rolls the attacks one at a time: a natural 1 always misses,
+// a natural 20 always hits, otherwise it hits if roll + bonus >= AC.
+//
+// Advantage/Disadvantage work differently here than in the automatic
+// hits math above: instead of adjusting the bonus by +5/-5, each
+// attack rolls 2d20 and keeps only one of them — the higher die on
+// Advantage, the lower die on Disadvantage. The plain attack bonus
+// (no +5/-5) is then added to whichever die was kept.
+function rollMobAttacks() {
+  const resultEl = document.getElementById('mobRollResult');
+
+  const attacks = parseInt(document.getElementById('mobAttacksInput').value, 10);
+  const ac = parseFloat(document.getElementById('mobACInput').value);
+
+  if (isNaN(attacks) || attacks < 1 || isNaN(ac)) {
+    resultEl.innerHTML = 'Enter attacks and target AC first';
+    return;
+  }
+
+  const rawBonus = parseFloat(document.getElementById('mobBonusInput').value);
+  const baseBonus = isNaN(rawBonus) ? 0 : rawBonus;
+
+  const advChecked = document.getElementById('mobAdvCheck').checked;
+  const disChecked = document.getElementById('mobDisCheck').checked;
+
+  let hitCount = 0;
+  const rollsHtml = [];
+
+  for (let i = 0; i < attacks; i++) {
+    let die;
+
+    if (advChecked || disChecked) {
+      const dieA = rollDie(20);
+      const dieB = rollDie(20);
+      die = advChecked ? Math.max(dieA, dieB) : Math.min(dieA, dieB);
+    } else {
+      die = rollDie(20);
+    }
+
+    let isHit;
+    if (die === 1) isHit = false;
+    else if (die === 20) isHit = true;
+    else isHit = die + baseBonus >= ac;
+
+    if (isHit) hitCount += 1;
+
+    const cls = isHit ? 'die-max' : 'die-min';
+    rollsHtml.push(`<span class="${cls}">${die}</span>`);
+  }
+
+  resultEl.innerHTML = `<strong>${hitCount}</strong> hit${hitCount === 1 ? '' : 's'} out of ${attacks} (${rollsHtml.join(', ')})`;
+}
+
+// Resets the whole mob attack calculator back to a blank state.
+function clearMobCalculator() {
+  document.getElementById('mobAttacksInput').value = '';
+  document.getElementById('mobBonusInput').value = '';
+  document.getElementById('mobACInput').value = '';
+  document.getElementById('mobAdvCheck').checked = false;
+  document.getElementById('mobDisCheck').checked = false;
+  document.getElementById('mobAutoResult').innerHTML = '';
+  document.getElementById('mobRollResult').innerHTML = '';
 }
 
 // ---- WIRING EVERYTHING UP ----
@@ -585,4 +778,39 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('swapBtn').addEventListener('click', swapSelected);
   document.getElementById('copyBtn').addEventListener('click', copyList);
   document.getElementById('clearBtn').addEventListener('click', clearAll);
+
+  // Dice roller: +/- buttons for the dice count field
+  document.getElementById('diceCountUp').addEventListener('click', () => {
+    document.getElementById('diceCountInput').value = getDiceCount() + 1;
+  });
+  document.getElementById('diceCountDown').addEventListener('click', () => {
+    document.getElementById('diceCountInput').value = Math.max(1, getDiceCount() - 1);
+  });
+
+  // Dice roller: die-type buttons
+  document.querySelectorAll('.die-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const sides = parseInt(btn.dataset.sides, 10);
+      const count = getDiceCount();
+      const rolls = rollDice(sides, count);
+      renderDiceResult(sides, rolls);
+    });
+  });
+
+  // Dice roller: clear button
+  document.getElementById('diceClearBtn').addEventListener('click', clearDiceRoller);
+
+  // Mob attack calculator: recalculate automatic hits/wasted whenever
+  // attacks, bonus, or AC change
+  document.getElementById('mobAttacksInput').addEventListener('input', updateMobAutoResult);
+  document.getElementById('mobBonusInput').addEventListener('input', updateMobAutoResult);
+  document.getElementById('mobACInput').addEventListener('input', updateMobAutoResult);
+
+  // Mob attack calculator: advantage / disadvantage checkboxes (mutually exclusive)
+  document.getElementById('mobAdvCheck').addEventListener('change', () => handleMobAdvDisChange('adv'));
+  document.getElementById('mobDisCheck').addEventListener('change', () => handleMobAdvDisChange('dis'));
+
+  // Mob attack calculator: roll button and clear button
+  document.getElementById('mobRollBtn').addEventListener('click', rollMobAttacks);
+  document.getElementById('mobClearBtn').addEventListener('click', clearMobCalculator);
 });

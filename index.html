@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,303 +10,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap"
-    rel="stylesheet"
-  />
-
-  <style>
-    html { font-size: 14px; }
-
-    :root {
-      --bg: #16130f;
-      --surface: #211c16;
-      --surface-2: #2a231b;
-      --border: #3a3126;
-      --text: #ece3d2;
-      --text-muted: #a89a82;
-      --gold: #c9a227;
-      --gold-bright: #e6c250;
-      --danger: #a3453f;
-      --radius: 8px;
-      --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
-      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      background: radial-gradient(ellipse at top, #1c1811, var(--bg));
-      color: var(--text);
-      font-family: var(--font-body);
-      line-height: 1.4;
-      padding: 18px 10px 32px;
-    }
-
-    .app { max-width: 640px; margin: 0 auto; }
-
-    .app-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-    }
-    .app-header h1 {
-      font-family: var(--font-display);
-      font-size: 1.2rem;
-      letter-spacing: 0.02em;
-      margin: 0;
-      color: var(--gold-bright);
-    }
-
-    .round-control {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-shrink: 0;
-    }
-    .round-btn {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-size: 1rem;
-      font-weight: 700;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-    }
-    .round-btn:hover { border-color: var(--gold); color: var(--gold-bright); }
-
-    .round-badge {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: var(--surface-2);
-      border: 2px solid var(--gold);
-    }
-    .round-label {
-      font-size: 0.55rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-muted);
-    }
-    #roundNumber {
-      font-family: var(--font-mono);
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--gold-bright);
-    }
-
-    section {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px 14px;
-      margin-bottom: 10px;
-    }
-    h2 {
-      font-family: var(--font-display);
-      font-size: 0.82rem;
-      letter-spacing: 0.03em;
-      margin: 0 0 8px;
-      color: var(--text);
-    }
-
-    .add-form { display: flex; flex-wrap: wrap; gap: 8px; }
-
-    input[type="text"], input[type="number"], textarea {
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
-      padding: 6px 9px;
-      font-family: var(--font-body);
-      font-size: 0.82rem;
-    }
-    #nameInput { flex: 2; min-width: 120px; }
-    #iniInput { flex: 1; min-width: 80px; font-family: var(--font-mono); }
-    textarea { width: 100%; resize: vertical; font-family: var(--font-mono); font-size: 0.8rem; }
-
-    input:focus-visible, textarea:focus-visible, button:focus-visible {
-      outline: 2px solid var(--gold-bright);
-      outline-offset: 1px;
-    }
-
-    .dump-area { display: flex; flex-direction: column; gap: 8px; }
-    .dump-controls { display: flex; justify-content: flex-end; }
-
-    button {
-      cursor: pointer;
-      font-family: var(--font-body);
-      border: none;
-      border-radius: 6px;
-      padding: 7px 12px;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-    .btn-primary { background: var(--gold); color: #1a1408; }
-    .btn-primary:hover { background: var(--gold-bright); }
-    .btn-secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { border-color: var(--gold); }
-    .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
-    .btn-danger:hover { background: var(--danger); color: #fff; }
-
-    .tracker-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
-
-    .tracker-row {
-      display: grid;
-      grid-template-columns: 40px 1fr 24px 22px 24px;
-      align-items: center;
-      gap: 6px;
-      background: var(--surface-2);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--gold);
-      border-radius: 6px;
-      padding: 7px 9px;
-      cursor: pointer;
-    }
-    .tracker-row.selected {
-      border-color: var(--gold-bright);
-      box-shadow: 0 0 0 2px var(--gold-bright) inset;
-      background: #33291a;
-    }
-    .tracker-row.row-hidden { opacity: 0.45; }
-
-    .row-ini {
-      background: transparent;
-      border: none;
-      color: var(--gold-bright);
-      font-family: var(--font-mono);
-      font-weight: 700;
-      text-align: center;
-      font-size: 0.82rem;
-      padding: 0;
-      width: 100%;
-      cursor: text;
-    }
-
-    .name-cell { width: 100%; display: flex; align-items: center; }
-    .row-name {
-      background: transparent;
-      border: none;
-      color: inherit;
-      font-weight: 500;
-      font-size: 0.82rem;
-      padding: 0;
-      width: 50%;
-      min-width: 60px;
-      cursor: text;
-    }
-
-    .row-ini:focus-visible, .row-name:focus-visible {
-      outline: 2px solid var(--gold-bright);
-      outline-offset: 1px;
-      border-radius: 4px;
-    }
-    input.row-ini::-webkit-outer-spin-button,
-    input.row-ini::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    input.row-ini { -moz-appearance: textfield; }
-
-    .tie-arrows {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
-    .tie-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      line-height: 1;
-      padding: 2px 4px;
-    }
-    .tie-btn:hover { color: var(--gold-bright); }
-
-    .visibility-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      padding: 2px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .visibility-btn:hover { color: var(--gold-bright); }
-    .visibility-btn svg { width: 15px; height: 15px; display: block; }
-
-    .remove-btn { background: none; border: none; color: var(--text-muted); font-size: 1rem; padding: 0; line-height: 1; }
-    .remove-btn:hover { color: var(--danger); }
-
-    .controls-panel { display: flex; gap: 8px; flex-wrap: wrap; background: none; border: none; padding: 0; }
-    .controls-panel button { flex: 1; min-width: 100px; }
-    .hidden { display: none !important; }
-
-    .toast {
-      position: fixed;
-      bottom: 18px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--gold);
-      color: #1a1408;
-      padding: 8px 14px;
-      border-radius: 6px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-      transition: opacity 0.3s ease;
-      z-index: 40;
-    }
-    .toast.hidden { opacity: 0; visibility: hidden; }
-
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.65);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      z-index: 50;
-    }
-    .modal-overlay.hidden { display: none; }
-    .modal-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px;
-      max-width: 340px;
-      width: 100%;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-    }
-    #modalMessage { margin: 0 0 14px; color: var(--text); font-size: 0.85rem; line-height: 1.45; }
-    .modal-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-    .modal-buttons button { flex: 1; }
-
-    @media (max-width: 480px) {
-      .app-header h1 { font-size: 1.05rem; }
-      .tracker-row { grid-template-columns: 34px 1fr 22px 20px 20px; gap: 4px; }
-    }
-  </style>
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
   <div class="app">
     <header class="app-header">
-      <h1>Initiative Tracker</h1>
+      <h1>DM Screen</h1>
       <div class="round-control">
         <button id="roundDown" class="round-btn" type="button" aria-label="Decrease round">−</button>
         <div class="round-badge">
@@ -316,35 +28,102 @@
       </div>
     </header>
 
-    <section class="add-panel">
-      <h2>Add a combatant</h2>
-      <form id="addForm" class="add-form">
-        <input type="text" id="nameInput" placeholder="Name" required />
-        <input type="number" id="iniInput" placeholder="Initiative" required />
-        <button type="submit" class="btn-primary">Add</button>
-      </form>
-    </section>
+    <div class="columns-wrap">
 
-    <section class="dump-panel">
-      <h2>Paste a List</h2>
-      <div class="dump-area">
-        <textarea id="dumpInput" rows="4"></textarea>
-        <div class="dump-controls">
-          <button id="parseBtn" class="btn-secondary" type="button">Parse &amp; add</button>
-        </div>
+      <div class="column column-initiative">
+        <section class="add-panel">
+          <h2>Add a combatant</h2>
+          <form id="addForm" class="add-form">
+            <input type="text" id="nameInput" placeholder="Name" required />
+            <input type="number" id="iniInput" placeholder="Initiative" required />
+            <button type="submit" class="btn-primary">Add</button>
+          </form>
+        </section>
+
+        <section class="dump-panel">
+          <h2>Paste a List</h2>
+          <div class="dump-area">
+            <textarea id="dumpInput" rows="4"></textarea>
+            <div class="dump-controls">
+              <button id="parseBtn" class="btn-secondary" type="button">Parse &amp; add</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="tracker-panel">
+          <h2>Turn order</h2>
+          <ol id="trackerList" class="tracker-list"></ol>
+        </section>
+
+        <section class="controls-panel">
+          <button id="swapBtn" class="btn-primary hidden" type="button">Swap</button>
+          <button id="copyBtn" class="btn-secondary">Copy list</button>
+          <button id="clearBtn" class="btn-danger">Clear all</button>
+        </section>
       </div>
-    </section>
 
-    <section class="tracker-panel">
-      <h2>Turn order</h2>
-      <ol id="trackerList" class="tracker-list"></ol>
-    </section>
+      <div class="column column-dice">
+        <section class="dice-panel">
+          <h2>Dice</h2>
 
-    <section class="controls-panel">
-      <button id="swapBtn" class="btn-primary hidden" type="button">Swap</button>
-      <button id="copyBtn" class="btn-secondary">Copy list</button>
-      <button id="clearBtn" class="btn-danger">Clear all</button>
-    </section>
+          <div class="dice-count-row">
+            <div class="dice-count-control">
+              <button id="diceCountDown" class="round-btn" type="button" aria-label="Decrease dice count">−</button>
+              <input type="number" id="diceCountInput" class="dice-count-input" value="1" min="1" />
+              <button id="diceCountUp" class="round-btn" type="button" aria-label="Increase dice count">+</button>
+            </div>
+            <input type="number" id="modifierInput" class="modifier-input" placeholder="Modifier" />
+          </div>
+
+          <div class="die-buttons">
+            <button class="die-btn" data-sides="4" type="button">d4</button>
+            <button class="die-btn" data-sides="6" type="button">d6</button>
+            <button class="die-btn" data-sides="8" type="button">d8</button>
+            <button class="die-btn" data-sides="10" type="button">d10</button>
+            <button class="die-btn" data-sides="12" type="button">d12</button>
+            <button class="die-btn" data-sides="20" type="button">d20</button>
+            <button class="die-btn" data-sides="100" type="button">d100</button>
+          </div>
+
+          <div id="diceResult" class="dice-result"></div>
+
+          <div class="panel-footer">
+            <button id="diceClearBtn" class="btn-secondary" type="button">Clear</button>
+          </div>
+        </section>
+
+        <section class="mob-panel">
+          <h2>Mob Attack Calculator</h2>
+
+          <div class="mob-inputs">
+            <input type="number" id="mobAttacksInput" placeholder="Attacks" min="1" />
+            <input type="number" id="mobBonusInput" placeholder="Atk bonus" />
+            <input type="number" id="mobACInput" placeholder="Target AC" />
+          </div>
+
+          <div class="mob-adv-row">
+            <label class="mob-check"><input type="checkbox" id="mobAdvCheck" /> Advantage</label>
+            <label class="mob-check"><input type="checkbox" id="mobDisCheck" /> Disadvantage</label>
+          </div>
+
+          <div id="mobAutoResult" class="mob-auto-result"></div>
+
+          <div class="panel-footer">
+            <button id="mobRollBtn" class="btn-primary" type="button">Roll attacks</button>
+            <button id="mobClearBtn" class="btn-secondary" type="button">Clear</button>
+          </div>
+
+          <div id="mobRollResult" class="dice-result"></div>
+        </section>
+      </div>
+
+      <div class="column column-lookup">
+        <section class="lookup-panel">
+          <h2>Lookup</h2>
+        </section>
+      </div>
+
+    </div>
   </div>
 
   <p id="toast" class="toast hidden"></p>
@@ -358,4 +137,5 @@
 
   <script src="dm-screen.js"></script>
 </body>
+
 </html>
