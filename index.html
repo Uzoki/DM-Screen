@@ -165,7 +165,7 @@
 
     .tracker-row {
       display: grid;
-      grid-template-columns: 40px 1fr 16px 24px;
+      grid-template-columns: 40px 1fr 24px 22px 24px;
       align-items: center;
       gap: 6px;
       background: var(--surface-2);
@@ -180,6 +180,7 @@
       box-shadow: 0 0 0 2px var(--gold-bright) inset;
       background: #33291a;
     }
+    .tracker-row.row-hidden { opacity: 0.45; }
 
     .row-ini {
       background: transparent;
@@ -223,17 +224,29 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 1px;
+      gap: 2px;
     }
     .tie-btn {
       background: none;
       border: none;
       color: var(--text-muted);
-      font-size: 0.6rem;
+      font-size: 0.95rem;
       line-height: 1;
-      padding: 0;
+      padding: 2px 4px;
     }
     .tie-btn:hover { color: var(--gold-bright); }
+
+    .visibility-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .visibility-btn:hover { color: var(--gold-bright); }
+    .visibility-btn svg { width: 15px; height: 15px; display: block; }
 
     .remove-btn { background: none; border: none; color: var(--text-muted); font-size: 1rem; padding: 0; line-height: 1; }
     .remove-btn:hover { color: var(--danger); }
@@ -285,7 +298,7 @@
 
     @media (max-width: 480px) {
       .app-header h1 { font-size: 1.05rem; }
-      .tracker-row { grid-template-columns: 34px 1fr 14px 20px; }
+      .tracker-row { grid-template-columns: 34px 1fr 22px 20px 20px; gap: 4px; }
     }
   </style>
 </head>

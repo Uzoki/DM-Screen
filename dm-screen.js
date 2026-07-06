@@ -2,17 +2,27 @@
    DM SCREEN — INITIATIVE TRACKER
    This file controls everything on the page: adding
    combatants, editing them in place, selecting/swapping,
-   reordering ties, the round counter, saving data in the
-   browser, and the paste-parser with its pop-ups.
+   reordering ties, hiding combatants from the copied list,
+   the round counter, saving data in the browser, and the
+   paste-parser with its pop-ups.
    ========================================================= */
 
 // ---- STATE ----
-let combatants = [];        // list of { id, name, initiative }
+let combatants = [];        // list of { id, name, initiative, isHidden }
 let round = 1;               // current round number, controlled by the +/- buttons
 let idCounter = 0;           // used to give each combatant a unique id
 let selectedIds = new Set(); // ids of the combatant(s) currently highlighted for swapping
 
 const STORAGE_KEY = 'dmScreenInitiativeState';
+
+// Small inline icons used for the show/hide (eye) button — no image
+// files needed, just plain SVG shapes.
+const OPEN_EYE_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+const CLOSED_EYE_SVG =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/><line x1="2" y1="2" x2="22" y2="22"/></svg>';
 
 // ---- SAVE / LOAD (so refreshing the page doesn't lose your list) ----
 
@@ -37,7 +47,7 @@ function load() {
 
 function makeCombatant(name, initiative) {
   idCounter += 1;
-  return { id: 'c-' + Date.now() + '-' + idCounter, name: name, initiative: initiative };
+  return { id: 'c-' + Date.now() + '-' + idCounter, name: name, initiative: initiative, isHidden: false };
 }
 
 // Returns the list sorted highest initiative first. When two combatants
@@ -74,7 +84,7 @@ function render() {
     const showDown = i < sorted.length - 1 && sorted[i + 1].initiative === c.initiative;
 
     const li = document.createElement('li');
-    li.className = 'tracker-row' + (selectedIds.has(c.id) ? ' selected' : '');
+    li.className = 'tracker-row' + (selectedIds.has(c.id) ? ' selected' : '') + (c.isHidden ? ' row-hidden' : '');
     li.dataset.id = c.id;
     li.innerHTML = `
       <input class="row-ini" type="number" value="${escapeHtml(c.initiative)}" data-id="${c.id}" />
@@ -83,6 +93,9 @@ function render() {
         ${showUp ? `<button class="tie-btn tie-up" data-id="${c.id}" aria-label="Move up">▲</button>` : ''}
         ${showDown ? `<button class="tie-btn tie-down" data-id="${c.id}" aria-label="Move down">▼</button>` : ''}
       </div>
+      <button class="visibility-btn" data-id="${c.id}" aria-label="${c.isHidden ? 'Show' : 'Hide'} ${escapeHtml(c.name)}">
+        ${c.isHidden ? CLOSED_EYE_SVG : OPEN_EYE_SVG}
+      </button>
       <button class="remove-btn" aria-label="Remove ${escapeHtml(c.name)}" data-id="${c.id}">×</button>
     `;
     list.appendChild(li);
@@ -99,8 +112,28 @@ function renderRound() {
 
 // ---- ACTIONS ----
 
-function removeCombatant(id) {
-  combatants = combatants.filter((c) => c.id !== id);
+async function confirmRemove(id) {
+  const combatant = combatants.find((c) => c.id === id);
+  if (!combatant) return;
+
+  const choice = await showModal(
+    'Remove ' + combatant.name + '? This cannot be undone.',
+    [
+      { label: 'Remove', value: 'remove', className: 'btn-danger' },
+      { label: 'Cancel', value: 'cancel', className: 'btn-secondary' }
+    ]
+  );
+
+  if (choice === 'remove') {
+    combatants = combatants.filter((c) => c.id !== id);
+    render();
+  }
+}
+
+function toggleVisibility(id) {
+  const combatant = combatants.find((c) => c.id === id);
+  if (!combatant) return;
+  combatant.isHidden = !combatant.isHidden;
   render();
 }
 
@@ -125,7 +158,7 @@ function decrementRound() {
 }
 
 function copyList() {
-  const sorted = sortedCombatants();
+  const sorted = sortedCombatants().filter((c) => !c.isHidden);
   if (sorted.length === 0) {
     showToast('Nothing to copy yet');
     return;
@@ -139,8 +172,9 @@ function copyList() {
 }
 
 // Clicking a row (anywhere except the editable name/initiative fields,
-// the tie-arrows, or the remove button) toggles whether it's selected.
-// Once exactly two rows are selected, the Swap button appears.
+// the tie-arrows, the eye button, or the remove button) toggles whether
+// it's selected. Once exactly two rows are selected, the Swap button
+// appears.
 function toggleSelect(id) {
   if (selectedIds.has(id)) {
     selectedIds.delete(id);
@@ -261,14 +295,20 @@ function showModal(message, buttons) {
   });
 }
 
-// Adds a new combatant — unless that name is already in the list, in
-// which case it asks whether to replace their current initiative.
-// Returns true if something was added or replaced, false if cancelled.
+// Adds a new combatant — unless that name is already in the list.
+// If it's already there with the SAME initiative, nothing needs to
+// happen (no pop-up). If it's there with a DIFFERENT initiative, it
+// asks whether to replace it. Returns true if something was added or
+// replaced (or already correct), false if the replace was cancelled.
 async function addOrReplaceCombatant(name, initiative) {
   const existing = combatants.find((c) => c.name.toLowerCase() === name.toLowerCase());
 
   if (!existing) {
     combatants.push(makeCombatant(name, initiative));
+    return true;
+  }
+
+  if (existing.initiative === initiative) {
     return true;
   }
 
@@ -493,11 +533,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Clicks inside the turn-order list: remove, tie-arrows, or select a row
+  // Clicks inside the turn-order list: remove, tie-arrows, eye toggle, or select a row
   document.getElementById('trackerList').addEventListener('click', (e) => {
     const removeBtn = e.target.closest('.remove-btn');
     if (removeBtn) {
-      removeCombatant(removeBtn.dataset.id);
+      confirmRemove(removeBtn.dataset.id);
+      return;
+    }
+
+    const visBtn = e.target.closest('.visibility-btn');
+    if (visBtn) {
+      toggleVisibility(visBtn.dataset.id);
       return;
     }
 
