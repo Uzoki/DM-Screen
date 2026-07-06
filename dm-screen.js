@@ -2,8 +2,8 @@
    DM SCREEN — INITIATIVE TRACKER
    This file controls everything on the page: adding
    combatants, editing them in place, selecting/swapping,
-   the round counter, saving data in the browser, and the
-   paste-parser with its pop-ups.
+   reordering ties, the round counter, saving data in the
+   browser, and the paste-parser with its pop-ups.
    ========================================================= */
 
 // ---- STATE ----
@@ -40,7 +40,9 @@ function makeCombatant(name, initiative) {
   return { id: 'c-' + Date.now() + '-' + idCounter, name: name, initiative: initiative };
 }
 
-// Returns the list sorted highest initiative first.
+// Returns the list sorted highest initiative first. When two combatants
+// tie, they keep whatever relative order they already have — which is
+// exactly what the tie-arrows below let you change.
 function sortedCombatants() {
   return [...combatants].sort((a, b) => b.initiative - a.initiative);
 }
@@ -67,13 +69,20 @@ function render() {
 
   list.innerHTML = '';
 
-  sorted.forEach((c) => {
+  sorted.forEach((c, i) => {
+    const showUp = i > 0 && sorted[i - 1].initiative === c.initiative;
+    const showDown = i < sorted.length - 1 && sorted[i + 1].initiative === c.initiative;
+
     const li = document.createElement('li');
     li.className = 'tracker-row' + (selectedIds.has(c.id) ? ' selected' : '');
     li.dataset.id = c.id;
     li.innerHTML = `
       <input class="row-ini" type="number" value="${escapeHtml(c.initiative)}" data-id="${c.id}" />
-      <input class="row-name" type="text" value="${escapeHtml(c.name)}" data-id="${c.id}" />
+      <div class="name-cell"><input class="row-name" type="text" value="${escapeHtml(c.name)}" data-id="${c.id}" /></div>
+      <div class="tie-arrows">
+        ${showUp ? `<button class="tie-btn tie-up" data-id="${c.id}" aria-label="Move up">▲</button>` : ''}
+        ${showDown ? `<button class="tie-btn tie-down" data-id="${c.id}" aria-label="Move down">▼</button>` : ''}
+      </div>
       <button class="remove-btn" aria-label="Remove ${escapeHtml(c.name)}" data-id="${c.id}">×</button>
     `;
     list.appendChild(li);
@@ -121,8 +130,7 @@ function copyList() {
     showToast('Nothing to copy yet');
     return;
   }
-  // Same "Initiative Name" format used for pasting, e.g. "18 Aragorn"
-  const text = sorted.map((c) => `${c.initiative} ${c.name}`).join('\n');
+  const text = sorted.map((c) => `[${c.initiative}] - ${c.name}`).join('\n');
 
   navigator.clipboard
     .writeText(text)
@@ -130,9 +138,9 @@ function copyList() {
     .catch(() => showToast('Could not copy — try selecting the text manually'));
 }
 
-// Clicking a row (anywhere except the editable name/initiative fields
-// or the remove button) toggles whether it's selected. Once exactly
-// two rows are selected, the Swap button appears.
+// Clicking a row (anywhere except the editable name/initiative fields,
+// the tie-arrows, or the remove button) toggles whether it's selected.
+// Once exactly two rows are selected, the Swap button appears.
 function toggleSelect(id) {
   if (selectedIds.has(id)) {
     selectedIds.delete(id);
@@ -160,6 +168,39 @@ function swapSelected() {
   selectedIds = new Set();
   render();
   showToast('Initiative swapped');
+}
+
+// Swaps two combatants' positions in the underlying list, WITHOUT
+// touching their initiative values. Since ties keep their relative
+// order when sorted, this is what actually moves a tied combatant
+// up or down past another tied combatant.
+function swapArrayPositions(idA, idB) {
+  const indexA = combatants.findIndex((c) => c.id === idA);
+  const indexB = combatants.findIndex((c) => c.id === idB);
+  if (indexA === -1 || indexB === -1) return;
+  const temp = combatants[indexA];
+  combatants[indexA] = combatants[indexB];
+  combatants[indexB] = temp;
+}
+
+function moveTieUp(id) {
+  const sorted = sortedCombatants();
+  const idx = sorted.findIndex((c) => c.id === id);
+  if (idx <= 0) return;
+  const neighbor = sorted[idx - 1];
+  if (neighbor.initiative !== sorted[idx].initiative) return;
+  swapArrayPositions(id, neighbor.id);
+  render();
+}
+
+function moveTieDown(id) {
+  const sorted = sortedCombatants();
+  const idx = sorted.findIndex((c) => c.id === id);
+  if (idx === -1 || idx >= sorted.length - 1) return;
+  const neighbor = sorted[idx + 1];
+  if (neighbor.initiative !== sorted[idx].initiative) return;
+  swapArrayPositions(id, neighbor.id);
+  render();
 }
 
 // Called when you click away from (or press Enter in) a name field.
@@ -250,17 +291,22 @@ async function addOrReplaceCombatant(name, initiative) {
 // This is the part that reads whatever you paste into the box and
 // turns it into a list of { name, initiative } pairs.
 //
-// It works in two stages:
-//   1) Break the pasted text into one "record" per combatant. A record
-//      starts wherever a line begins with "*". Everything until the
-//      NEXT "*" belongs to that same record — no matter whether your
-//      dice-roller put it all on one line, or spread across five lines.
-//      If there are no "*" bullets at all, every line is treated as
-//      its own record instead (for quick manual typing).
-//   2) For each record, strip out the parts we don't need (the words
-//      "Initiative: roll" and the date/time stamp), then whatever
-//      number is left over is the initiative roll, and whatever text
-//      is left over is the name.
+// It understands two very different kinds of lines:
+//
+//   A) A quick one-liner, typed by hand: "18 Aragorn", "18, Aragorn",
+//      or even "[18] - Aragorn" (the same shape this app copies out).
+//      Each of these lines is already a complete, standalone entry.
+//
+//   B) A block copied from a dice-roller log, which can be spread over
+//      several lines or crammed onto one, and always ends with a
+//      timestamp like "7/2/2026 10:14 PM". Everything from the end of
+//      the previous timestamp up to and including the next timestamp
+//      is treated as one entry. An entry like this is only accepted if
+//      it actually contains the words "Initiative: roll" somewhere in
+//      it — so a Nature check, an attack roll, or anything else that
+//      isn't an initiative roll gets skipped automatically. Anything
+//      left over at the very end with no timestamp (an incomplete,
+//      cut-off entry) is dropped too.
 
 // Cleans a raw name: strips emoji/symbols, then keeps only the first word.
 function cleanName(rawName) {
@@ -270,55 +316,62 @@ function cleanName(rawName) {
   return match ? match[0] : cleaned;
 }
 
-// Stage 1: break the pasted text into one record per combatant.
+const QUICK_LINE_PATTERN = /^\[?-?\d+(?:\.\d+)?\]?[\s,-]+\S.*$/;
+const TIMESTAMP_PATTERN = /\d{1,4}[/-]\d{1,2}[/-]\d{1,4}\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?/i;
+
+// Stage 1: break the pasted text into records. Each record remembers
+// whether it was a "quick" one-liner or a dice-log style block, since
+// they get checked differently in stage 2.
 function splitIntoRecords(text) {
-  const lines = text.split('\n').map((l) => l.trim());
+  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l !== '');
   const records = [];
   let current = [];
-  let sawBullet = false;
 
   lines.forEach((line) => {
-    if (line === '') return;
-    if (/^\*/.test(line)) {
-      if (current.length > 0) records.push(current.join(' '));
-      current = [line.replace(/^\*\s*/, '')];
-      sawBullet = true;
-    } else {
-      current.push(line);
+    if (QUICK_LINE_PATTERN.test(line) && !TIMESTAMP_PATTERN.test(line)) {
+      current = [];
+      records.push({ text: line, isQuick: true });
+      return;
+    }
+
+    current.push(line);
+    if (TIMESTAMP_PATTERN.test(line)) {
+      records.push({ text: current.join(' '), isQuick: false });
+      current = [];
     }
   });
-  if (current.length > 0) records.push(current.join(' '));
+  // Anything left in "current" never reached a timestamp — an
+  // incomplete entry, so it's intentionally left out.
 
-  if (!sawBullet) {
-    // No "*" bullets anywhere — treat every non-empty line as its own record.
-    return lines.filter((l) => l !== '');
-  }
-
-  return records.map((r) => r.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  return records;
 }
 
-// Stage 2: pull { name, initiative } out of one record's text.
+// Stage 2: pull { name, initiative } out of one record.
 function parseRecord(record) {
-  let text = record;
+  let text = record.text;
 
-  // Remove the "Initiative: roll" label, wherever it appears.
-  text = text.replace(/initiative\s*:?\s*roll/gi, ' ');
+  if (!record.isQuick) {
+    // Only accept dice-log blocks that are actually an initiative roll.
+    const isInitiativeRoll = /initiative\s*:?\s*roll/i.test(text);
+    if (!isInitiativeRoll) return null;
 
-  // Remove a date/time stamp like "7/2/2026 10:14 PM", wherever it appears.
-  text = text.replace(/\d{1,4}[/-]\d{1,2}[/-]\d{1,4}\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?/gi, ' ');
+    text = text.replace(/initiative\s*:?\s*roll/gi, ' ');
+    text = text.replace(TIMESTAMP_PATTERN, ' ');
+  }
 
   text = text.replace(/\s+/g, ' ').trim();
   if (text === '') return null;
 
-  // Whatever number is left over is the initiative roll.
   const numberMatch = text.match(/-?\d+(?:\.\d+)?/);
   if (!numberMatch) return null;
 
   const initiative = parseFloat(numberMatch[0]);
-  const rawName = (text.slice(0, numberMatch.index) + text.slice(numberMatch.index + numberMatch[0].length))
-    .replace(/[,:]+/g, ' ')
+  let rawName = (text.slice(0, numberMatch.index) + text.slice(numberMatch.index + numberMatch[0].length))
+    .replace(/[,:*[\]]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  // Strip a leftover leading dash, e.g. from "[18] - Aragorn" style input.
+  rawName = rawName.replace(/^-\s*/, '').trim();
 
   if (!rawName) return null;
 
@@ -440,13 +493,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Clicks inside the turn-order list: remove button, or select a row
+  // Clicks inside the turn-order list: remove, tie-arrows, or select a row
   document.getElementById('trackerList').addEventListener('click', (e) => {
     const removeBtn = e.target.closest('.remove-btn');
     if (removeBtn) {
       removeCombatant(removeBtn.dataset.id);
       return;
     }
+
+    const upBtn = e.target.closest('.tie-up');
+    if (upBtn) {
+      moveTieUp(upBtn.dataset.id);
+      return;
+    }
+
+    const downBtn = e.target.closest('.tie-down');
+    if (downBtn) {
+      moveTieDown(downBtn.dataset.id);
+      return;
+    }
+
     if (e.target.tagName === 'INPUT') return; // clicking a field edits it, doesn't select the row
     const row = e.target.closest('.tracker-row');
     if (row) toggleSelect(row.dataset.id);

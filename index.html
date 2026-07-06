@@ -165,14 +165,14 @@
 
     .tracker-row {
       display: grid;
-      grid-template-columns: 44px 1fr 26px;
+      grid-template-columns: 40px 1fr 16px 24px;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       background: var(--surface-2);
       border: 1px solid var(--border);
       border-left: 3px solid var(--gold);
       border-radius: 6px;
-      padding: 6px 9px;
+      padding: 7px 9px;
       cursor: pointer;
     }
     .tracker-row.selected {
@@ -181,22 +181,32 @@
       background: #33291a;
     }
 
-    .row-ini, .row-name {
+    .row-ini {
       background: transparent;
       border: none;
-      color: inherit;
+      color: var(--gold-bright);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      text-align: center;
+      font-size: 0.82rem;
       padding: 0;
       width: 100%;
       cursor: text;
     }
-    .row-ini {
-      font-family: var(--font-mono);
-      font-weight: 700;
-      color: var(--gold-bright);
-      text-align: center;
+
+    .name-cell { width: 100%; display: flex; align-items: center; }
+    .row-name {
+      background: transparent;
+      border: none;
+      color: inherit;
+      font-weight: 500;
       font-size: 0.82rem;
+      padding: 0;
+      width: 50%;
+      min-width: 60px;
+      cursor: text;
     }
-    .row-name { font-weight: 500; font-size: 0.82rem; }
+
     .row-ini:focus-visible, .row-name:focus-visible {
       outline: 2px solid var(--gold-bright);
       outline-offset: 1px;
@@ -208,6 +218,22 @@
       margin: 0;
     }
     input.row-ini { -moz-appearance: textfield; }
+
+    .tie-arrows {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+    }
+    .tie-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.6rem;
+      line-height: 1;
+      padding: 0;
+    }
+    .tie-btn:hover { color: var(--gold-bright); }
 
     .remove-btn { background: none; border: none; color: var(--text-muted); font-size: 1rem; padding: 0; line-height: 1; }
     .remove-btn:hover { color: var(--danger); }
@@ -259,7 +285,7 @@
 
     @media (max-width: 480px) {
       .app-header h1 { font-size: 1.05rem; }
-      .tracker-row { grid-template-columns: 38px 1fr 22px; }
+      .tracker-row { grid-template-columns: 34px 1fr 14px 20px; }
     }
   </style>
 </head>
