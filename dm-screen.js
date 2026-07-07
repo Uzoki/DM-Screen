@@ -4,8 +4,9 @@
    combatants, editing them in place, selecting/swapping,
    reordering ties, hiding combatants from the copied list,
    the round counter, saving data in the browser, the
-   paste-parser with its pop-ups, the dice roller, and the
-   mob attack calculator.
+   paste-parser with its pop-ups, the dice roller, the mob
+   attack calculator, the reference dropdowns, and the jump
+   calculator.
    ========================================================= */
 
 // ---- STATE ----
@@ -158,13 +159,30 @@ function decrementRound() {
   save();
 }
 
+// Builds the "[initiative] - Name" copy text. Initiative numbers are
+// right-aligned by padding shorter ones with leading spaces (before
+// the bracket, not inside it), so every "[" lines up regardless of
+// how many digits each combatant's initiative has.
+function buildCopyText(list) {
+  const numberStrings = list.map((c) => String(c.initiative));
+  const maxLen = numberStrings.reduce((max, s) => Math.max(max, s.length), 0);
+
+  return list
+    .map((c, i) => {
+      const numStr = numberStrings[i];
+      const padding = ' '.repeat(maxLen - numStr.length);
+      return `${padding}[${numStr}] - ${c.name}`;
+    })
+    .join('\n');
+}
+
 function copyList() {
   const sorted = sortedCombatants().filter((c) => !c.isHidden);
   if (sorted.length === 0) {
     showToast('Nothing to copy yet');
     return;
   }
-  const text = sorted.map((c) => `[${c.initiative}] - ${c.name}`).join('\n');
+  const text = buildCopyText(sorted);
 
   navigator.clipboard
     .writeText(text)
@@ -536,7 +554,7 @@ function renderDiceResult(sides, rolls) {
     })
     .join(', ');
 
-  let html = `<strong>${sum}</strong> (${rollsHtml})`;
+  let html = `<strong>${sum}</strong> [${rollsHtml}]`;
   if (hasModifier) {
     html += ` + ${modifier} = <strong>${total}</strong>`;
   }
@@ -643,6 +661,8 @@ function rollMobAttacks() {
   const disChecked = document.getElementById('mobDisCheck').checked;
 
   let hitCount = 0;
+  let critHits = 0;
+  let critMisses = 0;
   const rollsHtml = [];
 
   for (let i = 0; i < attacks; i++) {
@@ -657,17 +677,39 @@ function rollMobAttacks() {
     }
 
     let isHit;
-    if (die === 1) isHit = false;
-    else if (die === 20) isHit = true;
-    else isHit = die + baseBonus >= ac;
+    if (die === 1) {
+      isHit = false;
+      critMisses += 1;
+    } else if (die === 20) {
+      isHit = true;
+      critHits += 1;
+    } else {
+      isHit = die + baseBonus >= ac;
+    }
 
     if (isHit) hitCount += 1;
 
-    const cls = isHit ? 'die-max' : 'die-min';
+    let cls;
+    if (die === 20) cls = 'crit-hit';
+    else if (die === 1) cls = 'crit-miss';
+    else cls = isHit ? 'die-max' : 'die-min';
+
     rollsHtml.push(`<span class="${cls}">${die}</span>`);
   }
 
-  resultEl.innerHTML = `<strong>${hitCount}</strong> hit${hitCount === 1 ? '' : 's'} out of ${attacks} (${rollsHtml.join(', ')})`;
+  // Regular (non-crit) hits, so the crit hits can be called out separately.
+  const normalHits = hitCount - critHits;
+
+  let summary = `<strong>${normalHits}</strong> hit${normalHits === 1 ? '' : 's'}`;
+  if (critHits > 0) {
+    summary += ` and <strong>${critHits}</strong> crit${critHits === 1 ? '' : 's'}`;
+  }
+  summary += ` out of ${attacks}`;
+  if (critMisses > 0) {
+    summary += ` (<strong>${critMisses}</strong> critical miss${critMisses === 1 ? '' : 'es'})`;
+  }
+
+  resultEl.innerHTML = `${summary} [${rollsHtml.join(', ')}]`;
 }
 
 // Resets the whole mob attack calculator back to a blank state.
@@ -681,12 +723,230 @@ function clearMobCalculator() {
   document.getElementById('mobRollResult').innerHTML = '';
 }
 
+// ---- REFERENCE DROPDOWNS (remember open/closed state for this browser session) ----
+
+const DROPDOWN_IDS = ['dropSkills', 'dropCreatureTypes', 'dropCover', 'dropObscured', 'dropConditions', 'dropJumping', 'dropNpcReactions'];
+
+function initDropdownPersistence() {
+  DROPDOWN_IDS.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const saved = sessionStorage.getItem('dropdown_' + id);
+    if (saved !== null) {
+      el.open = saved === 'true';
+    }
+
+    el.addEventListener('toggle', () => {
+      sessionStorage.setItem('dropdown_' + id, el.open);
+    });
+  });
+}
+
+// ---- NPC REACTIONS ----
+
+// Rolls 2d6 and returns the sum.
+function roll2d6() {
+  return rollDie(6) + rollDie(6);
+}
+
+// Rolls the full monster-reaction chain and returns the finished
+// result string, using an arrow (→) between each step.
+function rollMonsterReactionResult() {
+  const first = roll2d6();
+
+  if (first === 2) return 'Immediate Attack';
+  if (first === 12) return 'Immediate Friendly';
+
+  if (first >= 3 && first <= 5) {
+    const parts = ['Hostile'];
+    const second = roll2d6();
+    if (second >= 2 && second <= 8) {
+      parts.push('Attack');
+    } else {
+      parts.push('Uncertain');
+      const third = roll2d6();
+      if (third >= 2 && third <= 5) parts.push('Attack');
+      else if (third >= 6 && third <= 8) parts.push('Leave');
+      else parts.push('Friendly');
+    }
+    return parts.join(' → ');
+  }
+
+  if (first >= 6 && first <= 8) {
+    const parts = ['Uncertain'];
+    const second = roll2d6();
+    if (second >= 2 && second <= 5) {
+      parts.push('Attack');
+    } else if (second >= 9 && second <= 12) {
+      parts.push('Friendly');
+    } else {
+      parts.push('Negotiate');
+      const third = roll2d6();
+      if (third >= 2 && third <= 5) parts.push('Attack');
+      else if (third >= 6 && third <= 8) parts.push('Leave');
+      else parts.push('Friendly');
+    }
+    return parts.join(' → ');
+  }
+
+  // first is 9-11
+  const second = roll2d6();
+  if (second >= 6 && second <= 12) {
+    return 'Friendly';
+  }
+  const parts = ['Friendly', 'Uncertain'];
+  const third = roll2d6();
+  if (third >= 2 && third <= 5) parts.push('Attack');
+  else if (third >= 6 && third <= 8) parts.push('Leave');
+  else parts.push('Friendly');
+  return parts.join(' → ');
+}
+
+function rollMonsterReaction() {
+  const result = rollMonsterReactionResult();
+  document.getElementById('monsterReactionResult').textContent = result;
+}
+
+// Picks Friendly, Indifferent, or Hostile at random for the humanoid
+// attitude grid.
+function randomizeAttitude() {
+  const options = ['Friendly', 'Indifferent', 'Hostile'];
+  const pick = options[Math.floor(Math.random() * options.length)];
+  document.getElementById('attitudeResult').textContent = pick;
+}
+
+// ---- JUMP CALCULATOR ----
+// Based on the long jump / high jump rules in the 5th Edition Player's
+// Handbook, plus a handful of optional class/feat/item modifiers that
+// change how far or how high a creature can jump.
+
+// Reads the height fields and returns the total height in decimal feet
+// (e.g. 5 feet 6 inches becomes 5.5).
+function getJumpHeightFeetDecimal() {
+  const feet = parseFloat(document.getElementById('jumpFeet').value) || 0;
+  const inches = parseFloat(document.getElementById('jumpInches').value) || 0;
+  return feet + inches / 12;
+}
+
+// Called when the feet or inches field changes — recalculates the cm
+// field to match, then re-runs the jump math.
+function syncHeightFromFeetInches() {
+  const feet = parseFloat(document.getElementById('jumpFeet').value) || 0;
+  const inches = parseFloat(document.getElementById('jumpInches').value) || 0;
+  const totalInches = feet * 12 + inches;
+  const cm = totalInches * 2.54;
+  document.getElementById('jumpCm').value = Math.round(cm * 10) / 10;
+  computeJump();
+}
+
+// Called when the cm field changes — recalculates feet/inches to
+// match, then re-runs the jump math.
+function syncHeightFromCm() {
+  const cm = parseFloat(document.getElementById('jumpCm').value) || 0;
+  const totalInches = cm / 2.54;
+  const feet = Math.floor(totalInches / 12);
+  const inches = Math.round((totalInches - feet * 12) * 10) / 10;
+  document.getElementById('jumpFeet').value = feet;
+  document.getElementById('jumpInches').value = inches;
+  computeJump();
+}
+
+// Shows the Dexterity score field only when Second-Story Work is
+// checked, since that's the only modifier that uses it.
+function toggleJumpDexVisibility() {
+  const rogueChecked = document.getElementById('jumpRogue').checked;
+  document.getElementById('jumpDexRow').classList.toggle('hidden', !rogueChecked);
+}
+
+// Rounds a jump result to the nearest half-foot and formats it for
+// display, dropping the decimal point entirely for whole numbers
+// (e.g. 10 stays "10", but 1.5 stays "1.5").
+function formatJumpNumber(value) {
+  const rounded = Math.round(value * 2) / 2;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+// Recalculates every jump result from the current Strength, Dexterity,
+// height, and checked modifiers, and writes the results into the page.
+function computeJump() {
+  const strRaw = parseFloat(document.getElementById('jumpStr').value);
+  const dexRaw = parseFloat(document.getElementById('jumpDex').value);
+  const strScore = isNaN(strRaw) ? 10 : strRaw;
+  const dexScore = isNaN(dexRaw) ? 10 : dexRaw;
+  const strMod = Math.floor((strScore - 10) / 2);
+  const dexMod = Math.floor((dexScore - 10) / 2);
+
+  const tiger = document.getElementById('jumpTiger').checked;     // Barbarian Totem: Tiger
+  const champion = document.getElementById('jumpChampion').checked; // Fighter Champion: Remarkable Athlete
+  const monk = document.getElementById('jumpMonk').checked;       // Monk: Step of the Wind
+  const rogue = document.getElementById('jumpRogue').checked;     // Rogue Thief: Second-Story Work
+  const spell = document.getElementById('jumpSpell').checked;     // Spell: Jump
+  const feat = document.getElementById('jumpFeat').checked;       // Feat: Athlete
+  const boots = document.getElementById('jumpBoots').checked;     // Boots of Striding and Springing
+
+  // Second-Story Work lets you calculate your jump distance using
+  // Dexterity instead of Strength — using whichever of the two scores
+  // is actually higher (ties default to Strength).
+  let baseScore = strScore;
+  let baseMod = strMod;
+  if (rogue && dexScore > strScore) {
+    baseScore = dexScore;
+    baseMod = dexMod;
+  }
+
+  // --- Long jump ---
+  let runningLong = baseScore;
+  if (champion) runningLong += strMod; // Remarkable Athlete only boosts the running long jump
+  if (tiger) runningLong += 10;        // Totem Spirit: Tiger adds a flat 10 feet
+
+  let standingLong = baseScore / 2;
+  if (tiger) standingLong += 10;       // ...to both running and standing long jumps
+
+  // --- High jump ---
+  let runningHigh = Math.max(0, 3 + baseMod);
+  if (tiger) runningHigh += 3;         // Totem Spirit: Tiger adds a flat 3 feet
+
+  let standingHigh = Math.max(0, 3 + baseMod) / 2;
+  if (tiger) standingHigh += 3;        // ...to both running and standing high jumps
+
+  // --- Multipliers that double/triple total jump distance ---
+  const multiplier = (monk ? 2 : 1) * (spell ? 3 : 1) * (boots ? 3 : 1);
+  runningLong *= multiplier;
+  standingLong *= multiplier;
+  runningHigh *= multiplier;
+  standingHigh *= multiplier;
+
+  // --- Reach while jumping: standing reach (based on height) + how
+  //     high you jump ---
+  const heightFeet = getJumpHeightFeetDecimal();
+  const standingReach = Math.round(heightFeet * 1.3);
+
+  const runReachVal = standingReach + runningHigh;
+  const standReachVal = standingReach + standingHigh;
+
+  document.getElementById('runLongJump').textContent = formatJumpNumber(Math.max(0, runningLong));
+  document.getElementById('runHighJump').textContent = formatJumpNumber(Math.max(0, runningHigh));
+  document.getElementById('runReach').textContent = formatJumpNumber(Math.max(0, runReachVal));
+
+  document.getElementById('standLongJump').textContent = formatJumpNumber(Math.max(0, standingLong));
+  document.getElementById('standHighJump').textContent = formatJumpNumber(Math.max(0, standingHigh));
+  document.getElementById('standReach').textContent = formatJumpNumber(Math.max(0, standReachVal));
+
+  // The Athlete feat shortens the running start needed from 10 feet
+  // to 5 feet — it does not change how far or high you actually jump.
+  document.getElementById('runningStartFeet').textContent = feat ? '5' : '10';
+}
+
 // ---- WIRING EVERYTHING UP ----
 
 document.addEventListener('DOMContentLoaded', () => {
   load();
   render();
   renderRound();
+  initDropdownPersistence();
+  toggleJumpDexVisibility();
+  computeJump();
 
   // Manual "Add a combatant" form
   document.getElementById('addForm').addEventListener('submit', async (e) => {
@@ -813,4 +1073,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // Mob attack calculator: roll button and clear button
   document.getElementById('mobRollBtn').addEventListener('click', rollMobAttacks);
   document.getElementById('mobClearBtn').addEventListener('click', clearMobCalculator);
+
+  // Jump calculator: ability scores and most modifier checkboxes just
+  // trigger a recalculation.
+  ['jumpStr', 'jumpDex', 'jumpTiger', 'jumpChampion', 'jumpMonk', 'jumpSpell', 'jumpFeat', 'jumpBoots']
+    .forEach((id) => {
+      document.getElementById(id).addEventListener('input', computeJump);
+      document.getElementById(id).addEventListener('change', computeJump);
+    });
+
+  // Jump calculator: Second-Story Work also shows/hides the Dexterity field
+  document.getElementById('jumpRogue').addEventListener('change', () => {
+    toggleJumpDexVisibility();
+    computeJump();
+  });
+
+  // Jump calculator: height fields sync with each other (feet/inches <-> cm)
+  document.getElementById('jumpFeet').addEventListener('input', syncHeightFromFeetInches);
+  document.getElementById('jumpInches').addEventListener('input', syncHeightFromFeetInches);
+  document.getElementById('jumpCm').addEventListener('input', syncHeightFromCm);
+
+  // NPC Reactions: monster reaction roller and humanoid attitude randomizer
+  document.getElementById('monsterReactionBtn').addEventListener('click', rollMonsterReaction);
+  document.getElementById('randomizeAttitudeBtn').addEventListener('click', randomizeAttitude);
 });

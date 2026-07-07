@@ -158,6 +158,31 @@ h2 {
     color: var(--text);
 }
 
+strong,
+b {
+    color: var(--gold-bright);
+    font-weight: 700;
+}
+
+/* ===== INITIATIVE GROUP BOX ===== */
+
+.sub-panel {
+    margin-bottom: 14px;
+}
+
+.sub-panel:last-of-type {
+    margin-bottom: 10px;
+}
+
+.sub-panel h3 {
+    font-family: var(--font-display);
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    margin: 0 0 6px;
+}
+
 .add-form {
     display: flex;
     flex-wrap: wrap;
@@ -389,9 +414,6 @@ input.row-ini {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-    background: none;
-    border: none;
-    padding: 0;
 }
 
 .controls-panel button {
@@ -482,6 +504,21 @@ input.row-ini {
     gap: 6px;
 }
 
+.modifier-control {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 70px;
+}
+
+.modifier-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
 .dice-count-input {
     width: 44px;
     text-align: center;
@@ -502,8 +539,7 @@ input.row-ini {
 }
 
 .modifier-input {
-    flex: 1;
-    min-width: 70px;
+    width: 100%;
     font-family: var(--font-mono);
 }
 
@@ -552,6 +588,18 @@ input.row-ini {
 .dice-result .die-min {
     color: var(--danger);
     font-weight: 700;
+}
+
+.dice-result .crit-hit {
+    color: var(--success);
+    font-weight: 800;
+    font-size: 1.2em;
+}
+
+.dice-result .crit-miss {
+    color: var(--danger);
+    font-weight: 800;
+    font-size: 1.2em;
 }
 
 /* ===== PANEL FOOTER (Clear / action buttons under a panel) ===== */
@@ -616,6 +664,276 @@ input.row-ini {
 .mob-auto-result strong {
     color: var(--gold-bright);
     font-size: 0.95rem;
+}
+
+/* ===== REFERENCE COLUMN / DROPDOWNS ===== */
+
+.dropdown-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+details.dropdown {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+details.dropdown summary {
+    cursor: pointer;
+    padding: 8px 10px;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    color: var(--gold-bright);
+    list-style: none;
+}
+
+details.dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+details.dropdown summary::before {
+    content: '▸ ';
+}
+
+details.dropdown[open] summary::before {
+    content: '▾ ';
+}
+
+.dropdown-body {
+    padding: 8px 10px 12px;
+    border-top: 1px solid var(--border);
+}
+
+.dropdown-body p {
+    margin: 2px 0;
+    font-size: 0.78rem;
+    color: var(--text);
+}
+
+/* Condition entries: headers + bullet lists inside a dropdown */
+
+.dropdown-body h4 {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+    color: var(--gold-bright);
+    margin: 12px 0 4px;
+}
+
+.dropdown-body h4:first-child {
+    margin-top: 0;
+}
+
+.dropdown-body ul {
+    margin: 0 0 8px;
+    padding-left: 18px;
+}
+
+.dropdown-body li {
+    font-size: 0.78rem;
+    color: var(--text);
+    margin: 3px 0;
+}
+
+/* Links inside reference dropdowns (e.g. Conditions) — yellow, bold,
+   open in a new tab via target="_blank" set in the HTML. */
+
+.dropdown-body a {
+    color: var(--gold-bright);
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-color: rgba(230, 194, 80, 0.4);
+}
+
+.dropdown-body a:hover {
+    text-decoration-color: var(--gold-bright);
+}
+
+/* ===== JUMP CALCULATOR ===== */
+
+.jump-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+
+.jump-input-row label {
+    flex: 1;
+    min-width: 90px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.jump-input-row input[type="number"] {
+    width: 60px;
+}
+
+.jump-height-fields {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.jump-height-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.jump-height-group input {
+    width: 82px;
+}
+
+/* Wider fields for ft / in / cm so values like "182.9" are fully
+   visible, with the browser's native spinner arrows kept intact. */
+.jump-num-input {
+    width: 88px !important;
+    font-family: var(--font-mono);
+    text-align: center;
+    padding: 6px 4px;
+}
+
+.jump-num-input-cm {
+    width: 100px !important;
+}
+
+.jump-height-unit {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
+
+.jump-height-eq {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 0 2px;
+}
+
+.jump-results h4 {
+    font-family: var(--font-display);
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text);
+    font-weight: 600;
+    margin: 10px 0 4px;
+}
+
+.jump-results p {
+    font-size: 0.78rem;
+    margin: 2px 0;
+    color: var(--text);
+}
+
+.jump-value {
+    color: var(--gold-bright);
+    font-weight: 700;
+    font-family: var(--font-mono);
+}
+
+.jump-notes {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+}
+
+.jump-modifiers {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+}
+
+.jump-modifiers label {
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+}
+
+/* ===== NPC REACTIONS ===== */
+
+.npc-reactions-columns {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.npc-box {
+    flex: 1 1 150px;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.npc-box h4 {
+    font-family: var(--font-display);
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text);
+    font-weight: 600;
+    margin: 0;
+}
+
+.npc-box button {
+    width: 100%;
+}
+
+.npc-result {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--gold-bright);
+    min-height: 18px;
+    word-break: break-word;
+    text-align: center;
+}
+
+.humanoid-grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.68rem;
+}
+
+.humanoid-grid th,
+.humanoid-grid td {
+    border: 1px solid var(--border);
+    padding: 4px 5px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.humanoid-grid thead th {
+    font-family: var(--font-display);
+    color: var(--gold-bright);
+    font-weight: 700;
+    background: var(--surface-2);
+}
+
+.humanoid-grid tbody th {
+    font-family: var(--font-mono);
+    color: var(--gold-bright);
+    background: var(--surface-2);
+}
+
+.humanoid-grid td {
+    color: var(--text);
+    background: transparent;
 }
 
 @media (max-width: 480px) {
