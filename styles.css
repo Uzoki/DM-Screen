@@ -505,18 +505,8 @@ input.row-ini {
 }
 
 .modifier-control {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
     flex: 1;
     min-width: 70px;
-}
-
-.modifier-label {
-    font-size: 0.62rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
 }
 
 .dice-count-input {
@@ -739,7 +729,9 @@ details.dropdown[open] summary::before {
 }
 
 /* Links inside reference dropdowns (e.g. Conditions) — yellow, bold,
-   open in a new tab via target="_blank" set in the HTML. */
+   open in a new tab via target="_blank" set in the HTML. This also
+   covers links inside the nested per-condition dropdowns below, since
+   .condition-body lives inside .dropdown-body. */
 
 .dropdown-body a {
     color: var(--gold-bright);
@@ -750,6 +742,65 @@ details.dropdown[open] summary::before {
 
 .dropdown-body a:hover {
     text-decoration-color: var(--gold-bright);
+}
+
+/* ===== PER-CONDITION NESTED DROPDOWNS ===== */
+/* Each condition (Blinded, Charmed, etc.) is its own collapsible
+   dropdown nested inside the main "Conditions" dropdown, so New Rules
+   (2024) and Legacy Rules (2014) text can both live there without
+   turning the whole list into one giant wall of text. */
+
+.condition-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+details.condition-dropdown {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+details.condition-dropdown summary {
+    cursor: pointer;
+    padding: 7px 10px;
+    font-family: var(--font-display);
+    font-size: 0.76rem;
+    color: var(--gold-bright);
+    list-style: none;
+}
+
+details.condition-dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+details.condition-dropdown summary::before {
+    content: '▸ ';
+}
+
+details.condition-dropdown[open] summary::before {
+    content: '▾ ';
+}
+
+.condition-body {
+    padding: 2px 10px 10px;
+    border-top: 1px solid var(--border);
+}
+
+.condition-body h5 {
+    font-family: var(--font-body);
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin: 8px 0 3px;
+}
+
+.condition-body h5:first-child {
+    margin-top: 6px;
 }
 
 /* ===== JUMP CALCULATOR ===== */
@@ -860,17 +911,18 @@ details.dropdown[open] summary::before {
 }
 
 /* ===== NPC REACTIONS ===== */
+/* Stacked vertically (instead of side-by-side) so the Humanoid
+   Reactions table can use the full width of the column instead of
+   being squeezed into half of it next to Monster Reactions. */
 
 .npc-reactions-columns {
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
 }
 
 .npc-box {
-    flex: 1 1 150px;
-    min-width: 150px;
+    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -907,13 +959,13 @@ details.dropdown[open] summary::before {
 .humanoid-grid {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.68rem;
+    font-size: 0.74rem;
 }
 
 .humanoid-grid th,
 .humanoid-grid td {
     border: 1px solid var(--border);
-    padding: 4px 5px;
+    padding: 6px 7px;
     text-align: center;
     vertical-align: middle;
 }

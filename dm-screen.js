@@ -184,6 +184,11 @@ function copyList() {
   }
   const text = buildCopyText(sorted);
 
+  if (!navigator.clipboard || !navigator.clipboard.writeText) {
+    showToast('Could not copy — try selecting the text manually');
+    return;
+  }
+
   navigator.clipboard
     .writeText(text)
     .then(() => showToast('List copied to clipboard'))
@@ -257,12 +262,31 @@ function moveTieDown(id) {
 }
 
 // Called when you click away from (or press Enter in) a name field.
-function commitNameEdit(input) {
+// If the new name matches another combatant already in the list, the
+// rename still goes through (duplicate names aren't blocked) but a
+// warning pop-up lets you know, in case it was a typo.
+async function commitNameEdit(input) {
   const combatant = combatants.find((c) => c.id === input.dataset.id);
   if (!combatant) return;
+
   const newName = input.value.trim();
-  if (newName) combatant.name = newName;
+  let duplicate = null;
+
+  if (newName) {
+    combatant.name = newName;
+    duplicate = combatants.find(
+      (c) => c.id !== combatant.id && c.name.toLowerCase() === newName.toLowerCase()
+    );
+  }
+
   render();
+
+  if (duplicate) {
+    await showModal(
+      'Heads up — "' + duplicate.name + '" is already the name of another combatant in the list.',
+      [{ label: 'OK', value: 'ok', className: 'btn-primary' }]
+    );
+  }
 }
 
 // Called when you click away from (or press Enter in) an initiative field.
@@ -318,7 +342,8 @@ function showModal(message, buttons) {
 // If it's already there with the SAME initiative, nothing needs to
 // happen (no pop-up). If it's there with a DIFFERENT initiative, it
 // asks whether to replace it. Returns true if something was added or
-// replaced (or already correct), false if the replace was cancelled.
+// replaced (or already correct), false if the replace was cancelled
+// (in which case the caller should NOT clear whatever the user typed).
 async function addOrReplaceCombatant(name, initiative) {
   const existing = combatants.find((c) => c.name.toLowerCase() === name.toLowerCase());
 
@@ -352,9 +377,13 @@ async function addOrReplaceCombatant(name, initiative) {
 //
 // It understands two very different kinds of lines:
 //
-//   A) A quick one-liner, typed by hand: "18 Aragorn", "18, Aragorn",
-//      or even "[18] - Aragorn" (the same shape this app copies out).
-//      Each of these lines is already a complete, standalone entry.
+//   A) A quick one-liner, typed by hand — in EITHER order:
+//      number-first, like "18 Aragorn", "18, Aragorn", or
+//      "[18] - Aragorn" (the same shape this app copies out), OR
+//      name-first, like "Aragorn 18", "Aragorn, 18" or "Aragorn - 18"
+//      (name-first only recognizes a single-word name right before
+//      the number, so it doesn't accidentally swallow a stray line
+//      out of a multi-line dice-log block below).
 //
 //   B) A block copied from a dice-roller log, which can be spread over
 //      several lines or crammed onto one, and always ends with a
@@ -375,7 +404,16 @@ function cleanName(rawName) {
   return match ? match[0] : cleaned;
 }
 
+// Number-first quick entry: "18 Aragorn", "18, Aragorn", "[18] - Aragorn".
 const QUICK_LINE_PATTERN = /^\[?-?\d+(?:\.\d+)?\]?[\s,-]+\S.*$/;
+// Name-first quick entry: "Aragorn 18", "Aragorn, 18", "Aragorn - 18".
+// The name portion is deliberately restricted to a single word with no
+// internal spaces AND no digits — no spaces so a stray line from a
+// multi-line dice-log block (which usually has several words before
+// its number) doesn't get mistaken for a quick entry, and no digits so
+// a numbered name like "Goblin2 15" can't have its "2" mistaken for
+// the initiative instead of the real number, "15".
+const QUICK_LINE_PATTERN_NAME_FIRST = /^[^\s,[\]0-9-]+[\s,-]+-?\d+(?:\.\d+)?\]?$/;
 const TIMESTAMP_PATTERN = /\d{1,4}[/-]\d{1,2}[/-]\d{1,4}\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?/i;
 
 // Stage 1: break the pasted text into records. Each record remembers
@@ -387,7 +425,11 @@ function splitIntoRecords(text) {
   let current = [];
 
   lines.forEach((line) => {
-    if (QUICK_LINE_PATTERN.test(line) && !TIMESTAMP_PATTERN.test(line)) {
+    const isQuickLine =
+      (QUICK_LINE_PATTERN.test(line) || QUICK_LINE_PATTERN_NAME_FIRST.test(line)) &&
+      !TIMESTAMP_PATTERN.test(line);
+
+    if (isQuickLine) {
       current = [];
       records.push({ text: line, isQuick: true });
       return;
@@ -405,7 +447,9 @@ function splitIntoRecords(text) {
   return records;
 }
 
-// Stage 2: pull { name, initiative } out of one record.
+// Stage 2: pull { name, initiative } out of one record. Works the same
+// way regardless of whether the number came before or after the name —
+// it just finds "the number" and treats everything else as "the name".
 function parseRecord(record) {
   let text = record.text;
 
@@ -448,12 +492,18 @@ function parseDump(text) {
   return entries;
 }
 
-// Groups entries by name: { "Zurl": [22], "Dvalin": [10, 16], ... }
+// Groups entries by name (case-insensitively, so "Aragorn" and
+// "aragorn" pasted on different lines count as the same person), while
+// remembering the exact spelling first seen for display purposes.
+// { "aragorn": { displayName: "Aragorn", values: [22] }, ... }
 function groupEntriesByName(entries) {
   const groups = {};
   entries.forEach((entry) => {
-    if (!groups[entry.name]) groups[entry.name] = [];
-    groups[entry.name].push(entry.initiative);
+    const key = entry.name.toLowerCase();
+    if (!groups[key]) {
+      groups[key] = { displayName: entry.name, values: [] };
+    }
+    groups[key].values.push(entry.initiative);
   });
   return groups;
 }
@@ -467,11 +517,12 @@ function groupEntriesByName(entries) {
 // which handles the "already in the list" pop-up if needed.
 async function processParsedEntries(entries) {
   const groups = groupEntriesByName(entries);
-  const names = Object.keys(groups);
+  const keys = Object.keys(groups);
   let addedCount = 0;
 
-  for (const name of names) {
-    const values = groups[name];
+  for (const key of keys) {
+    const displayName = groups[key].displayName;
+    const values = groups[key].values;
     let finalValue;
 
     if (values.length === 1) {
@@ -483,7 +534,7 @@ async function processParsedEntries(entries) {
         const high = Math.max(values[0], values[1]);
         const low = Math.min(values[0], values[1]);
         finalValue = await showModal(
-          name + ' rolled initiative twice: ' + high + ' and ' + low + '. Did they roll with advantage or disadvantage?',
+          displayName + ' rolled initiative twice: ' + high + ' and ' + low + '. Did they roll with advantage or disadvantage?',
           [
             { label: 'Advantage (use ' + high + ')', value: high, className: 'btn-primary' },
             { label: 'Disadvantage (use ' + low + ')', value: low, className: 'btn-secondary' }
@@ -492,14 +543,14 @@ async function processParsedEntries(entries) {
       }
     } else {
       await showModal(
-        name + ' has ' + values.length + ' initiative rolls pasted in, so it is not clear which one to use. ' +
-        name + ' was not added — please add them manually above with the correct number.',
+        displayName + ' has ' + values.length + ' initiative rolls pasted in, so it is not clear which one to use. ' +
+        displayName + ' was not added — please add them manually above with the correct number.',
         [{ label: 'OK', value: 'ok', className: 'btn-primary' }]
       );
       continue;
     }
 
-    const wasAdded = await addOrReplaceCombatant(name, finalValue);
+    const wasAdded = await addOrReplaceCombatant(displayName, finalValue);
     if (wasAdded) addedCount += 1;
     render();
   }
@@ -536,13 +587,15 @@ function getDiceCount() {
 // - the sum and the final total are bold
 // - any individual die that rolled its maximum value is green
 // - any individual die that rolled a 1 is red
+// - an explicit modifier of exactly 0 is treated the same as no
+//   modifier at all, so it doesn't clutter the line with "+ 0 ="
 function renderDiceResult(sides, rolls) {
   const sum = rolls.reduce((a, b) => a + b, 0);
 
   const modInput = document.getElementById('modifierInput');
   const modRaw = modInput.value.trim();
   const modifier = parseFloat(modRaw);
-  const hasModifier = modRaw !== '' && !isNaN(modifier);
+  const hasModifier = modRaw !== '' && !isNaN(modifier) && modifier !== 0;
   const total = hasModifier ? sum + modifier : sum;
 
   const rollsHtml = rolls
@@ -570,38 +623,44 @@ function clearDiceRoller() {
   document.getElementById('diceResult').innerHTML = '';
 }
 
-// ---- MOB ATTACK CALCULATOR ----
+// ---- MOB ATTACK CALCULATOR (2024 DMG model) ----
+// The 2024 DMG replaced the old 2014 "how many attackers per hit"
+// lookup table with a probability-based one. Rather than hard-code a
+// copy of that table (which only lists a handful of mob sizes), this
+// works out the same underlying math directly: the real chance a
+// single attacker's roll hits, multiplied across the whole mob, using
+// the real Advantage/Disadvantage formula (roll twice, keep the
+// higher/lower result) instead of the old flat +-5 approximation.
+//
+// Heads-up: I confirmed the general approach (probability x mob size)
+// against a worked example, but couldn't 100% confirm whether the book
+// rounds the final number up or down. The general 2024 rule is to
+// round DOWN on fractions, so that's what this uses — the exact
+// "expected hits" number is also shown so you can round it yourself
+// at the table if your copy of the DMG says otherwise.
 
-// The number of attacks needed to guarantee one hit, based on the
-// target number (the d20 roll needed to hit, after subtracting the
-// attack bonus from the target's AC). This mirrors the mob-attack
-// "how many mooks does it take" table used at the table.
-function attacksNeededPerHit(targetNumber) {
-  if (targetNumber <= 5) return 1;
-  if (targetNumber <= 12) return 2;
-  if (targetNumber <= 14) return 3;
-  if (targetNumber <= 16) return 4;
-  if (targetNumber <= 18) return 5;
-  if (targetNumber === 19) return 10;
-  return 20; // 20 or higher
+// Chance that a single attack with the given "roll needed" number
+// hits, accounting for the fact that a natural 1 always misses and a
+// natural 20 always hits, no matter what the target number is.
+function singleAttackHitChance(targetNumber) {
+  let hitFaces = 1; // a natural 20 is always a hit
+  for (let face = 2; face <= 19; face++) {
+    if (face >= targetNumber) hitFaces += 1;
+  }
+  return hitFaces / 20;
 }
 
-// Reads the attack bonus field and folds in advantage (+5) or
-// disadvantage (-5), whichever checkbox (if either) is checked.
-function getMobEffectiveBonus() {
-  const rawBonus = parseFloat(document.getElementById('mobBonusInput').value);
-  const baseBonus = isNaN(rawBonus) ? 0 : rawBonus;
-
-  const advChecked = document.getElementById('mobAdvCheck').checked;
-  const disChecked = document.getElementById('mobDisCheck').checked;
-
-  if (advChecked) return baseBonus + 5;
-  if (disChecked) return baseBonus - 5;
-  return baseBonus;
+// Applies real Advantage/Disadvantage math on top of the single-attack
+// chance above (mode is 'normal', 'advantage', or 'disadvantage').
+function mobHitChance(targetNumber, mode) {
+  const p = singleAttackHitChance(targetNumber);
+  if (mode === 'advantage') return 1 - (1 - p) * (1 - p);
+  if (mode === 'disadvantage') return p * p;
+  return p;
 }
 
-// Recalculates "Automatic hits" / "Attacks wasted" any time the
-// attacks, bonus, AC, advantage, or disadvantage fields change.
+// Recalculates "Automatic hits" any time the attacks, bonus, AC,
+// advantage, or disadvantage fields change.
 function updateMobAutoResult() {
   const resultEl = document.getElementById('mobAutoResult');
 
@@ -613,14 +672,19 @@ function updateMobAutoResult() {
     return;
   }
 
-  const effectiveBonus = getMobEffectiveBonus();
-  const targetNumber = ac - effectiveBonus;
-  const neededPerHit = attacksNeededPerHit(targetNumber);
+  const rawBonus = parseFloat(document.getElementById('mobBonusInput').value);
+  const bonus = isNaN(rawBonus) ? 0 : rawBonus;
+  const targetNumber = ac - bonus;
 
-  const hits = Math.floor(attacks / neededPerHit);
-  const wasted = attacks % neededPerHit;
+  const advChecked = document.getElementById('mobAdvCheck').checked;
+  const disChecked = document.getElementById('mobDisCheck').checked;
+  const mode = advChecked ? 'advantage' : (disChecked ? 'disadvantage' : 'normal');
 
-  resultEl.innerHTML = `<strong>${hits}</strong> automatic hits &nbsp;/&nbsp; <strong>${wasted}</strong> attacks wasted`;
+  const chance = mobHitChance(targetNumber, mode);
+  const expected = chance * attacks;
+  const hits = Math.floor(expected);
+
+  resultEl.innerHTML = `<strong>${hits}</strong> automatic hits out of ${attacks} &nbsp;(expected ${expected.toFixed(1)})`;
 }
 
 // Makes sure advantage and disadvantage can't both be checked at once.
@@ -642,7 +706,8 @@ function handleMobAdvDisChange(justChecked) {
 // hits math above: instead of adjusting the bonus by +5/-5, each
 // attack rolls 2d20 and keeps only one of them — the higher die on
 // Advantage, the lower die on Disadvantage. The plain attack bonus
-// (no +5/-5) is then added to whichever die was kept.
+// (no +5/-5) is then added to whichever die was kept. (Left exactly
+// as it was — this real 2d20 mechanic hasn't changed between editions.)
 function rollMobAttacks() {
   const resultEl = document.getElementById('mobRollResult');
 
@@ -817,9 +882,18 @@ function randomizeAttitude() {
 }
 
 // ---- JUMP CALCULATOR ----
-// Based on the long jump / high jump rules in the 5th Edition Player's
-// Handbook, plus a handful of optional class/feat/item modifiers that
-// change how far or how high a creature can jump.
+// Based on the long jump / high jump rules, which are identical in the
+// 2014 and 2024 Player's Handbooks: your Strength score is your long
+// jump distance (with a running start), and 3 + your Strength modifier
+// is your high jump height (with a running start) — half either
+// without a running start. The modifier checkboxes below (feats,
+// subclass features, spell, magic item) are also all confirmed
+// unchanged between the two editions, with one exception: Second-Story
+// Work. The 2014 PHB only adds your Dexterity modifier to a running
+// jump; the 2024 PHB instead lets you calculate your jump using
+// Dexterity in place of Strength entirely — which is what the
+// "whichever is higher" logic below already does, so no change was
+// needed there for this update.
 
 // Reads the height fields and returns the total height in decimal feet
 // (e.g. 5 feet 6 inches becomes 5.5).
@@ -877,7 +951,7 @@ function computeJump() {
   const strMod = Math.floor((strScore - 10) / 2);
   const dexMod = Math.floor((dexScore - 10) / 2);
 
-  const tiger = document.getElementById('jumpTiger').checked;     // Barbarian Totem: Tiger
+  const tiger = document.getElementById('jumpTiger').checked;     // Barbarian Totem: Tiger (while raging)
   const champion = document.getElementById('jumpChampion').checked; // Fighter Champion: Remarkable Athlete
   const monk = document.getElementById('jumpMonk').checked;       // Monk: Step of the Wind
   const rogue = document.getElementById('jumpRogue').checked;     // Rogue Thief: Second-Story Work
@@ -885,9 +959,9 @@ function computeJump() {
   const feat = document.getElementById('jumpFeat').checked;       // Feat: Athlete
   const boots = document.getElementById('jumpBoots').checked;     // Boots of Striding and Springing
 
-  // Second-Story Work lets you calculate your jump distance using
-  // Dexterity instead of Strength — using whichever of the two scores
-  // is actually higher (ties default to Strength).
+  // Second-Story Work (2024): calculate jump distance using Dexterity
+  // instead of Strength, using whichever of the two scores is higher
+  // (ties default to Strength).
   let baseScore = strScore;
   let baseMod = strMod;
   if (rogue && dexScore > strScore) {
@@ -898,14 +972,14 @@ function computeJump() {
   // --- Long jump ---
   let runningLong = baseScore;
   if (champion) runningLong += strMod; // Remarkable Athlete only boosts the running long jump
-  if (tiger) runningLong += 10;        // Totem Spirit: Tiger adds a flat 10 feet
+  if (tiger) runningLong += 10;        // Totem Spirit: Tiger adds a flat 10 feet (while raging)
 
   let standingLong = baseScore / 2;
   if (tiger) standingLong += 10;       // ...to both running and standing long jumps
 
   // --- High jump ---
   let runningHigh = Math.max(0, 3 + baseMod);
-  if (tiger) runningHigh += 3;         // Totem Spirit: Tiger adds a flat 3 feet
+  if (tiger) runningHigh += 3;         // Totem Spirit: Tiger adds a flat 3 feet (while raging)
 
   let standingHigh = Math.max(0, 3 + baseMod) / 2;
   if (tiger) standingHigh += 3;        // ...to both running and standing high jumps
@@ -918,7 +992,8 @@ function computeJump() {
   standingHigh *= multiplier;
 
   // --- Reach while jumping: standing reach (based on height) + how
-  //     high you jump ---
+  //     high you jump. Not an official rule in either edition — see
+  //     the note under the Jumping dropdown. ---
   const heightFeet = getJumpHeightFeetDecimal();
   const standingReach = Math.round(heightFeet * 1.3);
 
@@ -934,7 +1009,8 @@ function computeJump() {
   document.getElementById('standReach').textContent = formatJumpNumber(Math.max(0, standReachVal));
 
   // The Athlete feat shortens the running start needed from 10 feet
-  // to 5 feet — it does not change how far or high you actually jump.
+  // to 5 feet — unchanged between 2014 and 2024 — and does not change
+  // how far or high you actually jump.
   document.getElementById('runningStartFeet').textContent = feat ? '5' : '10';
 }
 
@@ -959,10 +1035,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!name || isNaN(ini)) return;
 
-    await addOrReplaceCombatant(name, ini);
-    nameInput.value = '';
-    iniInput.value = '';
-    nameInput.focus();
+    const wasAdded = await addOrReplaceCombatant(name, ini);
+    if (wasAdded) {
+      nameInput.value = '';
+      iniInput.value = '';
+      nameInput.focus();
+    }
     render();
   });
 
@@ -1060,7 +1138,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Dice roller: clear button
   document.getElementById('diceClearBtn').addEventListener('click', clearDiceRoller);
 
-  // Mob attack calculator: recalculate automatic hits/wasted whenever
+  // Mob attack calculator: recalculate automatic hits whenever
   // attacks, bonus, or AC change
   document.getElementById('mobAttacksInput').addEventListener('input', updateMobAutoResult);
   document.getElementById('mobBonusInput').addEventListener('input', updateMobAutoResult);
