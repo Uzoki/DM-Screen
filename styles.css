@@ -191,6 +191,7 @@ b {
 
 input[type="text"],
 input[type="number"],
+select,
 textarea {
     background: var(--surface-2);
     border: 1px solid var(--border);
@@ -199,6 +200,12 @@ textarea {
     padding: 6px 9px;
     font-family: var(--font-body);
     font-size: 0.82rem;
+}
+
+select {
+    width: 100%;
+    margin-bottom: 8px;
+    cursor: pointer;
 }
 
 #nameInput {
@@ -220,6 +227,7 @@ textarea {
 }
 
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible,
 button:focus-visible {
     outline: 2px solid var(--gold-bright);
@@ -801,6 +809,24 @@ details.condition-dropdown[open] summary::before {
 
 .condition-body h5:first-child {
     margin-top: 6px;
+}
+
+/* Brief highlight flash used when a condition cross-reference link
+   (e.g. "Incapacitated" mentioned inside Stunned) opens and scrolls
+   to that condition's own dropdown, so it's easy to spot. */
+@keyframes reference-flash {
+    0% {
+        background: rgba(230, 194, 80, 0.4);
+        box-shadow: 0 0 0 2px var(--gold-bright);
+    }
+    100% {
+        background: transparent;
+        box-shadow: none;
+    }
+}
+
+.reference-flash {
+    animation: reference-flash 1.5s ease-out;
 }
 
 /* ===== JUMP CALCULATOR ===== */

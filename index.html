@@ -60,6 +60,7 @@
 
           <div class="controls-panel">
             <button id="swapBtn" class="btn-primary hidden" type="button">Swap</button>
+            <button id="undoBtn" class="btn-secondary" type="button">Undo</button>
             <button id="copyBtn" class="btn-secondary">Copy list</button>
             <button id="clearBtn" class="btn-danger">Clear list</button>
           </div>
@@ -155,7 +156,7 @@
               <div class="dropdown-body">
                 <p><strong>Half Cover</strong> = +2 AC and DEX save</p>
                 <p><strong>Three-Quarters Cover</strong> = +5 AC and DEX save</p>
-                <p><strong>Total Cover</strong> = can't be targeted directly</p>
+                <p><strong>Total Cover</strong> = Can't be targeted directly</p>
               </div>
             </details>
 
@@ -163,7 +164,7 @@
               <summary>Obscured</summary>
               <div class="dropdown-body">
                 <p><strong>Lightly Obscured</strong> = Disadvantage on WIS (Perception) checks that rely on sight</p>
-                <p><strong>Heavily Obscured</strong> = You have the Blinded condition while trying to see something in the area</p>
+                <p><strong>Heavily Obscured</strong> = You have the <a href="#" class="condition-ref" data-condition="condition-blinded">Blinded</a> condition while trying to see something in the area</p>
               </div>
             </details>
 
@@ -173,7 +174,7 @@
 
                 <div class="condition-list">
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-blinded">
                     <summary>Blinded</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
@@ -189,7 +190,7 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-charmed">
                     <summary>Charmed</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
@@ -205,7 +206,7 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-deafened">
                     <summary>Deafened</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
@@ -219,7 +220,7 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-exhaustion">
                     <summary>Exhaustion</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
@@ -245,7 +246,7 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-frightened">
                     <summary>Frightened</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
@@ -261,7 +262,7 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-grappled">
                     <summary>Grappled</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
@@ -273,13 +274,13 @@
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
                         <li>A grappled creature's <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">speed</a> becomes 0, and it can't benefit from any bonus to its speed.</li>
-                        <li>The condition ends if the grappler is <a href="https://roll20.net/compendium/dnd5e/Rules:Conditions?expansion=34047#toc_6" target="_blank" rel="noopener">incapacitated</a> (see the condition).</li>
+                        <li>The condition ends if the grappler is <a href="#" class="condition-ref" data-condition="condition-incapacitated">incapacitated</a> (see the condition).</li>
                         <li>The condition also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the <a href="https://roll20.net/compendium/dnd5e/Thunderwave?expansion=34047#content" target="_blank" rel="noopener">thunderwave</a> spell.</li>
                       </ul>
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-incapacitated">
                     <summary>Incapacitated</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
@@ -296,7 +297,7 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-invisible">
                     <summary>Invisible</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
@@ -313,12 +314,12 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-paralyzed">
                     <summary>Paralyzed</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You have the Incapacitated condition.</li>
+                        <li>You have the <a href="#" class="condition-ref" data-condition="condition-incapacitated">Incapacitated</a> condition.</li>
                         <li>Your <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">Speed</a> is 0 and can't increase.</li>
                         <li>You automatically fail <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
                         <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a>.</li>
@@ -326,7 +327,7 @@
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A paralyzed creature is <a href="https://roll20.net/compendium/dnd5e/Rules:Conditions?expansion=34047#toc_6" target="_blank" rel="noopener">incapacitated</a> (see the condition) and can't move or speak.</li>
+                        <li>A paralyzed creature is <a href="#" class="condition-ref" data-condition="condition-incapacitated">incapacitated</a> (see the condition) and can't move or speak.</li>
                         <li>The creature automatically fails <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
                         <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against the creature have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a>.</li>
                         <li>Any <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_21" target="_blank" rel="noopener">attack</a> that hits the creature is a <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_49" target="_blank" rel="noopener">critical hit</a> if the attacker is within 5 feet of the creature.</li>
@@ -334,23 +335,23 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-petrified">
                     <summary>Petrified</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
                         <li>You're transformed, along with any nonmagical objects you're wearing and carrying, into a solid inanimate substance (usually stone). Your weight increases by a factor of ten, and you cease aging.</li>
-                        <li>You have the Incapacitated condition.</li>
+                        <li>You have the <a href="#" class="condition-ref" data-condition="condition-incapacitated">Incapacitated</a> condition.</li>
                         <li>Your <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">Speed</a> is 0 and can't increase.</li>
                         <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a>.</li>
                         <li>You automatically fail <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
                         <li>You have <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_51" target="_blank" rel="noopener">Resistance</a> to all <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_46" target="_blank" rel="noopener">damage</a>.</li>
-                        <li>You have Immunity to the Poisoned condition (note: as of 2024 you are <strong>no longer</strong> immune to disease while petrified).</li>
+                        <li>You have Immunity to the <a href="#" class="condition-ref" data-condition="condition-poisoned">Poisoned</a> condition (note: as of 2024 you are <strong>no longer</strong> immune to disease while petrified).</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
                         <li>A petrified creature is transformed, along with any nonmagical object it is wearing or carrying, into a solid inanimate substance (usually stone). Its weight increases by a factor of ten, and it ceases aging.</li>
-                        <li>The creature is <a href="https://roll20.net/compendium/dnd5e/Rules:Conditions?expansion=34047#toc_6" target="_blank" rel="noopener">incapacitated</a> (see the condition), can't move or speak, and is unaware of its surroundings.</li>
+                        <li>The creature is <a href="#" class="condition-ref" data-condition="condition-incapacitated">incapacitated</a> (see the condition), can't move or speak, and is unaware of its surroundings.</li>
                         <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against the creature have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a>.</li>
                         <li>The creature automatically fails <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
                         <li>The creature has <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_51" target="_blank" rel="noopener">resistance</a> to all <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_46" target="_blank" rel="noopener">damage</a>.</li>
@@ -359,7 +360,7 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-poisoned">
                     <summary>Poisoned</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
@@ -373,7 +374,7 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-prone">
                     <summary>Prone</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
@@ -390,7 +391,7 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-restrained">
                     <summary>Restrained</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
@@ -408,30 +409,30 @@
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-stunned">
                     <summary>Stunned</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You have the Incapacitated condition.</li>
+                        <li>You have the <a href="#" class="condition-ref" data-condition="condition-incapacitated">Incapacitated</a> condition.</li>
                         <li>You automatically fail <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
                         <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a>.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A stunned creature is <a href="https://roll20.net/compendium/dnd5e/Rules:Conditions?expansion=34047#toc_6" target="_blank" rel="noopener">incapacitated</a> (see the condition), can't <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_9" target="_blank" rel="noopener">move</a>, and can speak only falteringly.</li>
+                        <li>A stunned creature is <a href="#" class="condition-ref" data-condition="condition-incapacitated">incapacitated</a> (see the condition), can't <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_9" target="_blank" rel="noopener">move</a>, and can speak only falteringly.</li>
                         <li>The creature automatically fails <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
                         <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against the creature have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a>.</li>
                       </ul>
                     </div>
                   </details>
 
-                  <details class="condition-dropdown">
+                  <details class="condition-dropdown" id="condition-unconscious">
                     <summary>Unconscious</summary>
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You have the Incapacitated and Prone conditions, and you drop whatever you're holding. When this condition ends, you remain Prone.</li>
+                        <li>You have the <a href="#" class="condition-ref" data-condition="condition-incapacitated">Incapacitated</a> and <a href="#" class="condition-ref" data-condition="condition-prone">Prone</a> conditions, and you drop whatever you're holding. When this condition ends, you remain <a href="#" class="condition-ref" data-condition="condition-prone">Prone</a>.</li>
                         <li>Your <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">Speed</a> is 0 and can't increase.</li>
                         <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a>.</li>
                         <li>You automatically fail <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
@@ -440,8 +441,8 @@
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>An unconscious creature is <a href="https://roll20.net/compendium/dnd5e/Rules:Conditions?expansion=34047#toc_6" target="_blank" rel="noopener">incapacitated</a>, can't <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_9" target="_blank" rel="noopener">move</a> or speak, and is unaware of its surroundings.</li>
-                        <li>The creature drops whatever it's holding and falls <a href="https://roll20.net/compendium/dnd5e/Rules:Conditions?expansion=34047#toc_11" target="_blank" rel="noopener">prone</a>.</li>
+                        <li>An unconscious creature is <a href="#" class="condition-ref" data-condition="condition-incapacitated">incapacitated</a>, can't <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_9" target="_blank" rel="noopener">move</a> or speak, and is unaware of its surroundings.</li>
+                        <li>The creature drops whatever it's holding and falls <a href="#" class="condition-ref" data-condition="condition-prone">prone</a>.</li>
                         <li>The creature automatically fails <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
                         <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against the creature have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a>.</li>
                         <li>Any <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_21" target="_blank" rel="noopener">attack</a> that hits the creature is a <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_49" target="_blank" rel="noopener">critical hit</a> if the attacker is within 5 feet of the creature.</li>
@@ -500,7 +501,6 @@
                     <p>If there are obstacles in the way, you might need to make a <strong>DC10 Strength (Athletics)</strong> check to jump over them. You cannot jump over any obstacle taller than your high jump.</p>
                     <p>If you land in difficult terrain, you might need to make a <strong>DC10 Dexterity (Acrobatics)</strong> check or land prone.</p>
                     <p>You cannot jump farther than your remaining movement — you might need to Dash to cover long distances. Your DM might allow you to push beyond your limits with a <strong>Strength (Athletics)</strong> check.</p>
-                    <p style="margin-top:8px; font-size:0.72rem; color:var(--text-muted);">"Reach" isn't an official rule in either edition — it's an estimate (standing reach plus jump height), not something you'll find printed in either PHB.</p>
                   </div>
                 </div>
 
@@ -562,6 +562,12 @@
 
                   <div class="npc-box">
                     <h4>Monster Reactions</h4>
+                    <select id="monsterReactionAttitude">
+                      <option value="">Random</option>
+                      <option value="friendly">Friendly</option>
+                      <option value="uncertain">Uncertain</option>
+                      <option value="hostile">Hostile</option>
+                    </select>
                     <button id="monsterReactionBtn" class="btn-secondary" type="button">Roll Monster Reaction</button>
                     <div id="monsterReactionResult" class="npc-result"></div>
                   </div>
@@ -569,6 +575,16 @@
                 </div>
 
               </div>
+            </details>
+
+            <details class="dropdown" id="dropRulesGlossary">
+              <summary>Rules Glossary</summary>
+              <div class="dropdown-body"></div>
+            </details>
+
+            <details class="dropdown" id="dropLore">
+              <summary>Lore</summary>
+              <div class="dropdown-body"></div>
             </details>
 
           </div>

@@ -14,8 +14,30 @@ let combatants = [];        // list of { id, name, initiative, isHidden }
 let round = 1;               // current round number, controlled by the +/- buttons
 let idCounter = 0;           // used to give each combatant a unique id
 let selectedIds = new Set(); // ids of the combatant(s) currently highlighted for swapping
+let undoStack = [];          // snapshots of "combatants" taken right before each change
 
 const STORAGE_KEY = 'dmScreenInitiativeState';
+const UNDO_LIMIT = 50; // how many past states the Undo button can step back through
+
+// Call this right before any change to the "combatants" list, so the
+// Undo button can restore exactly how things looked beforehand.
+function pushUndoSnapshot() {
+  undoStack.push(JSON.parse(JSON.stringify(combatants)));
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+}
+
+// Steps the initiative list back one change. Round number and
+// selections aren't part of this — just the list of combatants.
+function undoLast() {
+  if (undoStack.length === 0) {
+    showToast('Nothing to undo');
+    return;
+  }
+  combatants = undoStack.pop();
+  selectedIds = new Set();
+  render();
+  showToast('Undid last change');
+}
 
 // Small inline icons used for the show/hide (eye) button — no image
 // files needed, just plain SVG shapes.
@@ -119,7 +141,7 @@ async function confirmRemove(id) {
   if (!combatant) return;
 
   const choice = await showModal(
-    'Remove ' + combatant.name + '? This cannot be undone.',
+    'Remove ' + combatant.name + '?',
     [
       { label: 'Remove', value: 'remove', className: 'btn-danger' },
       { label: 'Cancel', value: 'cancel', className: 'btn-secondary' }
@@ -127,6 +149,7 @@ async function confirmRemove(id) {
   );
 
   if (choice === 'remove') {
+    pushUndoSnapshot();
     combatants = combatants.filter((c) => c.id !== id);
     render();
   }
@@ -135,13 +158,15 @@ async function confirmRemove(id) {
 function toggleVisibility(id) {
   const combatant = combatants.find((c) => c.id === id);
   if (!combatant) return;
+  pushUndoSnapshot();
   combatant.isHidden = !combatant.isHidden;
   render();
 }
 
 function clearAll() {
-  const confirmed = confirm('Clear the entire initiative list? This cannot be undone.');
+  const confirmed = confirm('Clear the entire initiative list?');
   if (!confirmed) return;
+  pushUndoSnapshot();
   combatants = [];
   selectedIds = new Set();
   render();
@@ -219,6 +244,7 @@ function swapSelected() {
   const second = combatants.find((c) => c.id === ids[1]);
   if (!first || !second) return;
 
+  pushUndoSnapshot();
   const temp = first.initiative;
   first.initiative = second.initiative;
   second.initiative = temp;
@@ -247,6 +273,7 @@ function moveTieUp(id) {
   if (idx <= 0) return;
   const neighbor = sorted[idx - 1];
   if (neighbor.initiative !== sorted[idx].initiative) return;
+  pushUndoSnapshot();
   swapArrayPositions(id, neighbor.id);
   render();
 }
@@ -257,35 +284,48 @@ function moveTieDown(id) {
   if (idx === -1 || idx >= sorted.length - 1) return;
   const neighbor = sorted[idx + 1];
   if (neighbor.initiative !== sorted[idx].initiative) return;
+  pushUndoSnapshot();
   swapArrayPositions(id, neighbor.id);
   render();
 }
 
 // Called when you click away from (or press Enter in) a name field.
 // If the new name matches another combatant already in the list, the
-// rename still goes through (duplicate names aren't blocked) but a
-// warning pop-up lets you know, in case it was a typo.
+// rename still goes through right away (duplicate names aren't
+// blocked) but a pop-up then asks whether to keep the new name or go
+// back to what it was called before.
 async function commitNameEdit(input) {
   const combatant = combatants.find((c) => c.id === input.dataset.id);
   if (!combatant) return;
 
+  const originalName = combatant.name;
   const newName = input.value.trim();
-  let duplicate = null;
-
-  if (newName) {
-    combatant.name = newName;
-    duplicate = combatants.find(
-      (c) => c.id !== combatant.id && c.name.toLowerCase() === newName.toLowerCase()
-    );
+  if (!newName || newName === originalName) {
+    render();
+    return;
   }
+
+  pushUndoSnapshot();
+  combatant.name = newName;
+  const duplicate = combatants.find(
+    (c) => c.id !== combatant.id && c.name.toLowerCase() === newName.toLowerCase()
+  );
 
   render();
 
   if (duplicate) {
-    await showModal(
-      'Heads up — "' + duplicate.name + '" is already the name of another combatant in the list.',
-      [{ label: 'OK', value: 'ok', className: 'btn-primary' }]
+    const choice = await showModal(
+      '"' + newName + '" is already the name of another combatant (' + duplicate.name + '). Keep the new name, or go back to "' + originalName + '"?',
+      [
+        { label: 'Keep "' + newName + '"', value: 'keep', className: 'btn-primary' },
+        { label: 'Go back to "' + originalName + '"', value: 'revert', className: 'btn-secondary' }
+      ]
     );
+
+    if (choice === 'revert') {
+      combatant.name = originalName;
+      render();
+    }
   }
 }
 
@@ -294,7 +334,10 @@ function commitIniEdit(input) {
   const combatant = combatants.find((c) => c.id === input.dataset.id);
   if (!combatant) return;
   const newIni = parseFloat(input.value);
-  if (!isNaN(newIni)) combatant.initiative = newIni;
+  if (!isNaN(newIni) && newIni !== combatant.initiative) {
+    pushUndoSnapshot();
+    combatant.initiative = newIni;
+  }
   render();
 }
 
@@ -348,6 +391,7 @@ async function addOrReplaceCombatant(name, initiative) {
   const existing = combatants.find((c) => c.name.toLowerCase() === name.toLowerCase());
 
   if (!existing) {
+    pushUndoSnapshot();
     combatants.push(makeCombatant(name, initiative));
     return true;
   }
@@ -365,6 +409,7 @@ async function addOrReplaceCombatant(name, initiative) {
   );
 
   if (choice === 'replace') {
+    pushUndoSnapshot();
     existing.initiative = initiative;
     return true;
   }
@@ -633,11 +678,19 @@ function clearDiceRoller() {
 // higher/lower result) instead of the old flat +-5 approximation.
 //
 // Heads-up: I confirmed the general approach (probability x mob size)
-// against a worked example, but couldn't 100% confirm whether the book
-// rounds the final number up or down. The general 2024 rule is to
-// round DOWN on fractions, so that's what this uses — the exact
-// "expected hits" number is also shown so you can round it yourself
-// at the table if your copy of the DMG says otherwise.
+// against a worked example, but couldn't 100% confirm the book's exact
+// rounding rule against every case. This rounds to the nearest whole
+// number, and rounds exactly-.5 ties down — the exact "expected hits"
+// number is also shown so you can round it yourself at the table if
+// your copy of the DMG handles it differently.
+
+// Rounds to the nearest whole number, except an exact .5 rounds down
+// instead of up (unlike Math.round, which always rounds .5 up).
+function roundHitsToNearest(value) {
+  const floor = Math.floor(value);
+  const fraction = value - floor;
+  return fraction > 0.5 ? floor + 1 : floor;
+}
 
 // Chance that a single attack with the given "roll needed" number
 // hits, accounting for the fact that a natural 1 always misses and a
@@ -682,7 +735,7 @@ function updateMobAutoResult() {
 
   const chance = mobHitChance(targetNumber, mode);
   const expected = chance * attacks;
-  const hits = Math.floor(expected);
+  const hits = roundHitsToNearest(expected);
 
   resultEl.innerHTML = `<strong>${hits}</strong> automatic hits out of ${attacks} &nbsp;(expected ${expected.toFixed(1)})`;
 }
@@ -790,7 +843,7 @@ function clearMobCalculator() {
 
 // ---- REFERENCE DROPDOWNS (remember open/closed state for this browser session) ----
 
-const DROPDOWN_IDS = ['dropSkills', 'dropCreatureTypes', 'dropCover', 'dropObscured', 'dropConditions', 'dropJumping', 'dropNpcReactions'];
+const DROPDOWN_IDS = ['dropSkills', 'dropCreatureTypes', 'dropCover', 'dropObscured', 'dropConditions', 'dropJumping', 'dropNpcReactions', 'dropRulesGlossary', 'dropLore'];
 
 function initDropdownPersistence() {
   DROPDOWN_IDS.forEach((id) => {
@@ -808,6 +861,33 @@ function initDropdownPersistence() {
   });
 }
 
+// ---- CONDITION CROSS-REFERENCES ----
+// Whenever one condition's text mentions another condition by name
+// (e.g. Stunned mentioning "Incapacitated", or Heavily Obscured
+// mentioning "Blinded"), that word is a clickable link. Clicking it
+// opens the main Conditions dropdown plus that specific condition's
+// own dropdown, scrolls it into view, and briefly flashes it gold so
+// it's easy to spot.
+function openConditionReference(conditionId) {
+  const mainDropdown = document.getElementById('dropConditions');
+  if (mainDropdown) {
+    mainDropdown.open = true;
+    sessionStorage.setItem('dropdown_dropConditions', 'true');
+  }
+
+  const target = document.getElementById(conditionId);
+  if (!target) return;
+  target.open = true;
+
+  // Give the browser a moment to lay out the newly opened content
+  // before scrolling, so it lands in the right place.
+  requestAnimationFrame(() => {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('reference-flash');
+    setTimeout(() => target.classList.remove('reference-flash'), 1500);
+  });
+}
+
 // ---- NPC REACTIONS ----
 
 // Rolls 2d6 and returns the sum.
@@ -817,8 +897,25 @@ function roll2d6() {
 
 // Rolls the full monster-reaction chain and returns the finished
 // result string, using an arrow (→) between each step.
-function rollMonsterReactionResult() {
-  const first = roll2d6();
+//
+// startingAttitude lets the DM pin down the FIRST roll instead of
+// leaving it random: 'hostile' forces a roll in the 3-5 range,
+// 'uncertain' forces 6-8, 'friendly' forces 9-11 — matching the three
+// middle bands of the normal 2d6 table. Leaving it unset (or any other
+// value) rolls the first 2d6 completely at random as before, which
+// also leaves the two extreme results (Immediate Attack / Immediate
+// Friendly) in play.
+function rollMonsterReactionResult(startingAttitude) {
+  let first;
+  if (startingAttitude === 'hostile') {
+    first = 3 + Math.floor(Math.random() * 3); // 3, 4, or 5
+  } else if (startingAttitude === 'uncertain') {
+    first = 6 + Math.floor(Math.random() * 3); // 6, 7, or 8
+  } else if (startingAttitude === 'friendly') {
+    first = 9 + Math.floor(Math.random() * 3); // 9, 10, or 11
+  } else {
+    first = roll2d6();
+  }
 
   if (first === 2) return 'Immediate Attack';
   if (first === 12) return 'Immediate Friendly';
@@ -869,7 +966,9 @@ function rollMonsterReactionResult() {
 }
 
 function rollMonsterReaction() {
-  const result = rollMonsterReactionResult();
+  const select = document.getElementById('monsterReactionAttitude');
+  const startingAttitude = select ? select.value : '';
+  const result = rollMonsterReactionResult(startingAttitude);
   document.getElementById('monsterReactionResult').textContent = result;
 }
 
@@ -1114,8 +1213,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Bottom control bar
   document.getElementById('swapBtn').addEventListener('click', swapSelected);
+  document.getElementById('undoBtn').addEventListener('click', undoLast);
   document.getElementById('copyBtn').addEventListener('click', copyList);
   document.getElementById('clearBtn').addEventListener('click', clearAll);
+
+  // Reference pane: clicking a condition name (e.g. "Incapacitated"
+  // inside Stunned, or "Blinded" inside Heavily Obscured) opens the
+  // Conditions dropdown and that specific condition, then scrolls to it.
+  document.querySelector('.lookup-panel').addEventListener('click', (e) => {
+    const ref = e.target.closest('.condition-ref');
+    if (!ref) return;
+    e.preventDefault();
+    openConditionReference(ref.dataset.condition);
+  });
 
   // Dice roller: +/- buttons for the dice count field
   document.getElementById('diceCountUp').addEventListener('click', () => {
