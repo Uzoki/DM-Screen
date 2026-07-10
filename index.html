@@ -18,13 +18,52 @@
   <div class="app">
     <header class="app-header">
       <h1>DM Screen</h1>
-      <div class="round-control">
-        <button id="roundDown" class="round-btn" type="button" aria-label="Decrease round">−</button>
-        <div class="round-badge">
-          <span class="round-label">Round</span>
-          <span id="roundNumber">1</span>
+
+      <div class="header-controls">
+
+        <div class="round-control">
+          <button id="roundDown" class="round-btn" type="button" aria-label="Decrease round">−</button>
+          <div class="round-badge">
+            <span class="round-label">Round</span>
+            <span id="roundNumber">1</span>
+          </div>
+          <button id="roundUp" class="round-btn" type="button" aria-label="Increase round">+</button>
         </div>
-        <button id="roundUp" class="round-btn" type="button" aria-label="Increase round">+</button>
+
+        <div class="time-control">
+
+          <div class="time-field">
+            <label for="startTimeInput">Starting time</label>
+            <input type="text" id="startTimeInput" class="time-text-input" value="8:00 AM" />
+          </div>
+
+          <div class="time-field">
+            <label>Duration adventured</label>
+            <div class="duration-control">
+              <div class="duration-unit">
+                <button id="durHoursDown" class="round-btn" type="button" aria-label="Decrease hours">−</button>
+                <input type="number" id="durHoursInput" class="duration-input" value="0" />
+                <button id="durHoursUp" class="round-btn" type="button" aria-label="Increase hours">+</button>
+              </div>
+              <span class="duration-sep">h</span>
+              <div class="duration-unit">
+                <button id="durMinutesDown" class="round-btn" type="button" aria-label="Decrease minutes">−</button>
+                <input type="number" id="durMinutesInput" class="duration-input" value="0" />
+                <button id="durMinutesUp" class="round-btn" type="button" aria-label="Increase minutes">+</button>
+              </div>
+              <span class="duration-sep">m</span>
+            </div>
+          </div>
+
+          <div class="time-field">
+            <label for="currentTimeInput">Current time</label>
+            <input type="text" id="currentTimeInput" class="time-text-input" value="8:00 AM" />
+          </div>
+
+          <button id="resetTimeBtn" class="btn-secondary time-reset-btn" type="button">Reset time</button>
+
+        </div>
+
       </div>
     </header>
 
@@ -133,11 +172,11 @@
             <details class="dropdown" id="dropSkills" open>
               <summary>Skills by Ability</summary>
               <div class="dropdown-body">
-                <p><strong>Strength:</strong> Athletics</p>
-                <p><strong>Dexterity:</strong> Acrobatics, Sleight of Hand, Stealth</p>
-                <p><strong>Intelligence:</strong> Arcana, History, Investigation, Nature, Religion</p>
-                <p><strong>Wisdom:</strong> Animal Handling, Insight, Medicine, Perception, Survival</p>
-                <p><strong>Charisma:</strong> Deception, Intimidation, Performance, Persuasion</p>
+                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-ability-score">Strength</a>:</strong> Athletics</p>
+                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a>:</strong> Acrobatics, Sleight of Hand, Stealth</p>
+                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-ability-score">Intelligence</a>:</strong> Arcana, History, Investigation, Nature, Religion</p>
+                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-ability-score">Wisdom</a>:</strong> Animal Handling, Insight, Medicine, Perception, Survival</p>
+                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-ability-score">Charisma</a>:</strong> Deception, Intimidation, Performance, Persuasion</p>
               </div>
             </details>
 
@@ -154,8 +193,8 @@
             <details class="dropdown" id="dropCover" open>
               <summary>Cover</summary>
               <div class="dropdown-body">
-                <p><strong>Half Cover</strong> = +2 AC and DEX save</p>
-                <p><strong>Three-Quarters Cover</strong> = +5 AC and DEX save</p>
+                <p><strong>Half Cover</strong> = +2 <a href="#" class="gloss-ref" data-ref="glossary-armor-class">AC</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">Saving Throw</a></p>
+                <p><strong>Three-Quarters Cover</strong> = +5 <a href="#" class="gloss-ref" data-ref="glossary-armor-class">AC</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">Saving Throw</a></p>
                 <p><strong>Total Cover</strong> = Can't be targeted directly</p>
               </div>
             </details>
@@ -163,8 +202,8 @@
             <details class="dropdown" id="dropObscured" open>
               <summary>Obscured</summary>
               <div class="dropdown-body">
-                <p><strong>Lightly Obscured</strong> = Disadvantage on WIS (Perception) checks that rely on sight</p>
-                <p><strong>Heavily Obscured</strong> = You have the <a href="#" class="condition-ref" data-condition="condition-blinded">Blinded</a> condition while trying to see something in the area</p>
+                <p><strong>Lightly Obscured</strong> = Disadvantage on <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Wisdom</a> (Perception) <a href="#" class="gloss-ref" data-ref="glossary-ability-check">checks</a> that rely on sight</p>
+                <p><strong>Heavily Obscured</strong> = You have the <a href="#" class="gloss-ref" data-ref="condition-blinded">Blinded</a> condition while trying to see something in the area</p>
               </div>
             </details>
 
@@ -179,13 +218,13 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You can't see and automatically fail any <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_4" target="_blank" rel="noopener">ability check</a> that requires sight.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a>, and your attack rolls have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Disadvantage</a>.</li>
+                        <li>You can't see and automatically fail any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> that requires sight.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>, and your attack rolls have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a>.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A blinded creature can't see and automatically fails any <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_4" target="_blank" rel="noopener">ability check</a> that requires sight.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against the creature have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a>, and the creature's attack rolls have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">disadvantage</a>.</li>
+                        <li>A blinded creature can't see and automatically fails any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> that requires sight.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>, and the creature's attack rolls have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a>.</li>
                       </ul>
                     </div>
                   </details>
@@ -195,13 +234,13 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You can't <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_21" target="_blank" rel="noopener">attack</a> the charmer or target the charmer with damaging abilities or magical effects.</li>
-                        <li>The charmer has <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a> on any <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_4" target="_blank" rel="noopener">ability check</a> to interact with you socially.</li>
+                        <li>You can't <a href="#" class="gloss-ref" data-ref="glossary-attack-action">attack</a> the charmer or target the charmer with damaging abilities or magical effects.</li>
+                        <li>The charmer has <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a> on any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> to interact with you socially.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A charmed creature can't <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_21" target="_blank" rel="noopener">attack</a> the charmer or target the charmer with harmful abilities or magical effects.</li>
-                        <li>The charmer has <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a> on any <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_4" target="_blank" rel="noopener">ability check</a> to interact socially with the creature.</li>
+                        <li>A charmed creature can't <a href="#" class="gloss-ref" data-ref="glossary-attack-action">attack</a> the charmer or target the charmer with harmful abilities or magical effects.</li>
+                        <li>The charmer has <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a> on any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> to interact socially with the creature.</li>
                       </ul>
                     </div>
                   </details>
@@ -211,11 +250,11 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You can't hear and automatically fail any <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_4" target="_blank" rel="noopener">ability check</a> that requires hearing.</li>
+                        <li>You can't hear and automatically fail any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> that requires hearing.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A deafened creature can't hear and automatically fails any <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_4" target="_blank" rel="noopener">ability check</a> that requires hearing.</li>
+                        <li>A deafened creature can't hear and automatically fails any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> that requires hearing.</li>
                       </ul>
                     </div>
                   </details>
@@ -226,17 +265,17 @@
                       <h5>New Rules (2024)</h5>
                       <ul>
                         <li>Exhaustion is cumulative and measured in levels, from 1 to 6.</li>
-                        <li>Each level gives you a cumulative −2 penalty to every <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">d20 roll</a> (ability checks, attack rolls, and saving throws).</li>
-                        <li>Each level also reduces your <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">Speed</a> by 5 feet, cumulative.</li>
+                        <li>Each level gives you a cumulative −2 penalty to every <a href="#" class="gloss-ref" data-ref="glossary-d20-test">d20 roll</a> (ability checks, attack rolls, and saving throws).</li>
+                        <li>Each level also reduces your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> by 5 feet, cumulative.</li>
                         <li>If your Exhaustion level reaches 6, you die.</li>
                         <li>Finishing a long rest removes 1 Exhaustion level.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
                         <li>Exhaustion is cumulative and measured in levels, from 1 to 6, with effects that stack as the level increases.</li>
-                        <li>Level 1: Disadvantage on <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_4" target="_blank" rel="noopener">ability checks</a>.</li>
-                        <li>Level 2: <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">Speed</a> halved.</li>
-                        <li>Level 3: Disadvantage on <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">attack rolls</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
+                        <li>Level 1: <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a>.</li>
+                        <li>Level 2: <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> halved.</li>
+                        <li>Level 3: Disadvantage on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> and <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
                         <li>Level 4: Hit point maximum halved.</li>
                         <li>Level 5: Speed reduced to 0.</li>
                         <li>Level 6: Death.</li>
@@ -251,13 +290,13 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Disadvantage</a> on <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_4" target="_blank" rel="noopener">ability checks</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">attack rolls</a> while the source of fear is within line of sight.</li>
-                        <li>You can't willingly <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_9" target="_blank" rel="noopener">move</a> closer to the source of fear.</li>
+                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a> and <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> while the source of fear is within line of sight.</li>
+                        <li>You can't willingly <a href="#" class="gloss-ref" data-ref="glossary-speed">move</a> closer to the source of fear.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A frightened creature has <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">disadvantage</a> on <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_4" target="_blank" rel="noopener">ability checks</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">attack rolls</a> while the source of its fear is within line of sight.</li>
-                        <li>The creature can't willingly <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_9" target="_blank" rel="noopener">move</a> closer to the source of its fear.</li>
+                        <li>A frightened creature has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a> and <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> while the source of its fear is within line of sight.</li>
+                        <li>The creature can't willingly <a href="#" class="gloss-ref" data-ref="glossary-speed">move</a> closer to the source of its fear.</li>
                       </ul>
                     </div>
                   </details>
@@ -267,15 +306,15 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>Your <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">Speed</a> is 0 and can't increase.</li>
-                        <li>You have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Disadvantage</a> on <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">attack rolls</a> against any target other than the grappler.</li>
+                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> is 0 and can't increase.</li>
+                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> against any target other than the grappler.</li>
                         <li>The grappler can drag or carry you when it moves, but every foot of movement costs it 1 extra foot unless you are Tiny or two or more sizes smaller than it.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A grappled creature's <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">speed</a> becomes 0, and it can't benefit from any bonus to its speed.</li>
-                        <li>The condition ends if the grappler is <a href="#" class="condition-ref" data-condition="condition-incapacitated">incapacitated</a> (see the condition).</li>
-                        <li>The condition also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the <a href="https://roll20.net/compendium/dnd5e/Thunderwave?expansion=34047#content" target="_blank" rel="noopener">thunderwave</a> spell.</li>
+                        <li>A grappled creature's <a href="#" class="gloss-ref" data-ref="glossary-speed">speed</a> becomes 0, and it can't benefit from any bonus to its speed.</li>
+                        <li>The condition ends if the grappler is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">incapacitated</a> (see the condition).</li>
+                        <li>The condition also ends if an effect removes the grappled creature from the reach of the grappler or grappling effect, such as when a creature is hurled away by the thunderwave spell.</li>
                       </ul>
                     </div>
                   </details>
@@ -285,14 +324,14 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You can't take any <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_20" target="_blank" rel="noopener">action</a>, Bonus Action, or <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_8" target="_blank" rel="noopener">Reaction</a>.</li>
-                        <li>Your Concentration is broken.</li>
+                        <li>You can't take any <a href="#" class="gloss-ref" data-ref="glossary-action">action</a>, <a href="#" class="gloss-ref" data-ref="glossary-bonus-action">Bonus Action</a>, or <a href="#" class="gloss-ref" data-ref="glossary-reaction">Reaction</a>.</li>
+                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-concentration">Concentration</a> is broken.</li>
                         <li>You can't speak.</li>
-                        <li>If you're Incapacitated when you roll Initiative, you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Disadvantage</a> on the roll.</li>
+                        <li>If you're Incapacitated when you roll <a href="#" class="gloss-ref" data-ref="glossary-initiative">Initiative</a>, you have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on the roll.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>An incapacitated creature can't take <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_20" target="_blank" rel="noopener">actions</a> or <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_8" target="_blank" rel="noopener">reactions</a>.</li>
+                        <li>An incapacitated creature can't take <a href="#" class="gloss-ref" data-ref="glossary-action">actions</a> or <a href="#" class="gloss-ref" data-ref="glossary-reaction">reactions</a>.</li>
                       </ul>
                     </div>
                   </details>
@@ -302,14 +341,14 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>If you're Invisible when you roll Initiative, you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a> on the roll.</li>
+                        <li>If you're Invisible when you roll <a href="#" class="gloss-ref" data-ref="glossary-initiative">Initiative</a>, you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a> on the roll.</li>
                         <li>You aren't affected by any effect that requires its target to be seen, unless the effect's creator can somehow see you. Any equipment you're wearing or carrying is also concealed.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Disadvantage</a>, and your attack rolls have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a>, unless the attacker can somehow see you.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a>, and your attack rolls have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>, unless the attacker can somehow see you.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>An invisible creature is impossible to see without the aid of magic or a special sense. For the purpose of <a href="https://roll20.net/compendium/dnd5e/Ability%20Scores?expansion=34047#toc_22" target="_blank" rel="noopener">hiding</a>, the creature is heavily obscured. The creature's location can be detected by any noise it makes or any tracks it leaves.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against the creature have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">disadvantage</a>, and the creature's attack rolls have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a>.</li>
+                        <li>An invisible creature is impossible to see without the aid of magic or a special sense. For the purpose of <a href="#" class="gloss-ref" data-ref="glossary-hide">hiding</a>, the creature is heavily obscured. The creature's location can be detected by any noise it makes or any tracks it leaves.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a>, and the creature's attack rolls have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>.</li>
                       </ul>
                     </div>
                   </details>
@@ -319,18 +358,18 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You have the <a href="#" class="condition-ref" data-condition="condition-incapacitated">Incapacitated</a> condition.</li>
-                        <li>Your <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">Speed</a> is 0 and can't increase.</li>
-                        <li>You automatically fail <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a>.</li>
-                        <li>Any attack roll that hits you is a <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_49" target="_blank" rel="noopener">Critical Hit</a> if the attacker is within 5 feet of you.</li>
+                        <li>You have the <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a> condition.</li>
+                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> is 0 and can't increase.</li>
+                        <li>You automatically fail <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>.</li>
+                        <li>Any attack roll that hits you is a <a href="#" class="gloss-ref" data-ref="glossary-critical-hit">Critical Hit</a> if the attacker is within 5 feet of you.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A paralyzed creature is <a href="#" class="condition-ref" data-condition="condition-incapacitated">incapacitated</a> (see the condition) and can't move or speak.</li>
-                        <li>The creature automatically fails <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against the creature have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a>.</li>
-                        <li>Any <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_21" target="_blank" rel="noopener">attack</a> that hits the creature is a <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_49" target="_blank" rel="noopener">critical hit</a> if the attacker is within 5 feet of the creature.</li>
+                        <li>A paralyzed creature is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">incapacitated</a> (see the condition) and can't move or speak.</li>
+                        <li>The creature automatically fails <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>.</li>
+                        <li>Any <a href="#" class="gloss-ref" data-ref="glossary-attack-action">attack</a> that hits the creature is a <a href="#" class="gloss-ref" data-ref="glossary-critical-hit">critical hit</a> if the attacker is within 5 feet of the creature.</li>
                       </ul>
                     </div>
                   </details>
@@ -341,21 +380,21 @@
                       <h5>New Rules (2024)</h5>
                       <ul>
                         <li>You're transformed, along with any nonmagical objects you're wearing and carrying, into a solid inanimate substance (usually stone). Your weight increases by a factor of ten, and you cease aging.</li>
-                        <li>You have the <a href="#" class="condition-ref" data-condition="condition-incapacitated">Incapacitated</a> condition.</li>
-                        <li>Your <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">Speed</a> is 0 and can't increase.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a>.</li>
-                        <li>You automatically fail <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
-                        <li>You have <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_51" target="_blank" rel="noopener">Resistance</a> to all <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_46" target="_blank" rel="noopener">damage</a>.</li>
-                        <li>You have Immunity to the <a href="#" class="condition-ref" data-condition="condition-poisoned">Poisoned</a> condition (note: as of 2024 you are <strong>no longer</strong> immune to disease while petrified).</li>
+                        <li>You have the <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a> condition.</li>
+                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> is 0 and can't increase.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>.</li>
+                        <li>You automatically fail <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
+                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-resistance">Resistance</a> to all <a href="#" class="gloss-ref" data-ref="glossary-damage">damage</a>.</li>
+                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-immunity">Immunity</a> to the <a href="#" class="gloss-ref" data-ref="condition-poisoned">Poisoned</a> condition (note: as of 2024 you are <strong>no longer</strong> immune to disease while petrified).</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
                         <li>A petrified creature is transformed, along with any nonmagical object it is wearing or carrying, into a solid inanimate substance (usually stone). Its weight increases by a factor of ten, and it ceases aging.</li>
-                        <li>The creature is <a href="#" class="condition-ref" data-condition="condition-incapacitated">incapacitated</a> (see the condition), can't move or speak, and is unaware of its surroundings.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against the creature have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a>.</li>
-                        <li>The creature automatically fails <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
-                        <li>The creature has <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_51" target="_blank" rel="noopener">resistance</a> to all <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_46" target="_blank" rel="noopener">damage</a>.</li>
-                        <li>The creature is immune to <a href="https://roll20.net/compendium/dnd5e/Rules:Poisons?expansion=34047#content" target="_blank" rel="noopener">poison</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Diseases?expansion=34047#content" target="_blank" rel="noopener">disease</a>, although a poison or disease already in its system is suspended, not neutralized.</li>
+                        <li>The creature is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">incapacitated</a> (see the condition), can't move or speak, and is unaware of its surroundings.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>.</li>
+                        <li>The creature automatically fails <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
+                        <li>The creature has <a href="#" class="gloss-ref" data-ref="glossary-resistance">resistance</a> to all <a href="#" class="gloss-ref" data-ref="glossary-damage">damage</a>.</li>
+                        <li>The creature is immune to <a href="#" class="gloss-ref" data-ref="glossary-damage-types">poison</a> and disease, although a poison or disease already in its system is suspended, not neutralized.</li>
                       </ul>
                     </div>
                   </details>
@@ -365,11 +404,11 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Disadvantage</a> on <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">attack rolls</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_4" target="_blank" rel="noopener">ability checks</a>.</li>
+                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a>.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A poisoned creature has <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">disadvantage</a> on <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">attack rolls</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_4" target="_blank" rel="noopener">ability checks</a>.</li>
+                        <li>A poisoned creature has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a>.</li>
                       </ul>
                     </div>
                   </details>
@@ -379,14 +418,14 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>Your only movement options are to <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_5" target="_blank" rel="noopener">crawl</a>, or to spend an amount of movement equal to half your <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">Speed</a> (round down) to right yourself and end the condition. If your Speed is 0, you can't right yourself.</li>
-                        <li>You have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Disadvantage</a> on <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">attack rolls</a>. An attack roll against you has <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a> if the attacker is within 5 feet of you. Otherwise, that attack roll has Disadvantage.</li>
+                        <li>Your only movement options are to <a href="#" class="gloss-ref" data-ref="glossary-crawling">crawl</a>, or to spend an amount of movement equal to half your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> (round down) to right yourself and end the condition. If your Speed is 0, you can't right yourself.</li>
+                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a>. An attack roll against you has <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a> if the attacker is within 5 feet of you. Otherwise, that attack roll has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a>.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A prone creature's only movement option is to <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_5" target="_blank" rel="noopener">crawl</a>, unless it stands up and thereby ends the condition.</li>
-                        <li>The creature has <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">disadvantage</a> on <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">attack rolls</a>.</li>
-                        <li>An <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">attack roll</a> against the creature has <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a> if the attacker is within 5 feet of the creature. Otherwise, the attack roll has <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">disadvantage</a>.</li>
+                        <li>A prone creature's only movement option is to <a href="#" class="gloss-ref" data-ref="glossary-crawling">crawl</a>, unless it stands up and thereby ends the condition.</li>
+                        <li>The creature has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a>.</li>
+                        <li>An <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack roll</a> against the creature has <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a> if the attacker is within 5 feet of the creature. Otherwise, the attack roll has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a>.</li>
                       </ul>
                     </div>
                   </details>
@@ -396,15 +435,15 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>Your <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">Speed</a> is 0 and can't increase.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a>, and your attack rolls have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Disadvantage</a>.</li>
-                        <li>You have Disadvantage on <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
+                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> is 0 and can't increase.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>, and your attack rolls have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a>.</li>
+                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A restrained creature's <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">speed</a> becomes 0, and it can't benefit from any bonus to its speed.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against the creature have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a>, and the creature's attack rolls have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">disadvantage</a>.</li>
-                        <li>The creature has <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">disadvantage</a> on <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
+                        <li>A restrained creature's <a href="#" class="gloss-ref" data-ref="glossary-speed">speed</a> becomes 0, and it can't benefit from any bonus to its speed.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>, and the creature's attack rolls have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a>.</li>
+                        <li>The creature has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
                       </ul>
                     </div>
                   </details>
@@ -414,15 +453,15 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You have the <a href="#" class="condition-ref" data-condition="condition-incapacitated">Incapacitated</a> condition.</li>
-                        <li>You automatically fail <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a>.</li>
+                        <li>You have the <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a> condition.</li>
+                        <li>You automatically fail <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>A stunned creature is <a href="#" class="condition-ref" data-condition="condition-incapacitated">incapacitated</a> (see the condition), can't <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_9" target="_blank" rel="noopener">move</a>, and can speak only falteringly.</li>
-                        <li>The creature automatically fails <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against the creature have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a>.</li>
+                        <li>A stunned creature is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">incapacitated</a> (see the condition), can't <a href="#" class="gloss-ref" data-ref="glossary-speed">move</a>, and can speak only falteringly.</li>
+                        <li>The creature automatically fails <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>.</li>
                       </ul>
                     </div>
                   </details>
@@ -432,20 +471,19 @@
                     <div class="condition-body">
                       <h5>New Rules (2024)</h5>
                       <ul>
-                        <li>You have the <a href="#" class="condition-ref" data-condition="condition-incapacitated">Incapacitated</a> and <a href="#" class="condition-ref" data-condition="condition-prone">Prone</a> conditions, and you drop whatever you're holding. When this condition ends, you remain <a href="#" class="condition-ref" data-condition="condition-prone">Prone</a>.</li>
-                        <li>Your <a href="https://roll20.net/compendium/dnd5e/Rules:Movement?expansion=34047#toc_1" target="_blank" rel="noopener">Speed</a> is 0 and can't increase.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against you have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">Advantage</a>.</li>
-                        <li>You automatically fail <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
-                        <li>Any attack roll that hits you is a <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_49" target="_blank" rel="noopener">Critical Hit</a> if the attacker is within 5 feet of you.</li>
+                        <li>You have the <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a> and <a href="#" class="gloss-ref" data-ref="condition-prone">Prone</a> conditions, and you drop whatever you're holding. When this condition ends, you remain <a href="#" class="gloss-ref" data-ref="condition-prone">Prone</a>.</li>
+                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> is 0 and can't increase.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>.</li>
+                        <li>You automatically fail <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
+                        <li>Any attack roll that hits you is a <a href="#" class="gloss-ref" data-ref="glossary-critical-hit">Critical Hit</a> if the attacker is within 5 feet of you.</li>
                         <li>You're unaware of your surroundings.</li>
                       </ul>
                       <h5>Legacy Rules (2014)</h5>
                       <ul>
-                        <li>An unconscious creature is <a href="#" class="condition-ref" data-condition="condition-incapacitated">incapacitated</a>, can't <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_9" target="_blank" rel="noopener">move</a> or speak, and is unaware of its surroundings.</li>
-                        <li>The creature drops whatever it's holding and falls <a href="#" class="condition-ref" data-condition="condition-prone">prone</a>.</li>
-                        <li>The creature automatically fails <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_12" target="_blank" rel="noopener">Strength</a> and <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_17" target="_blank" rel="noopener">Dexterity</a> <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_35" target="_blank" rel="noopener">saving throws</a>.</li>
-                        <li><a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_32" target="_blank" rel="noopener">Attack rolls</a> against the creature have <a href="https://roll20.net/compendium/dnd5e/Rules:Ability%20Scores?expansion=34047#toc_2" target="_blank" rel="noopener">advantage</a>.</li>
-                        <li>Any <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_21" target="_blank" rel="noopener">attack</a> that hits the creature is a <a href="https://roll20.net/compendium/dnd5e/Rules:Combat?expansion=34047#toc_49" target="_blank" rel="noopener">critical hit</a> if the attacker is within 5 feet of the creature.</li>
+                        <li>An unconscious creature is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">incapacitated</a>, can't <a href="#" class="gloss-ref" data-ref="glossary-speed">move</a> or speak, and is unaware of its surroundings.</li>
+                        <li>The creature drops whatever it's holding and falls <a href="#" class="gloss-ref" data-ref="condition-prone">prone</a>.</li>
+                        <li>The creature automatically fails <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
+                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>.</li>
                       </ul>
                     </div>
                   </details>
@@ -498,9 +536,9 @@
                   <p>Reach: <span id="standReach" class="jump-value">0</span> feet off the ground</p>
 
                   <div class="jump-notes">
-                    <p>If there are obstacles in the way, you might need to make a <strong>DC10 Strength (Athletics)</strong> check to jump over them. You cannot jump over any obstacle taller than your high jump.</p>
-                    <p>If you land in difficult terrain, you might need to make a <strong>DC10 Dexterity (Acrobatics)</strong> check or land prone.</p>
-                    <p>You cannot jump farther than your remaining movement — you might need to Dash to cover long distances. Your DM might allow you to push beyond your limits with a <strong>Strength (Athletics)</strong> check.</p>
+                    <p>If there are obstacles in the way, you might need to make a <strong>DC10 <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Strength</a> (Athletics)</strong> <a href="#" class="gloss-ref" data-ref="glossary-ability-check">check</a> to jump over them. You cannot jump over any obstacle taller than your high jump.</p>
+                    <p>If you land in <a href="#" class="gloss-ref" data-ref="glossary-difficult-terrain">difficult terrain</a>, you might need to make a <strong>DC10 <a href="#" class="gloss-ref" data-ref="glossary-ability-score">Dexterity</a> (Acrobatics)</strong> <a href="#" class="gloss-ref" data-ref="glossary-ability-check">check</a> or land <a href="#" class="gloss-ref" data-ref="condition-prone">prone</a>.</p>
+                    <p>You cannot jump farther than your remaining <a href="#" class="gloss-ref" data-ref="glossary-speed">movement</a> — you might need to <a href="#" class="gloss-ref" data-ref="glossary-dash">Dash</a> to cover long distances. Your DM might allow you to push beyond your limits with a <strong><a href="#" class="gloss-ref" data-ref="glossary-ability-score">Strength</a> (Athletics)</strong> <a href="#" class="gloss-ref" data-ref="glossary-ability-check">check</a>.</p>
                   </div>
                 </div>
 
@@ -532,9 +570,9 @@
                       <thead>
                         <tr>
                           <th></th>
-                          <th>Friendly</th>
-                          <th>Indifferent</th>
-                          <th>Hostile</th>
+                          <th><a href="#" class="gloss-ref" data-ref="glossary-friendly">Friendly</a></th>
+                          <th><a href="#" class="gloss-ref" data-ref="glossary-indifferent">Indifferent</a></th>
+                          <th><a href="#" class="gloss-ref" data-ref="glossary-hostile">Hostile</a></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -579,7 +617,1111 @@
 
             <details class="dropdown" id="dropRulesGlossary">
               <summary>Rules Glossary</summary>
-              <div class="dropdown-body"></div>
+              <div class="dropdown-body">
+                <p style="margin-bottom:10px;">Definitions from the 2024 Rules Glossary.</p>
+                <div class="condition-list">
+
+                  <details class="condition-dropdown" id="glossary-abbreviations">
+                    <summary>Abbreviations</summary>
+                    <div class="condition-body">
+                      <p>AC = <a href="#" class="gloss-ref" data-ref="glossary-armor-class">Armor Class</a> · C = <a href="#" class="gloss-ref" data-ref="glossary-concentration">Concentration</a> · CE = Chaotic Evil · CG = Chaotic Good · Cha. = Charisma · CN = Chaotic Neutral · Con. = Constitution · CP = Copper Piece(s) · CR = <a href="#" class="gloss-ref" data-ref="glossary-challenge-rating">Challenge Rating</a> · DC = <a href="#" class="gloss-ref" data-ref="glossary-difficulty-class">Difficulty Class</a> · Dex. = Dexterity · DM = Dungeon Master</p>
+                      <p>EP = Electrum Piece(s) · GP = Gold Piece(s) · HP = Hit Point(s) · Int. = Intelligence · LE = Lawful Evil · LG = Lawful Good · LN = Lawful Neutral · M = Material component · N = Neutral · NE = Neutral Evil · NG = Neutral Good · NPC = Nonplayer character</p>
+                      <p>PB = <a href="#" class="gloss-ref" data-ref="glossary-proficiency">Proficiency</a> Bonus · PP = Platinum Piece(s) · R = <a href="#" class="gloss-ref" data-ref="glossary-ritual">Ritual</a> · S = Somatic component · SP = Silver Piece(s) · Str. = Strength · V = Verbal component · Wis. = Wisdom · XP = Experience Point(s)</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-ability-check">
+                    <summary>Ability Check</summary>
+                    <div class="condition-body">
+                      <p>A <a href="#" class="gloss-ref" data-ref="glossary-d20-test">D20 Test</a> that represents using one of the six abilities — or a specific skill associated with an ability — to overcome a challenge.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-ability-score">
+                    <summary>Ability Score and Modifier</summary>
+                    <div class="condition-body">
+                      <p>A creature has six ability scores — Strength, Dexterity, Constitution, Intelligence, Wisdom, and Charisma — each with a corresponding modifier. Add the modifier when making a <a href="#" class="gloss-ref" data-ref="glossary-d20-test">D20 Test</a> with that ability, or whenever a rule says to.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-action">
+                    <summary>Action</summary>
+                    <div class="condition-body">
+                      <p>On your turn you can take one action. The special named actions (Attack, Dash, Disengage, Dodge, Help, Hide, Influence, Magic, Ready, Search, Study, Utilize) each have their own entry below, in addition to whatever special actions your features provide.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-advantage">
+                    <summary>Advantage</summary>
+                    <div class="condition-body">
+                      <p>If you have Advantage on a <a href="#" class="gloss-ref" data-ref="glossary-d20-test">D20 Test</a>, roll two d20s and use the higher roll. A roll can't be affected by more than one Advantage, and Advantage and <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on the same roll cancel each other out.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-adventure">
+                    <summary>Adventure</summary>
+                    <div class="condition-body">
+                      <p>A series of encounters. A story emerges through playing them.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-alignment">
+                    <summary>Alignment</summary>
+                    <div class="condition-body">
+                      <p>A creature's alignment broadly describes its ethical attitudes and ideals: one factor identifies morality (good, evil, or neutral), the other describes attitude toward order (lawful, chaotic, or neutral) — nine possible combinations in total, such as Lawful Good or Neutral Evil.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-ally">
+                    <summary>Ally</summary>
+                    <div class="condition-body">
+                      <p>A creature is your ally if it's a member of your adventuring party, your friend, on your side in combat, or designated as your ally by the rules or the DM.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-area-of-effect">
+                    <summary>Area of Effect</summary>
+                    <div class="condition-body">
+                      <p>Many spells and features have an area of effect, typically one of six shapes: Cone, Cube, Cylinder, Emanation, Line, or Sphere (each has its own entry below).</p>
+                      <p>An area of effect has a point of origin, from which its energy erupts. If every straight line from the point of origin to a location in the area is blocked by an obstruction giving Total Cover, that location isn't included. If the origin point is placed unseen behind an obstruction such as a wall, the origin instead forms on the near side of it.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-armor-class">
+                    <summary>Armor Class</summary>
+                    <div class="condition-body">
+                      <p>The target number for an attack roll — how difficult a target is to hit. Base AC is 10 plus your Dexterity modifier, unless a rule gives you another base AC calculation; you can only use one such calculation at a time.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-armor-training">
+                    <summary>Armor Training</summary>
+                    <div class="condition-body">
+                      <p>Lets you use armor of a certain category without penalty. Wearing Light, Medium, or Heavy armor without training gives <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on any Strength or Dexterity <a href="#" class="gloss-ref" data-ref="glossary-d20-test">D20 Test</a> and prevents casting spells. Using a Shield without training means you don't gain its AC bonus.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-attack-action">
+                    <summary>Attack [Action]</summary>
+                    <div class="condition-body">
+                      <p>Lets you make one attack roll with a weapon or an <a href="#" class="gloss-ref" data-ref="glossary-unarmed-strike">Unarmed Strike</a>.</p>
+                      <ul>
+                        <li><strong>Equipping/Unequipping.</strong> You can equip or unequip one weapon as part of this action, before or after the attack, without needing to use it for that attack.</li>
+                        <li><strong>Moving Between Attacks.</strong> If a feature such as Extra Attack gives you more than one attack, you can split your movement between those attacks.</li>
+                      </ul>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-attack-roll">
+                    <summary>Attack Roll</summary>
+                    <div class="condition-body">
+                      <p>A <a href="#" class="gloss-ref" data-ref="glossary-d20-test">D20 Test</a> representing an attack with a weapon, an <a href="#" class="gloss-ref" data-ref="glossary-unarmed-strike">Unarmed Strike</a>, or a spell.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-attitude">
+                    <summary>Attitude</summary>
+                    <div class="condition-body">
+                      <p>A monster's starting attitude toward a player character: <a href="#" class="gloss-ref" data-ref="glossary-friendly">Friendly</a>, <a href="#" class="gloss-ref" data-ref="glossary-hostile">Hostile</a>, or <a href="#" class="gloss-ref" data-ref="glossary-indifferent">Indifferent</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-attunement">
+                    <summary>Attunement</summary>
+                    <div class="condition-body">
+                      <p>Some magic items require forming a bond — Attunement — before their magical properties can be used. A creature can be attuned to no more than three magic items at a time.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-blindsight">
+                    <summary>Blindsight</summary>
+                    <div class="condition-body">
+                      <p>Lets you see within a set range without relying on physical sight. You can see anything not behind Total Cover in that range even if <a href="#" class="gloss-ref" data-ref="condition-blinded">Blinded</a> or in Darkness, and you can see creatures with the <a href="#" class="gloss-ref" data-ref="condition-invisible">Invisible</a> condition within that range.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-bloodied">
+                    <summary>Bloodied</summary>
+                    <div class="condition-body">
+                      <p>A creature is Bloodied while it has half its <a href="#" class="gloss-ref" data-ref="glossary-hit-points">Hit Points</a> or fewer remaining.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-bonus-action">
+                    <summary>Bonus Action</summary>
+                    <div class="condition-body">
+                      <p>A special action you can take on the same turn as your action. You can't take more than one Bonus Action per turn, and only when a rule explicitly grants one.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-breaking-objects">
+                    <summary>Breaking Objects</summary>
+                    <div class="condition-body">
+                      <p>The DM may allow an exceedingly fragile object to be broken automatically with the Attack or Utilize action. Otherwise, use the tables below.</p>
+                      <table class="humanoid-grid">
+                        <thead><tr><th>AC</th><th>Substance</th></tr></thead>
+                        <tbody>
+                          <tr><td>11</td><td>Cloth, paper, rope</td></tr>
+                          <tr><td>13</td><td>Crystal, glass, ice</td></tr>
+                          <tr><td>15</td><td>Wood</td></tr>
+                          <tr><td>17</td><td>Stone</td></tr>
+                          <tr><td>19</td><td>Iron, steel</td></tr>
+                          <tr><td>21</td><td>Mithral</td></tr>
+                          <tr><td>23</td><td>Adamantine</td></tr>
+                        </tbody>
+                      </table>
+                      <table class="humanoid-grid" style="margin-top:8px;">
+                        <thead><tr><th>Size</th><th>Fragile</th><th>Resilient</th></tr></thead>
+                        <tbody>
+                          <tr><td>Tiny (bottle, lock)</td><td>2 (1d4)</td><td>5 (2d4)</td></tr>
+                          <tr><td>Small (chest, lute)</td><td>3 (1d6)</td><td>10 (3d6)</td></tr>
+                          <tr><td>Medium (barrel, chandelier)</td><td>4 (1d8)</td><td>18 (4d8)</td></tr>
+                          <tr><td>Large (cart, table)</td><td>5 (1d10)</td><td>27 (5d10)</td></tr>
+                        </tbody>
+                      </table>
+                      <p style="margin-top:8px;">Objects have <a href="#" class="gloss-ref" data-ref="glossary-immunity">Immunity</a> to Poison and Psychic damage; the DM may rule other types more or less effective (e.g. paper/cloth Vulnerable to Fire). Big objects like walls may have a damage threshold. An object without assigned ability scores can't make ability checks and fails all saving throws.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-bright-light">
+                    <summary>Bright Light</summary>
+                    <div class="condition-body">
+                      <p>Normal illumination.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-burning">
+                    <summary>Burning [Hazard]</summary>
+                    <div class="condition-body">
+                      <p>A burning creature or object takes 1d4 Fire damage at the start of each of its turns. As an action, a creature can extinguish itself by dropping <a href="#" class="gloss-ref" data-ref="condition-prone">Prone</a> and rolling on the ground. Fire also goes out if doused, submerged, or suffocated.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-burrow-speed">
+                    <summary>Burrow Speed</summary>
+                    <div class="condition-body">
+                      <p>Lets a creature move through sand, earth, mud, or ice. It can't burrow through solid rock unless a trait says otherwise.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-campaign">
+                    <summary>Campaign</summary>
+                    <div class="condition-body">
+                      <p>A series of adventures.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-cantrip">
+                    <summary>Cantrip</summary>
+                    <div class="condition-body">
+                      <p>A level 0 spell, cast without using a spell slot.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-carrying-capacity">
+                    <summary>Carrying Capacity</summary>
+                    <div class="condition-body">
+                      <p>Your size and Strength score determine how much weight you can carry, drag, lift, or push. While dragging, lifting, or pushing more than you can carry, your Speed can be no more than 5 feet.</p>
+                      <table class="humanoid-grid">
+                        <thead><tr><th>Size</th><th>Carry</th><th>Drag/Lift/Push</th></tr></thead>
+                        <tbody>
+                          <tr><td>Tiny</td><td>Str. × 7.5 lb.</td><td>Str. × 15 lb.</td></tr>
+                          <tr><td>Small/Medium</td><td>Str. × 15 lb.</td><td>Str. × 30 lb.</td></tr>
+                          <tr><td>Large</td><td>Str. × 30 lb.</td><td>Str. × 60 lb.</td></tr>
+                          <tr><td>Huge</td><td>Str. × 60 lb.</td><td>Str. × 120 lb.</td></tr>
+                          <tr><td>Gargantuan</td><td>Str. × 120 lb.</td><td>Str. × 240 lb.</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-challenge-rating">
+                    <summary>Challenge Rating</summary>
+                    <div class="condition-body">
+                      <p>Summarizes the threat a monster poses to four player characters. Higher than party level suggests danger, lower suggests little threat — but circumstances and party size can change this significantly in play.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-character-sheet">
+                    <summary>Character Sheet</summary>
+                    <div class="condition-body">
+                      <p>A paper or digital record used to track your character's information.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-climbing">
+                    <summary>Climbing</summary>
+                    <div class="condition-body">
+                      <p>Each foot of movement while climbing costs 1 extra foot (2 extra in <a href="#" class="gloss-ref" data-ref="glossary-difficult-terrain">Difficult Terrain</a>) unless you have and use a <a href="#" class="gloss-ref" data-ref="glossary-climb-speed">Climb Speed</a>. The DM may require a DC 15 Strength (Athletics) check on a slippery surface or one with few handholds.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-climb-speed">
+                    <summary>Climb Speed</summary>
+                    <div class="condition-body">
+                      <p>Used in place of Speed to climb a vertical surface without the extra movement cost normally required.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-concentration">
+                    <summary>Concentration</summary>
+                    <div class="condition-body">
+                      <p>Some spells and effects require Concentration to stay active. It can be ended voluntarily at any time (no action). It's broken by any of the following:</p>
+                      <ul>
+                        <li><strong>Another Concentration Effect.</strong> Starting to cast a Concentration spell, or activating another Concentration effect, ends the previous one.</li>
+                        <li><strong>Damage.</strong> Taking damage requires a Constitution save (DC = 10 or half the damage taken, whichever is higher, max DC 30) to maintain it.</li>
+                        <li><strong><a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a> or Dead.</strong> Concentration ends immediately if you're Incapacitated or die.</li>
+                      </ul>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-condition">
+                    <summary>Condition</summary>
+                    <div class="condition-body">
+                      <p>A temporary game state that affects its recipient in a defined way. A condition doesn't stack with itself — a creature either has it or doesn't — except <a href="#" class="gloss-ref" data-ref="condition-exhaustion">Exhaustion</a>, which is cumulative. See the <a href="#" class="gloss-ref" data-ref="dropConditions">Conditions dropdown</a> above for the full list.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-cone">
+                    <summary>Cone [Area of Effect]</summary>
+                    <div class="condition-body">
+                      <p>Extends in straight lines from a point of origin in a chosen direction. Its width at any point equals that point's distance from the origin (e.g. 15 feet wide at 15 feet from the origin). The origin itself isn't included in the area unless its creator says otherwise.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-crawling">
+                    <summary>Crawling</summary>
+                    <div class="condition-body">
+                      <p>Each foot of movement while crawling costs 1 extra foot (2 extra in <a href="#" class="gloss-ref" data-ref="glossary-difficult-terrain">Difficult Terrain</a>).</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-creature">
+                    <summary>Creature</summary>
+                    <div class="condition-body">
+                      <p>Any being in the game, including a player character, is a creature.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-creature-type">
+                    <summary>Creature Type</summary>
+                    <div class="condition-body">
+                      <p>Every creature has a tag identifying its type (most player characters are Humanoid). Types have no rules of their own, but some rules affect certain types differently. See the <a href="#" class="gloss-ref" data-ref="dropCreatureTypes">Creature Types by Skill dropdown</a> above.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-critical-hit">
+                    <summary>Critical Hit</summary>
+                    <div class="condition-body">
+                      <p>Rolling a natural 20 on an attack roll scores a Critical Hit, which always hits regardless of AC or modifiers. Roll all the attack's damage dice twice and add them together, then add relevant modifiers.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-cube">
+                    <summary>Cube [Area of Effect]</summary>
+                    <div class="condition-body">
+                      <p>Extends in straight lines from a point of origin located anywhere on one of its faces. The effect that creates it specifies the length of each side. The origin isn't included in the area unless its creator says otherwise.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-curses">
+                    <summary>Curses</summary>
+                    <div class="condition-body">
+                      <p>The effect that confers a curse defines what it does. Curses can be removed by Remove Curse, Greater Restoration, or other magic that explicitly ends curses.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-cylinder">
+                    <summary>Cylinder [Area of Effect]</summary>
+                    <div class="condition-body">
+                      <p>Extends in straight lines from a point of origin at the center of the circular top or bottom face. The effect specifies the base radius and the height. Unlike most shapes, the origin point IS included in the area.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-d20-test">
+                    <summary>D20 Test</summary>
+                    <div class="condition-body">
+                      <p>Covers the three main d20 rolls: ability checks, attack rolls, and saving throws. Anything affecting D20 Tests affects all three. The DM decides when a D20 Test is warranted.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-damage">
+                    <summary>Damage</summary>
+                    <div class="condition-body">
+                      <p>Represents harm that causes a creature or object to lose <a href="#" class="gloss-ref" data-ref="glossary-hit-points">Hit Points</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-damage-roll">
+                    <summary>Damage Roll</summary>
+                    <div class="condition-body">
+                      <p>A die roll, adjusted by applicable modifiers, that deals damage to a target.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-damage-threshold">
+                    <summary>Damage Threshold</summary>
+                    <div class="condition-body">
+                      <p>A creature or object with a damage threshold has <a href="#" class="gloss-ref" data-ref="glossary-immunity">Immunity</a> to all damage unless a single attack or effect deals damage equal to or greater than the threshold, in which case it takes the full amount. Damage that fails to meet the threshold is superficial and does nothing.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-damage-types">
+                    <summary>Damage Types</summary>
+                    <div class="condition-body">
+                      <p>Acid, Bludgeoning, Cold, Fire, Force, Lightning, Necrotic, Piercing, Poison, Psychic, Radiant, Slashing, Thunder. Damage types carry no rules of their own, but other rules (like <a href="#" class="gloss-ref" data-ref="glossary-resistance">Resistance</a>) key off them.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-darkness">
+                    <summary>Darkness</summary>
+                    <div class="condition-body">
+                      <p>An area of Darkness is <a href="#" class="gloss-ref" data-ref="glossary-heavily-obscured">Heavily Obscured</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-darkvision">
+                    <summary>Darkvision</summary>
+                    <div class="condition-body">
+                      <p>Lets you see in <a href="#" class="gloss-ref" data-ref="glossary-dim-light">Dim Light</a> within a set range as if it were <a href="#" class="gloss-ref" data-ref="glossary-bright-light">Bright Light</a>, and in Darkness within that range as if it were Dim Light (colors appear only as shades of gray in that Darkness).</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-dash">
+                    <summary>Dash [Action]</summary>
+                    <div class="condition-body">
+                      <p>Gives extra movement equal to your Speed (after modifiers) for the current turn. You may use a special speed (like <a href="#" class="gloss-ref" data-ref="glossary-fly-speed">Fly Speed</a>) instead of your normal Speed, chosen each time you Dash.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-dead">
+                    <summary>Dead</summary>
+                    <div class="condition-body">
+                      <p>A dead creature has no <a href="#" class="gloss-ref" data-ref="glossary-hit-points">Hit Points</a> and can't regain them without magic like Raise Dead or Revivify — the spirit must consent, having departed for the Outer Planes. On revival it keeps ongoing conditions, contagions, or curses (if durations haven't lapsed), returns with 1 fewer <a href="#" class="gloss-ref" data-ref="condition-exhaustion">Exhaustion</a> level if it died with any, and loses any <a href="#" class="gloss-ref" data-ref="glossary-attunement">Attunement</a> it had.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-death-saving-throw">
+                    <summary>Death Saving Throw</summary>
+                    <div class="condition-body">
+                      <p>A player character must make a Death Save if they start their turn at 0 <a href="#" class="gloss-ref" data-ref="glossary-hit-points">Hit Points</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-dehydration">
+                    <summary>Dehydration [Hazard]</summary>
+                    <div class="condition-body">
+                      <p>Drinking less than half a day's required water gives 1 <a href="#" class="gloss-ref" data-ref="condition-exhaustion">Exhaustion</a> level at day's end, which can't be removed until a full day's water is drunk.</p>
+                      <table class="humanoid-grid">
+                        <thead><tr><th>Size</th><th>Water/day</th></tr></thead>
+                        <tbody>
+                          <tr><td>Tiny</td><td>1/4 gallon</td></tr>
+                          <tr><td>Small</td><td>1 gallon</td></tr>
+                          <tr><td>Medium</td><td>1 gallon</td></tr>
+                          <tr><td>Large</td><td>4 gallons</td></tr>
+                          <tr><td>Huge</td><td>16 gallons</td></tr>
+                          <tr><td>Gargantuan</td><td>64 gallons</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-difficult-terrain">
+                    <summary>Difficult Terrain</summary>
+                    <div class="condition-body">
+                      <p>Every foot of movement in Difficult Terrain costs 1 extra foot (not cumulative — a space either is or isn't Difficult Terrain). A space qualifies if it contains, among other things: a non-Tiny non-ally creature, furniture sized for your size or larger, heavy snow/ice/rubble/undergrowth, liquid shin-to-waist deep, a narrow opening one size smaller than you, or a slope of 20 degrees or more.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-difficulty-class">
+                    <summary>Difficulty Class</summary>
+                    <div class="condition-body">
+                      <p>The target number (DC) for an ability check or saving throw.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-dim-light">
+                    <summary>Dim Light</summary>
+                    <div class="condition-body">
+                      <p>An area of Dim Light is <a href="#" class="gloss-ref" data-ref="glossary-lightly-obscured">Lightly Obscured</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-disadvantage">
+                    <summary>Disadvantage</summary>
+                    <div class="condition-body">
+                      <p>If you have Disadvantage on a <a href="#" class="gloss-ref" data-ref="glossary-d20-test">D20 Test</a>, roll two d20s and use the lower roll. A roll can't be affected by more than one Disadvantage, and <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>/Disadvantage on the same roll cancel out.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-disengage">
+                    <summary>Disengage [Action]</summary>
+                    <div class="condition-body">
+                      <p>Your movement doesn't provoke <a href="#" class="gloss-ref" data-ref="glossary-opportunity-attacks">Opportunity Attacks</a> for the rest of the turn.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-dodge">
+                    <summary>Dodge [Action]</summary>
+                    <div class="condition-body">
+                      <p>Until the start of your next turn, attack rolls against you have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> if you can see the attacker, and you make Dexterity saves with <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>. Lost if you're <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a> or your Speed is 0.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-emanation">
+                    <summary>Emanation [Area of Effect]</summary>
+                    <div class="condition-body">
+                      <p>Extends in straight lines from a creature or object in all directions, out to a distance the effect specifies. It moves with its origin unless instantaneous or stationary. The origin itself isn't included in the area unless its creator says otherwise.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-encounter">
+                    <summary>Encounter</summary>
+                    <div class="condition-body">
+                      <p>A scene in an adventure belonging to at least one of the game's three pillars: social interaction, exploration, or combat.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-enemy">
+                    <summary>Enemy</summary>
+                    <div class="condition-body">
+                      <p>A creature is your enemy if it fights against you, actively works to harm you, or is designated your enemy by the rules or DM.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-experience-points">
+                    <summary>Experience Points</summary>
+                    <div class="condition-body">
+                      <p>Awarded by the DM for overcoming challenges and completing adventures. Crossing certain XP thresholds increases a character's level.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-expertise">
+                    <summary>Expertise</summary>
+                    <div class="condition-body">
+                      <p>Doubles your <a href="#" class="gloss-ref" data-ref="glossary-proficiency">Proficiency</a> Bonus on an ability check using a skill proficiency you have Expertise in (unless already doubled by another feature). Expertise is gained in a skill you're already proficient in, and can't stack twice in the same skill.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-falling">
+                    <summary>Falling [Hazard]</summary>
+                    <div class="condition-body">
+                      <p>A fall deals 1d6 Bludgeoning damage at the end of the fall per 10 feet fallen, max 20d6, and leaves you <a href="#" class="gloss-ref" data-ref="condition-prone">Prone</a> on landing unless you take no damage. Falling into liquid lets you use your Reaction for a DC 15 Strength (Athletics) or Dexterity (Acrobatics) check to hit head/feet first, halving the damage on a success.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-flying">
+                    <summary>Flying</summary>
+                    <div class="condition-body">
+                      <p>While flying, you fall if <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a>, <a href="#" class="gloss-ref" data-ref="condition-prone">Prone</a>, or your <a href="#" class="gloss-ref" data-ref="glossary-fly-speed">Fly Speed</a> drops to 0 — unless you can hover.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-fly-speed">
+                    <summary>Fly Speed</summary>
+                    <div class="condition-body">
+                      <p>Lets you travel through the air. You can stay aloft until you land, fall, or die.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-friendly">
+                    <summary>Friendly [Attitude]</summary>
+                    <div class="condition-body">
+                      <p>A Friendly creature views you favorably; you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a> on ability checks to influence it.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-grappling">
+                    <summary>Grappling</summary>
+                    <div class="condition-body">
+                      <p>Characters typically grapple with an <a href="#" class="gloss-ref" data-ref="glossary-unarmed-strike">Unarmed Strike</a>; some monsters have special grapple attacks.</p>
+                      <ul>
+                        <li><strong><a href="#" class="gloss-ref" data-ref="condition-grappled">Grappled</a> Condition.</strong> A successful grapple gives the target the Grappled condition.</li>
+                        <li><strong>One Grapple per Hand.</strong> A free hand (or equivalent body part) is needed, and it can grapple only one creature at a time.</li>
+                        <li><strong>Ending a Grapple.</strong> The target can use its action for a Strength (Athletics) or Dexterity (Acrobatics) check against the escape DC. It also ends if the grappler is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a>, if the target is moved beyond the grapple's range, or if the grappler releases it (no action required).</li>
+                      </ul>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-hazard">
+                    <summary>Hazard</summary>
+                    <div class="condition-body">
+                      <p>An environmental danger — see Burning, Dehydration, Falling, Malnutrition, and <a href="#" class="gloss-ref" data-ref="glossary-suffocation">Suffocation</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-healing">
+                    <summary>Healing</summary>
+                    <div class="condition-body">
+                      <p>How you regain <a href="#" class="gloss-ref" data-ref="glossary-hit-points">Hit Points</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-heavily-obscured">
+                    <summary>Heavily Obscured</summary>
+                    <div class="condition-body">
+                      <p>You have the <a href="#" class="gloss-ref" data-ref="condition-blinded">Blinded</a> condition while trying to see something in a Heavily Obscured space.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-help">
+                    <summary>Help [Action]</summary>
+                    <div class="condition-body">
+                      <ul>
+                        <li><strong>Assist an <a href="#" class="gloss-ref" data-ref="glossary-ability-check">Ability Check</a>.</strong> Choose a skill/tool proficiency and a nearby ally; they get <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a> on the next check with that skill/tool before the start of your next turn. DM has final say on feasibility.</li>
+                        <li><strong>Assist an <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack Roll</a>.</strong> Distract an enemy within 5 feet, giving an ally Advantage on their next attack against it before the start of your next turn.</li>
+                      </ul>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-heroic-inspiration">
+                    <summary>Heroic Inspiration</summary>
+                    <div class="condition-body">
+                      <p>Can be expended to reroll any die immediately after rolling it (must use the new result). Gaining it while you already have it is lost unless given to a player character who lacks it.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-hide">
+                    <summary>Hide [Action]</summary>
+                    <div class="condition-body">
+                      <p>Requires a successful DC 15 Dexterity (Stealth) check while <a href="#" class="gloss-ref" data-ref="glossary-heavily-obscured">Heavily Obscured</a> or behind Three-Quarters/Total Cover, and out of any enemy's line of sight. On success, you have the <a href="#" class="gloss-ref" data-ref="condition-invisible">Invisible</a> condition while hidden; the check total becomes the DC for others to find you via Wisdom (Perception).</p>
+                      <p>Hiding ends immediately if you make a sound louder than a whisper, an enemy finds you, you make an attack roll, or you cast a spell with a Verbal component.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-high-jump">
+                    <summary>High Jump</summary>
+                    <div class="condition-body">
+                      <p>Jump vertically 3 + Strength modifier feet (min 0) with a 10-foot running start; half that standing still. Each foot costs a foot of movement. You can reach half your height higher during the jump, for a total reach of the jump height plus 1.5x your height.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-hit-point-dice">
+                    <summary>Hit Point Dice</summary>
+                    <div class="condition-body">
+                      <p>Help determine a character's HP maximum. Most monsters have them too. Can be spent during a <a href="#" class="gloss-ref" data-ref="glossary-short-rest">Short Rest</a> to regain HP.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-hit-points">
+                    <summary>Hit Points</summary>
+                    <div class="condition-body">
+                      <p>A measure of how hard a creature or object is to kill or destroy. Damage reduces HP, healing restores it, and it can never exceed the maximum or drop below 0.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-hostile">
+                    <summary>Hostile [Attitude]</summary>
+                    <div class="condition-body">
+                      <p>A Hostile creature views you unfavorably; you have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on ability checks to influence it.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-hover">
+                    <summary>Hover</summary>
+                    <div class="condition-body">
+                      <p>Some creatures, spells, or effects grant the ability to hover, which prevents falling while flying in certain circumstances.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-illusions">
+                    <summary>Illusions</summary>
+                    <div class="condition-body">
+                      <p>The effect that creates an illusion defines what it does and which senses it deceives. An illusion is insubstantial and weightless but seems affected by its environment (casting shadows, echoing, etc.) unless stated otherwise.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-immunity">
+                    <summary>Immunity</summary>
+                    <div class="condition-body">
+                      <p>If you have Immunity to a damage type or condition, it doesn't affect you at all.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-improvised-weapons">
+                    <summary>Improvised Weapons</summary>
+                    <div class="condition-body">
+                      <p>An object wielded as a makeshift weapon (broken glass, a table leg, etc.). A Simple/Martial weapon used contrary to its design (e.g. a ranged weapon in melee, or throwing a non-Thrown melee weapon) also counts as improvised.</p>
+                      <ul>
+                        <li><strong><a href="#" class="gloss-ref" data-ref="glossary-proficiency">Proficiency</a>.</strong> No Proficiency Bonus applies.</li>
+                        <li><strong>Damage.</strong> 1d4 of a type the DM deems appropriate on a hit.</li>
+                        <li><strong>Range.</strong> If thrown: normal range 20 feet, long range 60 feet.</li>
+                        <li><strong>Weapon Equivalents.</strong> The DM may rule that an improvised weapon resembling a real one uses that weapon's rules.</li>
+                      </ul>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-indifferent">
+                    <summary>Indifferent [Attitude]</summary>
+                    <div class="condition-body">
+                      <p>An Indifferent creature has no desire to help or hinder you — the default attitude of a monster.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-influence">
+                    <summary>Influence [Action]</summary>
+                    <div class="condition-body">
+                      <p>Urge a monster to do something. The DM decides whether the monster is Willing (no check, it complies its own way), Unwilling (no check, it refuses), or Hesitant (requires an ability check).</p>
+                      <p>For a Hesitant response, the DC is 15 or the monster's Intelligence score, whichever is higher. Success means it does as urged; failure means you must wait 24 hours (or DM-set duration) to try the same approach again.</p>
+                      <table class="humanoid-grid">
+                        <thead><tr><th><a href="#" class="gloss-ref" data-ref="glossary-ability-check">Ability Check</a></th><th>Interaction</th></tr></thead>
+                        <tbody>
+                          <tr><td>Cha. (Deception)</td><td>Deceiving a monster that understands you</td></tr>
+                          <tr><td>Cha. (Intimidation)</td><td>Intimidating a monster</td></tr>
+                          <tr><td>Cha. (Performance)</td><td>Amusing a monster</td></tr>
+                          <tr><td>Cha. (Persuasion)</td><td>Persuading a monster that understands you</td></tr>
+                          <tr><td>Wis. (Animal Handling)</td><td>Gently coaxing a Beast or Monstrosity</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-initiative">
+                    <summary>Initiative</summary>
+                    <div class="condition-body">
+                      <p>Determines turn order in combat. A DM may instead use a fixed Initiative score of 10 + Dexterity modifier, +5 if <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a> on Initiative rolls, -5 if <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-jumping">
+                    <summary>Jumping</summary>
+                    <div class="condition-body">
+                      <p>A jump is either a <a href="#" class="gloss-ref" data-ref="glossary-long-jump">Long Jump</a> (horizontal) or a <a href="#" class="gloss-ref" data-ref="glossary-high-jump">High Jump</a> (vertical) — see their own entries, or the <a href="#" class="gloss-ref" data-ref="dropJumping">Jumping calculator dropdown</a> above.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-knocking-out">
+                    <summary>Knocking Out a Creature</summary>
+                    <div class="condition-body">
+                      <p>When a melee attack would reduce a creature to 0 HP, you can instead reduce it to 1 HP; it gains the <a href="#" class="gloss-ref" data-ref="condition-unconscious">Unconscious</a> condition and starts a <a href="#" class="gloss-ref" data-ref="glossary-short-rest">Short Rest</a>. It stays Unconscious until it regains HP or someone succeeds on a DC 10 Wisdom (Medicine) check to administer first aid.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-lightly-obscured">
+                    <summary>Lightly Obscured</summary>
+                    <div class="condition-body">
+                      <p><a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on Wisdom (Perception) checks to see something in a Lightly Obscured space.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-line">
+                    <summary>Line [Area of Effect]</summary>
+                    <div class="condition-body">
+                      <p>Extends from a point of origin in a straight path, covering an area defined by its length and width. The origin isn't included unless its creator says otherwise.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-long-jump">
+                    <summary>Long Jump</summary>
+                    <div class="condition-body">
+                      <p>Leap horizontally up to your Strength score in feet with a 10-foot running start; half that standing still. Each foot costs a foot of movement.</p>
+                      <p>Landing in <a href="#" class="gloss-ref" data-ref="glossary-difficult-terrain">Difficult Terrain</a> requires a DC 10 Dexterity (Acrobatics) check or you fall <a href="#" class="gloss-ref" data-ref="condition-prone">Prone</a>. At the DM's option, clearing a low obstacle (no taller than a quarter of the jump distance) requires a DC 10 Strength (Athletics) check, or you hit it.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-long-rest">
+                    <summary>Long Rest</summary>
+                    <div class="condition-body">
+                      <p>At least 8 hours of downtime with at least 6 hours of sleep and no more than 2 hours of light activity. You must have at least 1 HP to start one, and must wait 16 hours after finishing one before starting another.</p>
+                      <p><strong>Benefits:</strong> regain all HP and spent <a href="#" class="gloss-ref" data-ref="glossary-hit-point-dice">Hit Point Dice</a> (and any reduced HP maximum returns to normal), reduced ability scores are restored, <a href="#" class="gloss-ref" data-ref="condition-exhaustion">Exhaustion</a> level decreases by 1, and any features that recharge on a Long Rest do so.</p>
+                      <p><strong>Interruptions:</strong> rolling <a href="#" class="gloss-ref" data-ref="glossary-initiative">Initiative</a>, casting a non-cantrip spell, taking any damage, or an hour of exertion — each stops the rest. If at least 1 hour had passed, you gain a <a href="#" class="gloss-ref" data-ref="glossary-short-rest">Short Rest</a>'s benefits instead. Resuming after an interruption adds 1 extra hour per interruption.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-magic-action">
+                    <summary>Magic [Action]</summary>
+                    <div class="condition-body">
+                      <p>Cast a spell with a casting time of an action, or activate a feature/item that requires this action. Spells with a casting time of 1 minute or longer require taking the Magic action (with <a href="#" class="gloss-ref" data-ref="glossary-concentration">Concentration</a>) on every turn of casting; if Concentration breaks, the spell fails without expending a slot.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-magical-effect">
+                    <summary>Magical Effect</summary>
+                    <div class="condition-body">
+                      <p>An effect is magical if created by a spell, magic item, or a phenomenon a rule labels magical.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-malnutrition">
+                    <summary>Malnutrition [Hazard]</summary>
+                    <div class="condition-body">
+                      <p>Eating less than half a day's required food requires a DC 10 Constitution save or gain 1 <a href="#" class="gloss-ref" data-ref="condition-exhaustion">Exhaustion</a> level at day's end. Eating nothing for 5 days automatically gives 1 Exhaustion level at day 5, plus another for each additional day without food. This Exhaustion can't be removed until a full day's food is eaten.</p>
+                      <table class="humanoid-grid">
+                        <thead><tr><th>Size</th><th>Food/day</th></tr></thead>
+                        <tbody>
+                          <tr><td>Tiny</td><td>1/4 pound</td></tr>
+                          <tr><td>Small</td><td>1 pound</td></tr>
+                          <tr><td>Medium</td><td>1 pound</td></tr>
+                          <tr><td>Large</td><td>4 pounds</td></tr>
+                          <tr><td>Huge</td><td>16 pounds</td></tr>
+                          <tr><td>Gargantuan</td><td>64 pounds</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-monster">
+                    <summary>Monster</summary>
+                    <div class="condition-body">
+                      <p>A creature controlled by the DM, even if benevolent.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-npc">
+                    <summary>Nonplayer Character</summary>
+                    <div class="condition-body">
+                      <p>An NPC is a monster with a personal name and a distinct personality.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-object">
+                    <summary>Object</summary>
+                    <div class="condition-body">
+                      <p>A nonliving, distinct thing. Composite things (like buildings) comprise more than one object.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-occupied-space">
+                    <summary>Occupied Space</summary>
+                    <div class="condition-body">
+                      <p>A space is occupied if a creature is in it, or it's completely filled by objects.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-opportunity-attacks">
+                    <summary>Opportunity Attacks</summary>
+                    <div class="condition-body">
+                      <p>Triggered when a creature you can see leaves your reach via its action, <a href="#" class="gloss-ref" data-ref="glossary-bonus-action">Bonus Action</a>, Reaction, or a speed. Use your Reaction to make one melee attack against it, occurring right before it leaves your reach.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-passive-perception">
+                    <summary>Passive Perception</summary>
+                    <div class="condition-body">
+                      <p>Reflects general awareness without an active check: 10 + Wisdom (Perception) check bonus, +5 with <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a> on such checks, -5 with <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-per-day">
+                    <summary>Per Day</summary>
+                    <div class="condition-body">
+                      <p>A "per day" use requires finishing a <a href="#" class="gloss-ref" data-ref="glossary-long-rest">Long Rest</a> to use again once exhausted.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-player-character">
+                    <summary>Player Character</summary>
+                    <div class="condition-body">
+                      <p>A character controlled by a player.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-possession">
+                    <summary>Possession</summary>
+                    <div class="condition-body">
+                      <p>A possessing effect defines how the possession works. Prevented by Protection from Evil and Good, and ended by Dispel Evil and Good.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-proficiency">
+                    <summary>Proficiency</summary>
+                    <div class="condition-body">
+                      <p>Add your Proficiency Bonus to a <a href="#" class="gloss-ref" data-ref="glossary-d20-test">D20 Test</a> made with something you're proficient in — a skill, saving throw, weapon, or tool.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-reach">
+                    <summary>Reach</summary>
+                    <div class="condition-body">
+                      <p>A creature has 5 feet of reach unless a rule says otherwise.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-reaction">
+                    <summary>Reaction</summary>
+                    <div class="condition-body">
+                      <p>A special action taken in response to a defined trigger, usable on another creature's turn (or your own, alongside an action/<a href="#" class="gloss-ref" data-ref="glossary-bonus-action">Bonus Action</a>). Only one Reaction can be taken per round, resetting at the start of your next turn. The Opportunity Attack is a Reaction available to all creatures.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-ready">
+                    <summary>Ready [Action]</summary>
+                    <div class="condition-body">
+                      <p>Wait for a specific circumstance before acting. On your turn, choose the trigger and the response (an action or moving up to your Speed); when the trigger occurs, you may use your Reaction to respond or ignore it.</p>
+                      <p>Readying a spell (casting time of an action) expends its resources immediately but holds the effect, requiring <a href="#" class="gloss-ref" data-ref="glossary-concentration">Concentration</a> until released or until the start of your next turn — if Concentration breaks, the spell fizzles with no effect.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-resistance">
+                    <summary>Resistance</summary>
+                    <div class="condition-body">
+                      <p>Damage of a type you have Resistance to is halved (round down), applied only once per instance of damage.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-ritual">
+                    <summary>Ritual</summary>
+                    <div class="condition-body">
+                      <p>A prepared spell with the Ritual tag can be cast as a Ritual, taking 10 minutes longer but expending no spell slot — meaning it can't be cast at a higher level this way.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-round-down">
+                    <summary>Round Down</summary>
+                    <div class="condition-body">
+                      <p>When dividing or multiplying, round down on a fraction — even exactly one-half — unless a rule specifically says to round up.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-saving-throw">
+                    <summary>Saving Throw</summary>
+                    <div class="condition-body">
+                      <p>Also called a save — an attempt to avoid or resist a threat, made only when a rule requires it (though you may choose to fail without rolling). If a target lacks the required ability score, it automatically fails.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-search">
+                    <summary>Search [Action]</summary>
+                    <div class="condition-body">
+                      <p>Make a Wisdom check to discern something not obvious.</p>
+                      <table class="humanoid-grid">
+                        <thead><tr><th>Skill</th><th>Thing to Detect</th></tr></thead>
+                        <tbody>
+                          <tr><td>Insight</td><td>Creature's state of mind</td></tr>
+                          <tr><td>Medicine</td><td>Creature's ailment or cause of death</td></tr>
+                          <tr><td>Perception</td><td>Concealed creature or object</td></tr>
+                          <tr><td>Survival</td><td>Tracks or food</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-shape-shifting">
+                    <summary>Shape-Shifting</summary>
+                    <div class="condition-body">
+                      <p>Effects like Wild Shape or Polymorph specify what happens to you. Ongoing effects (conditions, spells, curses) normally carry over between forms unless stated otherwise. You revert to your true form if you die.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-short-rest">
+                    <summary>Short Rest</summary>
+                    <div class="condition-body">
+                      <p>A 1-hour period of downtime doing nothing more strenuous than reading, talking, eating, or standing watch. Requires at least 1 HP to start.</p>
+                      <p><strong>Benefits:</strong> spend <a href="#" class="gloss-ref" data-ref="glossary-hit-point-dice">Hit Point Dice</a> to regain HP (roll the die + Constitution modifier per die, minimum 1 HP each), and any features that recharge on a Short Rest do so.</p>
+                      <p><strong>Interruptions:</strong> rolling <a href="#" class="gloss-ref" data-ref="glossary-initiative">Initiative</a>, casting a non-cantrip spell, or taking damage — an interrupted Short Rest gives no benefits.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-simultaneous-effects">
+                    <summary>Simultaneous Effects</summary>
+                    <div class="condition-body">
+                      <p>If multiple things happen at once on a turn, whoever's turn it is (player or DM) decides the order.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-size">
+                    <summary>Size</summary>
+                    <div class="condition-body">
+                      <p>Tiny, Small, Medium, Large, Huge, or Gargantuan. A creature's size determines the space it occupies in combat; an object's size affects its <a href="#" class="gloss-ref" data-ref="glossary-hit-points">Hit Points</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-skill">
+                    <summary>Skill</summary>
+                    <div class="condition-body">
+                      <p>A specialization tied to an ability check. <a href="#" class="gloss-ref" data-ref="glossary-proficiency">Proficiency</a> in a skill adds your Proficiency Bonus to associated checks.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-speed">
+                    <summary>Speed</summary>
+                    <div class="condition-body">
+                      <p>The distance in feet a creature can move on its turn.</p>
+                      <p><strong>Special Speeds.</strong> Burrow, Climb, Fly, and <a href="#" class="gloss-ref" data-ref="glossary-swim-speed">Swim Speed</a> each have their own entry. With more than one, choose which to use as you move, switching mid-move by subtracting distance already moved from the new speed (if 0 or less, that speed can't be used this move).</p>
+                      <p><strong>Changes to Speed.</strong> If Speed is increased/decreased, any special speed changes by the same amount for the same duration (e.g. Speed reduced to 0 also reduces <a href="#" class="gloss-ref" data-ref="glossary-climb-speed">Climb Speed</a> to 0; Speed halved also halves <a href="#" class="gloss-ref" data-ref="glossary-fly-speed">Fly Speed</a>).</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-spell">
+                    <summary>Spell</summary>
+                    <div class="condition-body">
+                      <p>A magical effect with the characteristics described under Spells in the rules.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-spell-attack">
+                    <summary>Spell Attack</summary>
+                    <div class="condition-body">
+                      <p>An attack roll made as part of a spell or other magical effect.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-spellcasting-focus">
+                    <summary>Spellcasting Focus</summary>
+                    <div class="condition-body">
+                      <p>An object certain creatures can use in place of a spell's Material components, provided those materials aren't consumed and have no listed cost.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-sphere">
+                    <summary>Sphere [Area of Effect]</summary>
+                    <div class="condition-body">
+                      <p>Extends in straight lines from a point of origin outward in all directions, out to a specified radius. Unlike most shapes, the origin point IS included in the area.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-stable">
+                    <summary>Stable</summary>
+                    <div class="condition-body">
+                      <p>A creature at 0 HP that isn't required to make Death <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">Saving Throws</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-stat-block">
+                    <summary>Stat Block</summary>
+                    <div class="condition-body">
+                      <p>Contains a monster's game statistics: Size, <a href="#" class="gloss-ref" data-ref="glossary-creature-type">Creature Type</a>, Alignment, AC/<a href="#" class="gloss-ref" data-ref="glossary-initiative">Initiative</a>/HP, Speed, ability scores, skills, resistances/vulnerabilities, immunities, gear, senses, languages, CR (with XP and <a href="#" class="gloss-ref" data-ref="glossary-proficiency">Proficiency</a> Bonus), and its traits, actions, bonus actions, and reactions.</p>
+                      <p>Attack entries give whether it's melee or ranged, the attack bonus, reach/range, and effect on a hit. Save-based effects give the save type, DC, who must save, and the effects of failure/success. Damage is usually shown as both a static number and a die expression (e.g. "4 (1d4 + 2)") — the DM picks one, not both.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-study">
+                    <summary>Study [Action]</summary>
+                    <div class="condition-body">
+                      <p>Make an Intelligence check to recall an important piece of information from memory, a book, a clue, or another source.</p>
+                      <table class="humanoid-grid">
+                        <thead><tr><th>Skill</th><th>Areas</th></tr></thead>
+                        <tbody>
+                          <tr><td>Arcana</td><td>Spells, magic items, planes, and Aberrations/Constructs/Elementals/Fey/Monstrosities</td></tr>
+                          <tr><td>History</td><td>Historic events, civilizations, wars, and Giants/Humanoids</td></tr>
+                          <tr><td>Investigation</td><td>Traps, ciphers, riddles, gadgetry</td></tr>
+                          <tr><td>Nature</td><td>Terrain, flora, weather, and Beasts/Dragons/Oozes/Plants</td></tr>
+                          <tr><td>Religion</td><td>Deities, rites, holy symbols, cults, and Celestials/Fiends/Undead</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-suffocation">
+                    <summary>Suffocation [Hazard]</summary>
+                    <div class="condition-body">
+                      <p>A creature can hold its breath for 1 + Constitution modifier minutes (minimum 30 seconds). Once out of breath or choking, it gains 1 <a href="#" class="gloss-ref" data-ref="condition-exhaustion">Exhaustion</a> level at the end of each of its turns until it can breathe again, at which point all levels gained this way are removed.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-surprise">
+                    <summary>Surprise</summary>
+                    <div class="condition-body">
+                      <p>A creature caught unawares at the start of combat is surprised, giving it <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on its <a href="#" class="gloss-ref" data-ref="glossary-initiative">Initiative</a> roll.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-swimming">
+                    <summary>Swimming</summary>
+                    <div class="condition-body">
+                      <p>Each foot of movement while swimming costs 1 extra foot (2 extra in <a href="#" class="gloss-ref" data-ref="glossary-difficult-terrain">Difficult Terrain</a>) unless you have and use a <a href="#" class="gloss-ref" data-ref="glossary-swim-speed">Swim Speed</a>. The DM may require a DC 15 Strength (Athletics) check to move any distance in rough water.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-swim-speed">
+                    <summary>Swim Speed</summary>
+                    <div class="condition-body">
+                      <p>Lets you swim without the extra movement cost normally required.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-target">
+                    <summary>Target</summary>
+                    <div class="condition-body">
+                      <p>A creature or object targeted by an attack roll, forced to save by an effect, or selected to receive a spell's or other phenomenon's effects.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-telepathy">
+                    <summary>Telepathy</summary>
+                    <div class="condition-body">
+                      <p>Lets a creature communicate mentally with another within range; the contacted creature needn't share a language but must understand at least one language or be telepathic itself.</p>
+                      <p>A telepath needn't see the target and can start/end contact freely (no action). Contact can't start, and is broken, if either party is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a>, if the target leaves range, or if the telepath contacts someone else. A non-telepath can receive but not initiate telepathic messages, though it can reply once contact is established.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-teleportation">
+                    <summary>Teleportation</summary>
+                    <div class="condition-body">
+                      <p>You disappear and reappear elsewhere instantly without moving through the intervening space; this doesn't use movement (unless stated otherwise) and never provokes <a href="#" class="gloss-ref" data-ref="glossary-opportunity-attacks">Opportunity Attacks</a>. All worn/carried equipment teleports with you; a creature you're merely touching doesn't, unless the effect says so. If the destination is occupied or blocked, you appear in the nearest unoccupied space of your choice instead.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-temporary-hp">
+                    <summary>Temporary Hit Points</summary>
+                    <div class="condition-body">
+                      <p>Granted by certain effects; act as a buffer against losing real <a href="#" class="gloss-ref" data-ref="glossary-hit-points">Hit Points</a>.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-tremorsense">
+                    <summary>Tremorsense</summary>
+                    <div class="condition-body">
+                      <p>Pinpoints creatures/moving objects within range while both you and the target share contact with the same surface or liquid. Can't detect anything airborne, and doesn't count as sight.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-truesight">
+                    <summary>Truesight</summary>
+                    <div class="condition-body">
+                      <p>Within its range: see through normal and magical Darkness, see <a href="#" class="gloss-ref" data-ref="condition-invisible">Invisible</a> creatures/objects, see through visual illusions (auto-succeeding saves against them), see a transformed creature's or object's true form, and see into the Ethereal Plane.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-unarmed-strike">
+                    <summary>Unarmed Strike</summary>
+                    <div class="condition-body">
+                      <p>A punch, kick, headbutt, or similar blow — a melee attack against a target within 5 feet. Choose one effect:</p>
+                      <ul>
+                        <li><strong>Damage.</strong> Attack roll (Strength modifier + <a href="#" class="gloss-ref" data-ref="glossary-proficiency">Proficiency</a> Bonus); on a hit, 1 + Strength modifier Bludgeoning damage.</li>
+                        <li><strong>Grapple.</strong> Target makes a Strength or Dexterity save (its choice) vs. DC 8 + Strength modifier + Proficiency Bonus, or gains the <a href="#" class="gloss-ref" data-ref="condition-grappled">Grappled</a> condition. Only works on a target up to one size larger, with a free hand.</li>
+                        <li><strong>Shove.</strong> Same DC and save; on a failure you push the target 5 feet away or knock it <a href="#" class="gloss-ref" data-ref="condition-prone">Prone</a>. Only works on a target up to one size larger.</li>
+                      </ul>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-unoccupied-space">
+                    <summary>Unoccupied Space</summary>
+                    <div class="condition-body">
+                      <p>A space is unoccupied if no creature is in it and it isn't completely filled by objects.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-utilize">
+                    <summary>Utilize [Action]</summary>
+                    <div class="condition-body">
+                      <p>Used when interacting with an object requires an action on its own, rather than as part of another action (like drawing a sword as part of the Attack action).</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-vulnerability">
+                    <summary>Vulnerability</summary>
+                    <div class="condition-body">
+                      <p>Damage of a type you're Vulnerable to is doubled, applied only once per instance of damage.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-weapon">
+                    <summary>Weapon</summary>
+                    <div class="condition-body">
+                      <p>An object in the Simple or Martial weapon category.</p>
+                    </div>
+                  </details>
+
+                  <details class="condition-dropdown" id="glossary-weapon-attack">
+                    <summary>Weapon Attack</summary>
+                    <div class="condition-body">
+                      <p>An attack roll made with a weapon.</p>
+                    </div>
+                  </details>
+
+                </div>
+              </div>
             </details>
 
             <details class="dropdown" id="dropLore">

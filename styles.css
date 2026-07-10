@@ -53,6 +53,13 @@ body {
     color: var(--gold-bright);
 }
 
+.header-controls {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
 .round-control {
     display: flex;
     align-items: center;
@@ -106,6 +113,87 @@ body {
     font-size: 1.05rem;
     font-weight: 700;
     color: var(--gold-bright);
+}
+
+/* ===== TIME TRACKER (header) ===== */
+
+.time-control {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-left: 12px;
+    padding: 10px 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.time-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.time-field label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.time-text-input {
+    width: 92px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--gold-bright);
+    text-align: center;
+    padding: 6px 6px;
+}
+
+
+
+.duration-control {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+}
+
+.duration-unit {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.duration-input {
+    width: 32px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--gold-bright);
+    padding: 6px 2px;
+}
+
+.duration-input::-webkit-outer-spin-button,
+.duration-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.duration-input {
+    -moz-appearance: textfield;
+}
+
+.duration-sep {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-right: 2px;
+}
+
+.time-reset-btn {
+    height: 30px;
 }
 
 /* ===== 3-COLUMN LAYOUT =====
@@ -375,14 +463,14 @@ input.row-ini {
 .tie-btn {
     background: none;
     border: none;
-    color: var(--text-muted);
+    color: var(--gold-bright);
     font-size: 0.95rem;
     line-height: 1;
     padding: 2px 4px;
 }
 
 .tie-btn:hover {
-    color: var(--gold-bright);
+    color: var(--gold);
 }
 
 .visibility-btn {
@@ -1026,5 +1114,19 @@ details.condition-dropdown[open] summary::before {
 
     .die-buttons {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .header-controls {
+        gap: 12px;
+    }
+
+    .time-control {
+        gap: 10px;
+        margin-left: 0;
+        padding: 8px 10px;
+    }
+
+    .time-text-input {
+        width: 80px;
     }
 }

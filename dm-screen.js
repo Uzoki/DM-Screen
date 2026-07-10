@@ -16,6 +16,15 @@ let idCounter = 0;           // used to give each combatant a unique id
 let selectedIds = new Set(); // ids of the combatant(s) currently highlighted for swapping
 let undoStack = [];          // snapshots of "combatants" taken right before each change
 
+// Time-tracking state: when the day started, and how long the party
+// has been adventuring since then. "Current time" is never stored
+// directly — it's always recalculated from these two.
+let timeState = {
+  startTime: '8:00 AM',
+  durHours: 0,
+  durMinutes: 0
+};
+
 const STORAGE_KEY = 'dmScreenInitiativeState';
 const UNDO_LIMIT = 50; // how many past states the Undo button can step back through
 
@@ -50,8 +59,24 @@ const CLOSED_EYE_SVG =
 
 // ---- SAVE / LOAD (so refreshing the page doesn't lose your list) ----
 
+let savedMobState = null; // mob attack calculator values restored from storage, applied once on page load
+
 function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ combatants, round }));
+  const attacksEl = document.getElementById('mobAttacksInput');
+  const bonusEl = document.getElementById('mobBonusInput');
+  const acEl = document.getElementById('mobACInput');
+  const advEl = document.getElementById('mobAdvCheck');
+  const disEl = document.getElementById('mobDisCheck');
+
+  const mob = {
+    attacks: attacksEl ? attacksEl.value : '',
+    bonus: bonusEl ? bonusEl.value : '',
+    ac: acEl ? acEl.value : '',
+    adv: advEl ? advEl.checked : false,
+    dis: disEl ? disEl.checked : false
+  };
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ combatants, round, mob, time: timeState }));
 }
 
 function load() {
@@ -61,6 +86,14 @@ function load() {
       const data = JSON.parse(raw);
       combatants = data.combatants || [];
       round = typeof data.round === 'number' ? data.round : 1;
+      savedMobState = data.mob || null;
+      if (data.time) {
+        timeState = {
+          startTime: typeof data.time.startTime === 'string' ? data.time.startTime : '8:00 AM',
+          durHours: typeof data.time.durHours === 'number' ? data.time.durHours : 0,
+          durMinutes: typeof data.time.durMinutes === 'number' ? data.time.durMinutes : 0
+        };
+      }
     }
   } catch (err) {
     console.warn('Could not load saved initiative data:', err);
@@ -169,6 +202,7 @@ function clearAll() {
   pushUndoSnapshot();
   combatants = [];
   selectedIds = new Set();
+  document.getElementById('dumpInput').value = '';
   render();
 }
 
@@ -430,86 +464,53 @@ async function addOrReplaceCombatant(name, initiative) {
 //      the number, so it doesn't accidentally swallow a stray line
 //      out of a multi-line dice-log block below).
 //
-//   B) A block copied from a dice-roller log, which can be spread over
-//      several lines or crammed onto one, and always ends with a
-//      timestamp like "7/2/2026 10:14 PM". Everything from the end of
-//      the previous timestamp up to and including the next timestamp
-//      is treated as one entry. An entry like this is only accepted if
-//      it actually contains the words "Initiative: roll" somewhere in
-//      it — so a Nature check, an attack roll, or anything else that
-//      isn't an initiative roll gets skipped automatically. Anything
-//      left over at the very end with no timestamp (an incomplete,
-//      cut-off entry) is dropped too.
+//   B) A block copied straight from D&D Beyond's game log. Instead of
+//      trying to recognise the whole shape of a log entry (which
+//      changes depending on exactly how you copy it — with or without
+//      a date, with or without bullet markers, with or without a
+//      duplicated name line), this just scans line by line for the
+//      one thing that never changes: a line containing the words
+//      "Initiative: roll". Whenever it finds one, it grabs the
+//      nearest usable line ABOVE it as the name, and the nearest
+//      plain number BELOW it as the roll — skipping over blank lines,
+//      stray bullet markers, and duplicate name lines along the way.
+//      Nothing else about the surrounding text (dates, timestamps,
+//      "*" bullets) matters at all.
 
-// Cleans a raw name: strips emoji/symbols, then keeps only the first word.
+// Cleans a raw name: strips emoji/symbols and any leading junk (bullet
+// markers like "* ", "- ", "• ", etc.), then keeps only the first word
+// — so "Gronja Stavbärare" becomes "Gronja".
 function cleanName(rawName) {
-  let cleaned = rawName.replace(/[\u{1F000}-\u{1FFFF}\u{2190}-\u{2BFF}\uFE0F]/gu, '');
+  let cleaned = String(rawName).replace(/[\u{1F000}-\u{1FFFF}\u{2190}-\u{2BFF}\uFE0F]/gu, '');
   cleaned = cleaned.trim();
   const match = cleaned.match(/[A-Za-zÀ-ÖØ-öø-ÿ0-9'’-]+/);
   return match ? match[0] : cleaned;
 }
 
 // Number-first quick entry: "18 Aragorn", "18, Aragorn", "[18] - Aragorn".
-const QUICK_LINE_PATTERN = /^\[?-?\d+(?:\.\d+)?\]?[\s,-]+\S.*$/;
+// The character right after the separator must be a letter — this is
+// what stops a dice-log breakdown line like "14 + 5" (a roll total
+// plus its modifier, no letters anywhere in it) from ever being
+// mistaken for "initiative 14, name 5".
+const QUICK_LINE_PATTERN = /^\[?-?\d+(?:\.\d+)?\]?[\s,-]+[A-Za-zÀ-ÖØ-öø-ÿ].*$/;
 // Name-first quick entry: "Aragorn 18", "Aragorn, 18", "Aragorn - 18".
 // The name portion is deliberately restricted to a single word with no
 // internal spaces AND no digits — no spaces so a stray line from a
-// multi-line dice-log block (which usually has several words before
-// its number) doesn't get mistaken for a quick entry, and no digits so
-// a numbered name like "Goblin2 15" can't have its "2" mistaken for
-// the initiative instead of the real number, "15".
+// multi-line log block doesn't get mistaken for a quick entry, and no
+// digits so a numbered name like "Goblin2 15" can't have its "2"
+// mistaken for the initiative instead of the real number, "15".
 const QUICK_LINE_PATTERN_NAME_FIRST = /^[^\s,[\]0-9-]+[\s,-]+-?\d+(?:\.\d+)?\]?$/;
-const TIMESTAMP_PATTERN = /\d{1,4}[/-]\d{1,2}[/-]\d{1,4}\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?/i;
+// A line that is ONLY a plain number, e.g. the roll result "15" sitting
+// on its own line in a D&D Beyond log entry.
+const PURE_NUMBER_LINE = /^-?\d+(?:\.\d+)?$/;
+// A line that mentions an initiative roll, in any of D&D Beyond's
+// phrasings ("Initiative: roll", "Initiative Roll", etc.).
+const INITIATIVE_LINE = /initiative\s*:?\s*roll/i;
 
-// Stage 1: break the pasted text into records. Each record remembers
-// whether it was a "quick" one-liner or a dice-log style block, since
-// they get checked differently in stage 2.
-function splitIntoRecords(text) {
-  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l !== '');
-  const records = [];
-  let current = [];
-
-  lines.forEach((line) => {
-    const isQuickLine =
-      (QUICK_LINE_PATTERN.test(line) || QUICK_LINE_PATTERN_NAME_FIRST.test(line)) &&
-      !TIMESTAMP_PATTERN.test(line);
-
-    if (isQuickLine) {
-      current = [];
-      records.push({ text: line, isQuick: true });
-      return;
-    }
-
-    current.push(line);
-    if (TIMESTAMP_PATTERN.test(line)) {
-      records.push({ text: current.join(' '), isQuick: false });
-      current = [];
-    }
-  });
-  // Anything left in "current" never reached a timestamp — an
-  // incomplete entry, so it's intentionally left out.
-
-  return records;
-}
-
-// Stage 2: pull { name, initiative } out of one record. Works the same
-// way regardless of whether the number came before or after the name —
-// it just finds "the number" and treats everything else as "the name".
-function parseRecord(record) {
-  let text = record.text;
-
-  if (!record.isQuick) {
-    // Only accept dice-log blocks that are actually an initiative roll.
-    const isInitiativeRoll = /initiative\s*:?\s*roll/i.test(text);
-    if (!isInitiativeRoll) return null;
-
-    text = text.replace(/initiative\s*:?\s*roll/gi, ' ');
-    text = text.replace(TIMESTAMP_PATTERN, ' ');
-  }
-
-  text = text.replace(/\s+/g, ' ').trim();
-  if (text === '') return null;
-
+// Pulls { name, initiative } out of a single hand-typed quick line
+// like "18 Aragorn" or "Aragorn - 18".
+function parseQuickLine(line) {
+  const text = line.replace(/\s+/g, ' ').trim();
   const numberMatch = text.match(/-?\d+(?:\.\d+)?/);
   if (!numberMatch) return null;
 
@@ -518,22 +519,65 @@ function parseRecord(record) {
     .replace(/[,:*[\]]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  // Strip a leftover leading dash, e.g. from "[18] - Aragorn" style input.
   rawName = rawName.replace(/^-\s*/, '').trim();
 
   if (!rawName) return null;
-
   return { name: cleanName(rawName), initiative: initiative };
 }
 
-// Puts stage 1 and stage 2 together.
+// Reads the whole pasted block and returns a list of { name, initiative }.
 function parseDump(text) {
-  const records = splitIntoRecords(text);
+  const rawLines = text.split('\n').map((l) => l.trim());
+  // Drop blank lines and lines that are nothing but a lone bullet
+  // marker (D&D Beyond sometimes pastes these as their own line).
+  const lines = rawLines.filter((l) => l !== '' && !/^[*\-•]$/.test(l));
+
   const entries = [];
-  records.forEach((record) => {
-    const parsed = parseRecord(record);
-    if (parsed) entries.push(parsed);
-  });
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (INITIATIVE_LINE.test(line)) {
+      // Look up to 3 lines back for the nearest usable name line.
+      let name = '';
+      for (let back = i - 1; back >= 0 && back >= i - 3; back--) {
+        const candidate = lines[back];
+        if (INITIATIVE_LINE.test(candidate) || PURE_NUMBER_LINE.test(candidate)) continue;
+        const cleaned = cleanName(candidate);
+        if (cleaned) {
+          name = cleaned;
+          break;
+        }
+      }
+
+      // Look up to 3 lines ahead for the roll result.
+      let initiative = null;
+      let numberLineIndex = -1;
+      for (let fwd = i + 1; fwd < lines.length && fwd <= i + 3; fwd++) {
+        if (PURE_NUMBER_LINE.test(lines[fwd])) {
+          initiative = parseFloat(lines[fwd]);
+          numberLineIndex = fwd;
+          break;
+        }
+      }
+
+      if (name && initiative !== null) {
+        entries.push({ name: name, initiative: initiative });
+      }
+
+      i = numberLineIndex !== -1 ? numberLineIndex + 1 : i + 1;
+      continue;
+    }
+
+    if (QUICK_LINE_PATTERN.test(line) || QUICK_LINE_PATTERN_NAME_FIRST.test(line)) {
+      const parsed = parseQuickLine(line);
+      if (parsed) entries.push(parsed);
+    }
+
+    i += 1;
+  }
+
   return entries;
 }
 
@@ -601,6 +645,161 @@ async function processParsedEntries(entries) {
   }
 
   return addedCount;
+}
+
+// ---- TIME TRACKER ----
+// Three header fields: a typed "Starting time", an up/down "Duration
+// adventured" (hours + minutes), and a read-only "Current time" that's
+// always just startTime + duration, recalculated on every change.
+
+// Turns a typed time string into minutes-since-midnight (0-1439), or
+// null if it can't be understood. Accepts 12-hour ("8:00 AM", "8 PM")
+// and 24-hour ("20:00", "8:00") formats.
+function parseTimeToMinutes(str) {
+  if (!str) return null;
+  const match = str.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])?$/);
+  if (!match) return null;
+
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2] ? parseInt(match[2], 10) : 0;
+  const meridiem = match[3] ? match[3].toUpperCase() : null;
+
+  if (isNaN(hours) || isNaN(minutes) || minutes < 0 || minutes > 59) return null;
+
+  if (meridiem) {
+    if (hours < 1 || hours > 12) return null;
+    if (meridiem === 'AM') hours = hours === 12 ? 0 : hours;
+    else hours = hours === 12 ? 12 : hours + 12;
+  } else if (hours < 0 || hours > 23) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+}
+
+// Turns minutes-since-midnight back into a "h:mm AM/PM" display string,
+// wrapping anything outside 0-1439 back around a 24-hour clock.
+function formatMinutesToTimeString(totalMinutes) {
+  const wrapped = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours24 = Math.floor(wrapped / 60);
+  const minutes = wrapped % 60;
+  const meridiem = hours24 >= 12 ? 'PM' : 'AM';
+  let displayHours = hours24 % 12;
+  if (displayHours === 0) displayHours = 12;
+  return displayHours + ':' + String(minutes).padStart(2, '0') + ' ' + meridiem;
+}
+
+// Keeps duration sane after any manual edit or +/- click: rolls extra
+// minutes over into hours (and back), and never lets the total drop
+// below zero.
+function normalizeDuration() {
+  let total = timeState.durHours * 60 + timeState.durMinutes;
+  if (isNaN(total) || total < 0) total = Math.max(0, total || 0);
+  timeState.durHours = Math.floor(total / 60);
+  timeState.durMinutes = total % 60;
+}
+
+// Recomputes and displays "Current time" from startTime + duration.
+// If the typed starting time couldn't be parsed, falls back to
+// midnight rather than leaving the field blank.
+function updateCurrentTimeDisplay() {
+  const startMinutes = parseTimeToMinutes(timeState.startTime);
+  const base = startMinutes === null ? 0 : startMinutes;
+  const total = base + timeState.durHours * 60 + timeState.durMinutes;
+  document.getElementById('currentTimeInput').value = formatMinutesToTimeString(total);
+}
+
+// Pushes the current timeState out to all three fields on screen.
+function renderTimeControls() {
+  document.getElementById('startTimeInput').value = timeState.startTime;
+  document.getElementById('durHoursInput').value = timeState.durHours;
+  document.getElementById('durMinutesInput').value = timeState.durMinutes;
+  updateCurrentTimeDisplay();
+}
+
+// Called when the Starting time field loses focus or Enter is pressed.
+// Invalid input is rejected (with a toast) and reverted to the last
+// good value instead of silently breaking the current-time math.
+function commitStartTimeInput(input) {
+  const parsed = parseTimeToMinutes(input.value);
+  if (parsed === null) {
+    showToast('Enter a valid time, like 8:00 AM or 20:00');
+    input.value = timeState.startTime;
+    return;
+  }
+  timeState.startTime = formatMinutesToTimeString(parsed);
+  input.value = timeState.startTime;
+  updateCurrentTimeDisplay();
+  save();
+}
+
+// Called when the Current time field loses focus or Enter is pressed.
+// Current time is normally just a read-out of startTime + duration, but
+// typing directly into it works the math backwards instead: it keeps
+// Starting time fixed and recalculates Duration adventured to match
+// whatever time was typed in. If the typed time is earlier in the day
+// than the starting time, it's treated as having wrapped past midnight
+// into the next day (e.g. starting at 10:00 PM, typing 2:00 AM gives a
+// 4-hour duration instead of a negative one).
+function commitCurrentTimeInput(input) {
+  const parsed = parseTimeToMinutes(input.value);
+  if (parsed === null) {
+    showToast('Enter a valid time, like 8:00 AM or 20:00');
+    updateCurrentTimeDisplay();
+    return;
+  }
+
+  const startMinutes = parseTimeToMinutes(timeState.startTime);
+  const base = startMinutes === null ? 0 : startMinutes;
+
+  let diff = parsed - base;
+  if (diff < 0) diff += 1440;
+
+  timeState.durHours = Math.floor(diff / 60);
+  timeState.durMinutes = diff % 60;
+
+  renderTimeControls();
+  save();
+}
+
+// Called when either duration field loses focus or Enter is pressed —
+// this is what lets you type a number directly instead of only using
+// the +/- buttons.
+function commitDurationInputs() {
+  const hoursInput = document.getElementById('durHoursInput');
+  const minutesInput = document.getElementById('durMinutesInput');
+  const hoursVal = parseInt(hoursInput.value, 10);
+  const minutesVal = parseInt(minutesInput.value, 10);
+
+  timeState.durHours = isNaN(hoursVal) ? 0 : hoursVal;
+  timeState.durMinutes = isNaN(minutesVal) ? 0 : minutesVal;
+  normalizeDuration();
+  renderTimeControls();
+  save();
+}
+
+// Duration +/- buttons: hours step by 1, minutes step by 10.
+function adjustDurationHours(delta) {
+  timeState.durHours += delta;
+  normalizeDuration();
+  renderTimeControls();
+  save();
+}
+
+function adjustDurationMinutes(delta) {
+  timeState.durMinutes += delta;
+  normalizeDuration();
+  renderTimeControls();
+  save();
+}
+
+// Resets the adventuring clock back to 0h 0m, without touching the
+// chosen Starting time.
+function resetTime() {
+  timeState.durHours = 0;
+  timeState.durMinutes = 0;
+  renderTimeControls();
+  save();
 }
 
 // ---- DICE ROLLER ----
@@ -719,6 +918,8 @@ function updateMobAutoResult() {
 
   const attacks = parseInt(document.getElementById('mobAttacksInput').value, 10);
   const ac = parseFloat(document.getElementById('mobACInput').value);
+
+  save(); // remember the mob calculator's current inputs so a refresh doesn't lose them
 
   if (isNaN(attacks) || attacks < 1 || isNaN(ac)) {
     resultEl.innerHTML = '';
@@ -839,6 +1040,7 @@ function clearMobCalculator() {
   document.getElementById('mobDisCheck').checked = false;
   document.getElementById('mobAutoResult').innerHTML = '';
   document.getElementById('mobRollResult').innerHTML = '';
+  save();
 }
 
 // ---- REFERENCE DROPDOWNS (remember open/closed state for this browser session) ----
@@ -861,23 +1063,31 @@ function initDropdownPersistence() {
   });
 }
 
-// ---- CONDITION CROSS-REFERENCES ----
-// Whenever one condition's text mentions another condition by name
-// (e.g. Stunned mentioning "Incapacitated", or Heavily Obscured
-// mentioning "Blinded"), that word is a clickable link. Clicking it
-// opens the main Conditions dropdown plus that specific condition's
-// own dropdown, scrolls it into view, and briefly flashes it gold so
-// it's easy to spot.
-function openConditionReference(conditionId) {
-  const mainDropdown = document.getElementById('dropConditions');
-  if (mainDropdown) {
-    mainDropdown.open = true;
-    sessionStorage.setItem('dropdown_dropConditions', 'true');
-  }
-
-  const target = document.getElementById(conditionId);
+// ---- GLOSSARY / RULES CROSS-REFERENCES ----
+// Anywhere on the page, an important rules term can be a gold clickable
+// link (class "gloss-ref", with data-ref="targetId") pointing at a
+// <details> element elsewhere on the page — a Rules Glossary entry, a
+// Condition, or a whole reference dropdown like Conditions or Jumping.
+// Clicking one opens that target AND every dropdown it's nested inside
+// (so a glossary entry buried inside the collapsed Rules Glossary
+// dropdown still opens correctly), scrolls it into view, and briefly
+// flashes it gold so it's easy to spot.
+function openReference(targetId) {
+  const target = document.getElementById(targetId);
   if (!target) return;
-  target.open = true;
+
+  // Open the target itself (if it's a dropdown/entry) plus every
+  // <details> ancestor it's nested inside, top-down.
+  let el = target;
+  while (el) {
+    if (el.tagName === 'DETAILS') {
+      el.open = true;
+      if (DROPDOWN_IDS.includes(el.id)) {
+        sessionStorage.setItem('dropdown_' + el.id, 'true');
+      }
+    }
+    el = el.parentElement;
+  }
 
   // Give the browser a moment to lay out the newly opened content
   // before scrolling, so it lands in the right place.
@@ -1119,9 +1329,21 @@ document.addEventListener('DOMContentLoaded', () => {
   load();
   render();
   renderRound();
+  renderTimeControls();
   initDropdownPersistence();
   toggleJumpDexVisibility();
   computeJump();
+
+  // Restore the mob attack calculator's inputs from the last session,
+  // then recalculate "Automatic hits" so it's visible right away.
+  if (savedMobState) {
+    document.getElementById('mobAttacksInput').value = savedMobState.attacks || '';
+    document.getElementById('mobBonusInput').value = savedMobState.bonus || '';
+    document.getElementById('mobACInput').value = savedMobState.ac || '';
+    document.getElementById('mobAdvCheck').checked = !!savedMobState.adv;
+    document.getElementById('mobDisCheck').checked = !!savedMobState.dis;
+  }
+  updateMobAutoResult();
 
   // Manual "Add a combatant" form
   document.getElementById('addForm').addEventListener('submit', async (e) => {
@@ -1211,20 +1433,52 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('roundUp').addEventListener('click', incrementRound);
   document.getElementById('roundDown').addEventListener('click', decrementRound);
 
+  // Time tracker: starting time field
+  document.getElementById('startTimeInput').addEventListener('focusout', (e) => commitStartTimeInput(e.target));
+  document.getElementById('startTimeInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') e.target.blur();
+  });
+
+  // Time tracker: current time field (typing a time directly recalculates duration)
+  document.getElementById('currentTimeInput').addEventListener('focusout', (e) => commitCurrentTimeInput(e.target));
+  document.getElementById('currentTimeInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') e.target.blur();
+  });
+
+  // Time tracker: duration fields (typing a number directly)
+  document.getElementById('durHoursInput').addEventListener('focusout', commitDurationInputs);
+  document.getElementById('durMinutesInput').addEventListener('focusout', commitDurationInputs);
+  document.getElementById('durHoursInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') e.target.blur();
+  });
+  document.getElementById('durMinutesInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') e.target.blur();
+  });
+
+  // Time tracker: duration +/- buttons (hours by 1, minutes by 10)
+  document.getElementById('durHoursUp').addEventListener('click', () => adjustDurationHours(1));
+  document.getElementById('durHoursDown').addEventListener('click', () => adjustDurationHours(-1));
+  document.getElementById('durMinutesUp').addEventListener('click', () => adjustDurationMinutes(10));
+  document.getElementById('durMinutesDown').addEventListener('click', () => adjustDurationMinutes(-10));
+
+  // Time tracker: reset button
+  document.getElementById('resetTimeBtn').addEventListener('click', resetTime);
+
   // Bottom control bar
   document.getElementById('swapBtn').addEventListener('click', swapSelected);
   document.getElementById('undoBtn').addEventListener('click', undoLast);
   document.getElementById('copyBtn').addEventListener('click', copyList);
   document.getElementById('clearBtn').addEventListener('click', clearAll);
 
-  // Reference pane: clicking a condition name (e.g. "Incapacitated"
-  // inside Stunned, or "Blinded" inside Heavily Obscured) opens the
-  // Conditions dropdown and that specific condition, then scrolls to it.
-  document.querySelector('.lookup-panel').addEventListener('click', (e) => {
-    const ref = e.target.closest('.condition-ref');
+  // Anywhere on the page: clicking a gold rules-term link (e.g.
+  // "AC" inside Cover, "Incapacitated" inside Stunned, or "Conditions
+  // dropdown" inside a glossary entry) opens every dropdown it's
+  // nested inside, then scrolls to and flashes the target.
+  document.addEventListener('click', (e) => {
+    const ref = e.target.closest('.gloss-ref');
     if (!ref) return;
     e.preventDefault();
-    openConditionReference(ref.dataset.condition);
+    openReference(ref.dataset.ref);
   });
 
   // Dice roller: +/- buttons for the dice count field
