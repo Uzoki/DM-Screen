@@ -899,6 +899,26 @@ details.condition-dropdown[open] summary::before {
     margin-top: 6px;
 }
 
+/* ===== LORE SECTION (nested group dropdowns) =====
+   The Lore dropdown reuses the same .condition-dropdown component as
+   Conditions/Rules Glossary, but nests it several levels deep (e.g.
+   Planes > Outer Planes > Upper Planes > Mount Celestia). This adds a
+   little left indent and spacing each time a .condition-list sits
+   inside another one, so deeper levels read as sub-groups rather than
+   blurring together. */
+.condition-list .condition-list {
+    margin-left: 12px;
+    margin-top: 2px;
+    padding-left: 10px;
+    border-left: 1px solid var(--border);
+}
+
+.lore-group-blurb {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 0.74rem !important;
+}
+
 /* Brief highlight flash used when a condition cross-reference link
    (e.g. "Incapacitated" mentioned inside Stunned) opens and scrolls
    to that condition's own dropdown, so it's easy to spot. */

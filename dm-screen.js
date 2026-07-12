@@ -1043,26 +1043,6 @@ function clearMobCalculator() {
   save();
 }
 
-// ---- REFERENCE DROPDOWNS (remember open/closed state for this browser session) ----
-
-const DROPDOWN_IDS = ['dropSkills', 'dropCreatureTypes', 'dropCover', 'dropObscured', 'dropConditions', 'dropJumping', 'dropNpcReactions', 'dropRulesGlossary', 'dropLore'];
-
-function initDropdownPersistence() {
-  DROPDOWN_IDS.forEach((id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    const saved = sessionStorage.getItem('dropdown_' + id);
-    if (saved !== null) {
-      el.open = saved === 'true';
-    }
-
-    el.addEventListener('toggle', () => {
-      sessionStorage.setItem('dropdown_' + id, el.open);
-    });
-  });
-}
-
 // ---- GLOSSARY / RULES CROSS-REFERENCES ----
 // Anywhere on the page, an important rules term can be a gold clickable
 // link (class "gloss-ref", with data-ref="targetId") pointing at a
@@ -1082,9 +1062,6 @@ function openReference(targetId) {
   while (el) {
     if (el.tagName === 'DETAILS') {
       el.open = true;
-      if (DROPDOWN_IDS.includes(el.id)) {
-        sessionStorage.setItem('dropdown_' + el.id, 'true');
-      }
     }
     el = el.parentElement;
   }
@@ -1330,7 +1307,6 @@ document.addEventListener('DOMContentLoaded', () => {
   render();
   renderRound();
   renderTimeControls();
-  initDropdownPersistence();
   toggleJumpDexVisibility();
   computeJump();
 
