@@ -65,6 +65,7 @@ function save() {
   const attacksEl = document.getElementById('mobAttacksInput');
   const bonusEl = document.getElementById('mobBonusInput');
   const acEl = document.getElementById('mobACInput');
+  const dmgEl = document.getElementById('mobDmgInput');
   const advEl = document.getElementById('mobAdvCheck');
   const disEl = document.getElementById('mobDisCheck');
 
@@ -72,6 +73,7 @@ function save() {
     attacks: attacksEl ? attacksEl.value : '',
     bonus: bonusEl ? bonusEl.value : '',
     ac: acEl ? acEl.value : '',
+    dmg: dmgEl ? dmgEl.value : '',
     adv: advEl ? advEl.checked : false,
     dis: disEl ? disEl.checked : false
   };
@@ -867,6 +869,165 @@ function clearDiceRoller() {
   document.getElementById('diceResult').innerHTML = '';
 }
 
+// ---- DAMAGE PARSING (for the Mob Attack Calculator's optional damage field) ----
+// Reads a free-typed damage string like "1d8acid+2d6 piercing" or
+// "4d4+2 PierCinG 2d10necrotic" and turns it into a list of dice
+// groups: [{ count, sides, modifier, type }, ...]. Damage type is
+// optional per group; if the same word doesn't appear near a group,
+// that group's type is '' (untyped).
+//
+// How it works: first every "NdM" dice expression in the string is
+// found (e.g. "1d8", "2d6", or just "d4" with no leading number,
+// which defaults to a count of 1). Whatever text sits between the end
+// of one dice expression and the start of the next one "belongs" to
+// the first — that's where its optional +/- modifier and optional
+// damage-type word are pulled from.
+
+const DAMAGE_TYPES = [
+  'acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic',
+  'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder'
+];
+
+function capitalizeWord(word) {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+function parseDamageInput(text) {
+  if (!text) return [];
+  let str = text.toLowerCase().replace(/[(),]/g, ' ');
+
+  const diceRegex = /(\d*)\s*d\s*(\d+)/g;
+  const matches = [];
+  let m;
+  while ((m = diceRegex.exec(str)) !== null) {
+    matches.push({
+      index: m.index,
+      end: diceRegex.lastIndex,
+      count: m[1] ? parseInt(m[1], 10) : 1,
+      sides: parseInt(m[2], 10)
+    });
+  }
+
+  // No dice found at all — if the whole field is just a flat number,
+  // treat it as a flat (no-dice) modifier instead of ignoring it.
+  if (matches.length === 0) {
+    const flat = parseFloat(str);
+    if (!isNaN(flat)) {
+      return [{ count: 0, sides: 0, modifier: flat, type: '' }];
+    }
+    return [];
+  }
+
+  const groups = [];
+  for (let i = 0; i < matches.length; i++) {
+    const tailStart = matches[i].end;
+    const tailEnd = i + 1 < matches.length ? matches[i + 1].index : str.length;
+    const tail = str.slice(tailStart, tailEnd);
+
+    let modifier = 0;
+    const modMatch = tail.match(/([+-])\s*(\d+)/);
+    if (modMatch) {
+      modifier = parseInt(modMatch[2], 10) * (modMatch[1] === '-' ? -1 : 1);
+    }
+
+    let type = '';
+    for (const t of DAMAGE_TYPES) {
+      if (tail.includes(t)) {
+        type = t;
+        break;
+      }
+    }
+
+    groups.push({ count: matches[i].count, sides: matches[i].sides, modifier: modifier, type: type });
+  }
+
+  return groups;
+}
+
+// Average damage per hit for each damage type, added up across every
+// dice group that shares that type. Returns { typeKey: averageValue }
+// where typeKey is '' for untyped damage.
+function averageDamagePerHitByType(groups) {
+  const totals = {};
+  groups.forEach((g) => {
+    const avg = g.count > 0 ? (g.count * (g.sides + 1)) / 2 + g.modifier : g.modifier;
+    const key = g.type || '';
+    totals[key] = (totals[key] || 0) + avg;
+  });
+  return totals;
+}
+
+// Builds the "Average damage" line for the automatic-hits result,
+// multiplying each type's average-per-hit value by however many hits
+// are landing. Returns '' if there's no damage entered.
+function buildAverageDamageHtml(groups, hitsCount) {
+  if (groups.length === 0) return '';
+
+  const perHit = averageDamagePerHitByType(groups);
+  const types = Object.keys(perHit);
+  const totalsByType = {};
+  types.forEach((key) => {
+    totalsByType[key] = perHit[key] * hitsCount;
+  });
+  const overallTotal = types.reduce((sum, key) => sum + totalsByType[key], 0);
+
+  if (types.length <= 1) {
+    const onlyKey = types[0] || '';
+    const suffix = onlyKey ? ' ' + capitalizeWord(onlyKey) : '';
+    return `<br>Average damage: <strong>${overallTotal.toFixed(1)}</strong>${suffix}`;
+  }
+
+  const parts = types.map((key) => `${capitalizeWord(key)}: <strong>${totalsByType[key].toFixed(1)}</strong>`);
+  return `<br>Average damage: <strong>${overallTotal.toFixed(1)}</strong> (${parts.join(', ')})`;
+}
+
+// Rolls the damage for a single hit, doubling the number of dice
+// (not the modifier) when isCrit is true. Returns { typeKey: value }
+// for that one hit.
+function rollDamageForHit(groups, isCrit) {
+  const totals = {};
+  groups.forEach((g) => {
+    let diceSum = 0;
+    if (g.count > 0) {
+      const diceCount = isCrit ? g.count * 2 : g.count;
+      for (let i = 0; i < diceCount; i++) {
+        diceSum += rollDie(g.sides);
+      }
+    }
+    const key = g.type || '';
+    totals[key] = (totals[key] || 0) + diceSum + g.modifier;
+  });
+  return totals;
+}
+
+// Builds the "Damage" line for the rolled-attacks result from the
+// per-hit values collected while rolling (see rollMobAttacks below).
+// perTypeValues looks like { '': [12, 8], fire: [5, 5] } — one entry
+// per hit that dealt that type of damage. Returns '' if there's no
+// damage entered at all.
+function buildRolledDamageHtml(groups, perTypeValues) {
+  if (groups.length === 0) return '';
+
+  const types = Object.keys(perTypeValues);
+  if (types.length === 0) {
+    return '<br>Damage: <strong>0</strong>';
+  }
+
+  const parts = types.map((key) => {
+    const values = perTypeValues[key];
+    const total = values.reduce((a, b) => a + b, 0);
+    const label = key ? capitalizeWord(key) + ': ' : '';
+    return `${label}<strong>${total}</strong> [${values.join(', ')}]`;
+  });
+
+  if (types.length === 1) {
+    return `<br>Damage: ${parts[0]}`;
+  }
+
+  const overallTotal = types.reduce((sum, key) => sum + perTypeValues[key].reduce((a, b) => a + b, 0), 0);
+  return `<br>Damage: <strong>${overallTotal}</strong> (${parts.join(', ')})`;
+}
+
 // ---- MOB ATTACK CALCULATOR (2024 DMG model) ----
 // The 2024 DMG replaced the old 2014 "how many attackers per hit"
 // lookup table with a probability-based one. Rather than hard-code a
@@ -938,7 +1099,11 @@ function updateMobAutoResult() {
   const expected = chance * attacks;
   const hits = roundHitsToNearest(expected);
 
-  resultEl.innerHTML = `<strong>${hits}</strong> automatic hits out of ${attacks} &nbsp;(expected ${expected.toFixed(1)})`;
+  const dmgInput = document.getElementById('mobDmgInput');
+  const damageGroups = parseDamageInput(dmgInput ? dmgInput.value : '');
+  const damageHtml = buildAverageDamageHtml(damageGroups, hits);
+
+  resultEl.innerHTML = `<strong>${hits}</strong> automatic hits out of ${attacks} &nbsp;(expected ${expected.toFixed(1)})${damageHtml}`;
 }
 
 // Makes sure advantage and disadvantage can't both be checked at once.
@@ -979,6 +1144,10 @@ function rollMobAttacks() {
   const advChecked = document.getElementById('mobAdvCheck').checked;
   const disChecked = document.getElementById('mobDisCheck').checked;
 
+  const dmgInput = document.getElementById('mobDmgInput');
+  const damageGroups = parseDamageInput(dmgInput ? dmgInput.value : '');
+  const perTypeDamageValues = {}; // type key -> array of per-hit damage values
+
   let hitCount = 0;
   let critHits = 0;
   let critMisses = 0;
@@ -1006,7 +1175,16 @@ function rollMobAttacks() {
       isHit = die + baseBonus >= ac;
     }
 
-    if (isHit) hitCount += 1;
+    if (isHit) {
+      hitCount += 1;
+      if (damageGroups.length > 0) {
+        const hitDamage = rollDamageForHit(damageGroups, die === 20);
+        Object.keys(hitDamage).forEach((key) => {
+          if (!perTypeDamageValues[key]) perTypeDamageValues[key] = [];
+          perTypeDamageValues[key].push(hitDamage[key]);
+        });
+      }
+    }
 
     let cls;
     if (die === 20) cls = 'crit-hit';
@@ -1028,7 +1206,9 @@ function rollMobAttacks() {
     summary += ` (<strong>${critMisses}</strong> critical miss${critMisses === 1 ? '' : 'es'})`;
   }
 
-  resultEl.innerHTML = `${summary} [${rollsHtml.join(', ')}]`;
+  const damageHtml = buildRolledDamageHtml(damageGroups, perTypeDamageValues);
+
+  resultEl.innerHTML = `${summary} [${rollsHtml.join(', ')}]${damageHtml}`;
 }
 
 // Resets the whole mob attack calculator back to a blank state.
@@ -1036,6 +1216,7 @@ function clearMobCalculator() {
   document.getElementById('mobAttacksInput').value = '';
   document.getElementById('mobBonusInput').value = '';
   document.getElementById('mobACInput').value = '';
+  document.getElementById('mobDmgInput').value = '';
   document.getElementById('mobAdvCheck').checked = false;
   document.getElementById('mobDisCheck').checked = false;
   document.getElementById('mobAutoResult').innerHTML = '';
@@ -1316,6 +1497,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('mobAttacksInput').value = savedMobState.attacks || '';
     document.getElementById('mobBonusInput').value = savedMobState.bonus || '';
     document.getElementById('mobACInput').value = savedMobState.ac || '';
+    document.getElementById('mobDmgInput').value = savedMobState.dmg || '';
     document.getElementById('mobAdvCheck').checked = !!savedMobState.adv;
     document.getElementById('mobDisCheck').checked = !!savedMobState.dis;
   }
@@ -1483,6 +1665,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('mobAttacksInput').addEventListener('input', updateMobAutoResult);
   document.getElementById('mobBonusInput').addEventListener('input', updateMobAutoResult);
   document.getElementById('mobACInput').addEventListener('input', updateMobAutoResult);
+  document.getElementById('mobDmgInput').addEventListener('input', updateMobAutoResult);
 
   // Mob attack calculator: advantage / disadvantage checkboxes (mutually exclusive)
   document.getElementById('mobAdvCheck').addEventListener('change', () => handleMobAdvDisChange('adv'));

@@ -713,6 +713,15 @@ input.row-ini {
     font-family: var(--font-mono);
 }
 
+.mob-dmg-row {
+    margin-bottom: 10px;
+}
+
+.mob-dmg-input {
+    width: 100%;
+    font-family: var(--font-mono);
+}
+
 .mob-adv-row {
     display: flex;
     align-items: center;
