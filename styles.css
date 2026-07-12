@@ -60,6 +60,25 @@ body {
     flex-wrap: wrap;
 }
 
+/* ===== ROUND COUNTER (header) ===== */
+
+.round-control-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    flex-shrink: 0;
+}
+
+.round-reset-btn {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+}
+
 .round-control {
     display: flex;
     align-items: center;
@@ -676,16 +695,31 @@ input.row-ini {
     font-weight: 700;
 }
 
+/* Crit hits/misses (natural 20s and 1s) — bright, bold, and slightly
+   larger than a normal roll so they jump out of the roll list. Uses
+   its own vivid colors rather than --success/--danger so it reads as
+   more urgent/exciting than a plain max/min die. */
 .dice-result .crit-hit {
-    color: var(--success);
-    font-weight: 800;
-    font-size: 1.2em;
+    color: #39e75f;
+    font-weight: 900;
+    font-size: 1.25em;
+    text-shadow: 0 0 6px rgba(57, 231, 95, 0.45);
 }
 
 .dice-result .crit-miss {
-    color: var(--danger);
+    color: #ff4136;
+    font-weight: 900;
+    font-size: 1.25em;
+    text-shadow: 0 0 6px rgba(255, 65, 54, 0.45);
+}
+
+/* An individual damage value (inside the "Damage:" breakdown list)
+   that came from a critical hit — bigger and bolder than the other
+   values in the same list, but keeps whatever damage-type color its
+   parent already has. */
+.dmg-crit-value {
     font-weight: 800;
-    font-size: 1.2em;
+    font-size: 1.15em;
 }
 
 /* ===== PANEL FOOTER (Clear / action buttons under a panel) ===== */
@@ -779,7 +813,67 @@ input.row-ini {
     font-size: 0.95rem;
 }
 
+/* The "X per hit" figure in the Average Total Damage line — gold to
+   match the rest of the app's highlighted numbers, but deliberately
+   NOT bold or enlarged, so it reads as a secondary detail next to the
+   bold total. */
+.per-attack-value {
+    color: var(--gold-bright);
+    font-weight: 400;
+}
+
+/* The "A1", "A2(crit)" attack-indicator label in the mob calculator's
+   per-attack breakdown — already bold and gold via ".dice-result
+   strong", this adds the underline that sets it apart from the
+   attack's plain (non-underlined) total-damage number. */
+.per-attack-label {
+    text-decoration: underline;
+}
+
 /* ===== REFERENCE COLUMN / DROPDOWNS ===== */
+
+.lookup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.lookup-header h2 {
+    margin: 0;
+}
+
+.reference-reset-btn {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.reference-search-row {
+    margin-bottom: 10px;
+}
+
+.reference-search-input {
+    width: 100%;
+}
+
+/* Dropdowns that don't match the current Reference-pane search
+   filter are removed from layout entirely (rather than just
+   collapsed), so the visible list is a clean, filtered result. */
+.search-hidden {
+    display: none !important;
+}
+
+/* Wraps each matched search term inside a visible dropdown, so it's
+   obvious at a glance why that dropdown matched. */
+.search-highlight {
+    background: var(--gold-bright);
+    color: #1a1408;
+    border-radius: 2px;
+    padding: 0 1px;
+}
 
 .dropdown-group {
     display: flex;
@@ -824,6 +918,20 @@ details.dropdown[open] summary::before {
     margin: 2px 0;
     font-size: 0.78rem;
     color: var(--text);
+}
+
+/* Used on a handful of skill labels (e.g. Arcana, History / Medicine,
+   Nature, Religion in "Creature Types by Skill") that should stand out
+   with a bigger font than the rest of the dropdown's body text. */
+.skill-label-large {
+    font-size: 0.95rem;
+}
+
+/* Used on individual skill names (Athletics, Acrobatics, ...) in
+   "Skills by Ability" and individual creature type names (Aberration,
+   Construct, ...) in "Creature Types by Skill". */
+.skill-italic {
+    font-style: italic;
 }
 
 /* Condition entries: headers + bullet lists inside a dropdown */

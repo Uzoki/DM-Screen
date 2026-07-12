@@ -21,13 +21,16 @@
 
       <div class="header-controls">
 
-        <div class="round-control">
-          <button id="roundDown" class="round-btn" type="button" aria-label="Decrease round">−</button>
-          <div class="round-badge">
-            <span class="round-label">Round</span>
-            <span id="roundNumber">1</span>
+        <div class="round-control-wrapper">
+          <div class="round-control">
+            <button id="roundDown" class="round-btn" type="button" aria-label="Decrease round">−</button>
+            <div class="round-badge">
+              <span class="round-label">Round</span>
+              <span id="roundNumber">1</span>
+            </div>
+            <button id="roundUp" class="round-btn" type="button" aria-label="Increase round">+</button>
           </div>
-          <button id="roundUp" class="round-btn" type="button" aria-label="Increase round">+</button>
+          <button id="resetRoundBtn" class="btn-danger round-reset-btn" type="button">Reset round</button>
         </div>
 
         <div class="time-control">
@@ -60,7 +63,8 @@
             <input type="text" id="currentTimeInput" class="time-text-input" value="8:00 AM" />
           </div>
 
-          <button id="resetTimeBtn" class="btn-danger time-reset-btn" type="button">Reset time</button>
+          <button id="nextDayBtn" class="btn-primary time-reset-btn" type="button">Next day</button>
+          <button id="resetTimeAllBtn" class="btn-danger time-reset-btn" type="button">Reset</button>
 
         </div>
 
@@ -108,7 +112,7 @@
 
       <div class="column column-dice">
         <section class="dice-panel">
-          <h2>Dice</h2>
+          <h2>Dice Roller</h2>
 
           <div class="dice-count-row">
             <div class="dice-count-control">
@@ -148,7 +152,7 @@
           </div>
 
           <div class="mob-dmg-row">
-            <input type="text" id="mobDmgInput" class="mob-dmg-input" placeholder="Damage (optional), e.g. 1d8+3 piercing" />
+            <input type="text" id="mobDmgInput" class="mob-dmg-input" placeholder="Damage (optional), e.g. 1d8+3 force + 2d4 acid" />
           </div>
 
           <div class="mob-adv-row">
@@ -169,28 +173,35 @@
 
       <div class="column column-lookup">
         <section class="lookup-panel">
-          <h2>Reference</h2>
+          <div class="lookup-header">
+            <h2>Reference Information</h2>
+            <button id="resetReferenceBtn" class="btn-danger reference-reset-btn" type="button">Reset</button>
+          </div>
+
+          <div class="reference-search-row">
+            <input type="text" id="referenceSearchInput" class="reference-search-input" placeholder="Search reference... (e.g. cover ac)" />
+          </div>
 
           <div class="dropdown-group">
 
             <details class="dropdown" id="dropSkills" open>
               <summary>Skills by Ability</summary>
               <div class="dropdown-body">
-                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a>:</strong> <a href="#" class="gloss-ref" data-ref="glossary-athletics">Athletics</a></p>
-                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a>:</strong> <a href="#" class="gloss-ref" data-ref="glossary-acrobatics">Acrobatics</a>, <a href="#" class="gloss-ref" data-ref="glossary-sleight-of-hand">Sleight of Hand</a>, <a href="#" class="gloss-ref" data-ref="glossary-stealth">Stealth</a></p>
-                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-intelligence">Intelligence</a>:</strong> <a href="#" class="gloss-ref" data-ref="glossary-arcana">Arcana</a>, <a href="#" class="gloss-ref" data-ref="glossary-history">History</a>, <a href="#" class="gloss-ref" data-ref="glossary-investigation">Investigation</a>, <a href="#" class="gloss-ref" data-ref="glossary-nature">Nature</a>, <a href="#" class="gloss-ref" data-ref="glossary-religion">Religion</a></p>
-                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-wisdom">Wisdom</a>:</strong> <a href="#" class="gloss-ref" data-ref="glossary-animal-handling">Animal Handling</a>, <a href="#" class="gloss-ref" data-ref="glossary-insight">Insight</a>, <a href="#" class="gloss-ref" data-ref="glossary-medicine">Medicine</a>, <a href="#" class="gloss-ref" data-ref="glossary-perception">Perception</a>, <a href="#" class="gloss-ref" data-ref="glossary-survival">Survival</a></p>
-                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-charisma">Charisma</a>:</strong> <a href="#" class="gloss-ref" data-ref="glossary-deception">Deception</a>, <a href="#" class="gloss-ref" data-ref="glossary-intimidation">Intimidation</a>, <a href="#" class="gloss-ref" data-ref="glossary-performance">Performance</a>, <a href="#" class="gloss-ref" data-ref="glossary-persuasion">Persuasion</a></p>
+                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="glossary-athletics">Athletics</a></p>
+                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="glossary-acrobatics">Acrobatics</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-sleight-of-hand">Sleight of Hand</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-stealth">Stealth</a></p>
+                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-intelligence">Intelligence</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="glossary-arcana">Arcana</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-history">History</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-investigation">Investigation</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-nature">Nature</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-religion">Religion</a></p>
+                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-wisdom">Wisdom</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="glossary-animal-handling">Animal Handling</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-insight">Insight</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-medicine">Medicine</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-perception">Perception</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-survival">Survival</a></p>
+                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-charisma">Charisma</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="glossary-deception">Deception</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-intimidation">Intimidation</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-performance">Performance</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-persuasion">Persuasion</a></p>
               </div>
             </details>
 
             <details class="dropdown" id="dropCreatureTypes" open>
               <summary>Creature Types by Skill</summary>
               <div class="dropdown-body">
-                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-arcana">Arcana</a>:</strong> <a href="#" class="gloss-ref" data-ref="creature-type-aberration">Aberration</a>, <a href="#" class="gloss-ref" data-ref="creature-type-construct">Construct</a>, <a href="#" class="gloss-ref" data-ref="creature-type-elemental">Elemental</a>, <a href="#" class="gloss-ref" data-ref="creature-type-fey">Fey</a>, <a href="#" class="gloss-ref" data-ref="creature-type-monstrosity">Monstrosity</a></p>
-                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-history">History</a>:</strong> <a href="#" class="gloss-ref" data-ref="creature-type-giant">Giant</a>, <a href="#" class="gloss-ref" data-ref="creature-type-humanoid">Humanoid</a></p>
-                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-nature">Nature</a>:</strong> <a href="#" class="gloss-ref" data-ref="creature-type-beast">Beast</a>, <a href="#" class="gloss-ref" data-ref="creature-type-dragon">Dragon</a>, <a href="#" class="gloss-ref" data-ref="creature-type-ooze">Ooze</a>, <a href="#" class="gloss-ref" data-ref="creature-type-plant">Plant</a></p>
-                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-religion">Religion</a>:</strong> <a href="#" class="gloss-ref" data-ref="creature-type-celestial">Celestial</a>, <a href="#" class="gloss-ref" data-ref="creature-type-fiend">Fiend</a>, <a href="#" class="gloss-ref" data-ref="creature-type-undead">Undead</a></p>
+                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-arcana">Arcana</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-aberration">Aberration</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-construct">Construct</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-elemental">Elemental</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-fey">Fey</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-monstrosity">Monstrosity</a></p>
+                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-history">History</a> / <a href="#" class="gloss-ref" data-ref="glossary-medicine">Medicine</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-giant">Giant</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-humanoid">Humanoid</a></p>
+                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-nature">Nature</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-beast">Beast</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-dragon">Dragon</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-ooze">Ooze</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-plant">Plant</a></p>
+                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-religion">Religion</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-celestial">Celestial</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-fiend">Fiend</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-undead">Undead</a></p>
               </div>
             </details>
 
@@ -1245,7 +1256,7 @@
                   <details class="condition-dropdown" id="glossary-high-jump">
                     <summary>High Jump</summary>
                     <div class="condition-body">
-                      <p>Jump vertically 3 + <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> modifier feet (min 0) with a 10-foot running start; half that standing still. Each foot costs a foot of movement. You can <a href="#" class="gloss-ref" data-ref="glossary-reach">reach</a> half your height higher during the jump, for a total reach of the jump height plus 1.5x your height.</p>
+                      <p>Jump vertically 3 + <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> modifier feet (min 0) with a 10-foot running start; half that standing still. Each foot costs a foot of movement. You can <a href="#" class="gloss-ref" data-ref="glossary-reach">reach</a> half your height higher during the jump, for a total reach of the jump height plus 1.5x your height. See the <a href="#" class="gloss-ref" data-ref="dropJumping">Jumping calculator dropdown</a> above for exact numbers.</p>
                     </div>
                   </details>
 
@@ -1402,7 +1413,7 @@
                   <details class="condition-dropdown" id="glossary-long-jump">
                     <summary>Long Jump</summary>
                     <div class="condition-body">
-                      <p>Leap horizontally up to your <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> score in feet with a 10-foot running start; half that standing still. Each foot costs a foot of movement.</p>
+                      <p>Leap horizontally up to your <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> score in feet with a 10-foot running start; half that standing still. Each foot costs a foot of movement. See the <a href="#" class="gloss-ref" data-ref="dropJumping">Jumping calculator dropdown</a> above for exact numbers.</p>
                       <p>Landing in <a href="#" class="gloss-ref" data-ref="glossary-difficult-terrain">Difficult Terrain</a> requires a <a href="#" class="gloss-ref" data-ref="glossary-difficulty-class">DC</a> 10 <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> (<a href="#" class="gloss-ref" data-ref="glossary-acrobatics">Acrobatics</a>) check or you fall <a href="#" class="gloss-ref" data-ref="condition-prone">Prone</a>. At the DM's option, clearing a low obstacle (no taller than a quarter of the jump distance) requires a DC 10 <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> (<a href="#" class="gloss-ref" data-ref="glossary-athletics">Athletics</a>) check, or you hit it.</p>
                     </div>
                   </details>
@@ -1451,7 +1462,7 @@
                                     <details class="condition-dropdown" id="glossary-medicine">
                     <summary>Medicine</summary>
                     <div class="condition-body">
-                      <p>A <a href="#" class="gloss-ref" data-ref="glossary-wisdom">Wisdom</a> <a href="#" class="gloss-ref" data-ref="glossary-skill">skill</a> used to stabilize a dying creature or diagnose an illness.</p>
+                      <p>A <a href="#" class="gloss-ref" data-ref="glossary-wisdom">Wisdom</a> <a href="#" class="gloss-ref" data-ref="glossary-skill">skill</a> used to stabilize a dying creature, diagnose an illness, or recall knowledge of anatomy and physiology — such as identifying a creature's vulnerable points, determining the cause of an unusual wound, or recognizing the effects of a disease or poison already at work.</p>
                     </div>
                   </details>
 

@@ -198,8 +198,9 @@ function toggleVisibility(id) {
   render();
 }
 
-function clearAll() {
-  const confirmed = confirm('Clear the entire initiative list?');
+// Clears the entire initiative list, after confirmation.
+async function clearAll() {
+  const confirmed = await confirmAction('Clear the entire initiative list?');
   if (!confirmed) return;
   pushUndoSnapshot();
   combatants = [];
@@ -216,6 +217,15 @@ function incrementRound() {
 
 function decrementRound() {
   round = Math.max(1, round - 1);
+  renderRound();
+  save();
+}
+
+// Resets the round counter back to 1, after confirmation.
+async function resetRound() {
+  const confirmed = await confirmAction('Reset the round counter back to 1?');
+  if (!confirmed) return;
+  round = 1;
   renderRound();
   save();
 }
@@ -415,6 +425,16 @@ function showModal(message, buttons) {
 
     overlay.classList.remove('hidden');
   });
+}
+
+// Generic yes/no confirmation popup, used by every Clear/Reset button
+// on the page. Returns true if the user confirmed, false if they
+// cancelled (or clicked away).
+function confirmAction(message, confirmLabel) {
+  return showModal(message, [
+    { label: confirmLabel || 'Confirm', value: 'confirm', className: 'btn-danger' },
+    { label: 'Cancel', value: 'cancel', className: 'btn-secondary' }
+  ]).then((choice) => choice === 'confirm');
 }
 
 // Adds a new combatant — unless that name is already in the list.
@@ -795,9 +815,22 @@ function adjustDurationMinutes(delta) {
   save();
 }
 
-// Resets the adventuring clock back to 0h 0m, without touching the
-// chosen Starting time.
+// "Next day" button: resets the adventuring clock back to 0h 0m,
+// without touching the chosen Starting time. No confirmation pop-up,
+// since this isn't a destructive Clear/Reset action.
 function resetTime() {
+  timeState.durHours = 0;
+  timeState.durMinutes = 0;
+  renderTimeControls();
+  save();
+}
+
+// "Reset" button: resets the ENTIRE time tracker back to its default
+// state, including the starting time, after confirmation.
+async function resetTimeAll() {
+  const confirmed = await confirmAction('Reset the time tracker back to its default state (8:00 AM, 0h 0m)?');
+  if (!confirmed) return;
+  timeState.startTime = '8:00 AM';
   timeState.durHours = 0;
   timeState.durMinutes = 0;
   renderTimeControls();
@@ -861,9 +894,12 @@ function renderDiceResult(sides, rolls) {
   document.getElementById('diceResult').innerHTML = html;
 }
 
-// Resets the dice roller back to its starting state: dice count back
-// to 1, modifier field emptied, and the last result cleared.
-function clearDiceRoller() {
+// Resets the dice roller back to its starting state, after
+// confirmation: dice count back to 1, modifier field emptied, and the
+// last result cleared.
+async function clearDiceRoller() {
+  const confirmed = await confirmAction('Clear the dice roller?');
+  if (!confirmed) return;
   document.getElementById('diceCountInput').value = 1;
   document.getElementById('modifierInput').value = '';
   document.getElementById('diceResult').innerHTML = '';
@@ -918,6 +954,14 @@ function capitalizeWord(word) {
 // the actual colors). Untyped damage gets no special class.
 function damageTypeClass(type) {
   return type ? 'dmg-' + type : '';
+}
+
+// Formats a damage total for display: keeps one decimal place unless
+// the number is a whole number, in which case the decimal is dropped
+// entirely (e.g. 16 instead of 16.0, but 16.5 stays 16.5).
+function formatDamageNumber(value) {
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
 function parseDamageInput(text) {
@@ -986,12 +1030,14 @@ function averageDamagePerHitByType(groups) {
 }
 
 // Builds the "Average Total Damage" line for the automatic-hits
-// result: the total across however many hits are landing, plus that
-// same total spread evenly across every attack (hits and misses
-// alike) as an "X per attack" figure. Returns '' if there's no
-// damage entered. When more than one damage type is in play, each
-// type's own subtotal is broken out afterward in its own color.
-function buildAverageDamageHtml(groups, hitsCount, attacksCount) {
+// result: the total across however many hits are landing, plus the
+// average damage of a SINGLE hit as an "X per hit" figure (shown in
+// gold) — this is just the raw per-hit dice average, independent of
+// how many hits actually landed. Returns '' if there's no damage
+// entered. When more than one damage type is in play, each type's own
+// subtotal is broken out afterward in its own color. Whole-number
+// totals are shown without a trailing ".0".
+function buildAverageDamageHtml(groups, hitsCount) {
   if (groups.length === 0) return '';
 
   const perHit = averageDamagePerHitByType(groups);
@@ -1001,19 +1047,20 @@ function buildAverageDamageHtml(groups, hitsCount, attacksCount) {
     totalsByType[key] = perHit[key] * hitsCount;
   });
   const overallTotal = types.reduce((sum, key) => sum + totalsByType[key], 0);
-  const perAttack = attacksCount > 0 ? overallTotal / attacksCount : 0;
+  const perHitTotal = types.reduce((sum, key) => sum + perHit[key], 0);
+  const perHitHtml = `<span class="per-attack-value">${perHitTotal.toFixed(1)}</span> per hit`;
 
   if (types.length === 1) {
     const cls = damageTypeClass(types[0]);
-    return `<br>Average Total Damage: <strong class="${cls}">${overallTotal.toFixed(1)}</strong> (${perAttack.toFixed(1)} per attack)`;
+    return `<br>Average Total Damage: <strong class="${cls}">${formatDamageNumber(overallTotal)}</strong> (${perHitHtml})`;
   }
 
   const parts = types.map((key) => {
     const cls = damageTypeClass(key);
     const label = key ? capitalizeWord(key) : 'Untyped';
-    return `<span class="${cls}">${label}: <strong class="${cls}">${totalsByType[key].toFixed(1)}</strong></span>`;
+    return `<span class="${cls}">${label}: <strong class="${cls}">${formatDamageNumber(totalsByType[key])}</strong></span>`;
   });
-  return `<br>Average Total Damage: <strong>${overallTotal.toFixed(1)}</strong> (${perAttack.toFixed(1)} per attack) — ${parts.join(', ')}`;
+  return `<br>Average Total Damage: <strong>${formatDamageNumber(overallTotal)}</strong> (${perHitHtml}) — ${parts.join(', ')}`;
 }
 
 // Rolls the damage for a single hit, doubling the number of dice
@@ -1037,9 +1084,11 @@ function rollDamageForHit(groups, isCrit) {
 
 // Builds the "Damage" line for the rolled-attacks result from the
 // per-hit values collected while rolling (see rollMobAttacks below).
-// perTypeValues looks like { '': [12, 8], fire: [5, 5] } — one entry
-// per hit that dealt that type of damage. Returns '' if there's no
-// damage entered at all.
+// perTypeValues looks like { '': [{value,isCrit}], fire: [{value,isCrit}] }
+// — one entry per hit that dealt that type of damage, in the order the
+// hits happened. Any value that came from a critical hit is shown
+// larger and bolder (but keeps its damage-type color) so it's easy to
+// spot at a glance. Returns '' if there's no damage entered at all.
 function buildRolledDamageHtml(groups, perTypeValues) {
   if (groups.length === 0) return '';
 
@@ -1049,19 +1098,50 @@ function buildRolledDamageHtml(groups, perTypeValues) {
   }
 
   const parts = types.map((key) => {
-    const values = perTypeValues[key];
-    const total = values.reduce((a, b) => a + b, 0);
+    const entries = perTypeValues[key];
+    const total = entries.reduce((sum, entry) => sum + entry.value, 0);
     const cls = damageTypeClass(key);
     const label = key ? capitalizeWord(key) + ': ' : '';
-    return `<span class="${cls}">${label}<strong class="${cls}">${total}</strong> [${values.join(', ')}]</span>`;
+    const valuesHtml = entries
+      .map((entry) => (entry.isCrit ? `<span class="dmg-crit-value">${entry.value}</span>` : `${entry.value}`))
+      .join(', ');
+    return `<span class="${cls}">${label}<strong class="${cls}">${total}</strong> [${valuesHtml}]</span>`;
   });
 
   if (types.length === 1) {
     return `<br>Damage: ${parts[0]}`;
   }
 
-  const overallTotal = types.reduce((sum, key) => sum + perTypeValues[key].reduce((a, b) => a + b, 0), 0);
+  const overallTotal = types.reduce((sum, key) => sum + perTypeValues[key].reduce((s, entry) => s + entry.value, 0), 0);
   return `<br>Damage: <strong>${overallTotal}</strong> (${parts.join(', ')})`;
+}
+
+// Builds the per-attack breakdown, one line per attack that hit, e.g.:
+// A1: 7 [3, 4]
+// A2(crit): 14 [5, 9]
+// Numbered in the order the attacks happened. Each attack's label
+// ("A1", "A2(crit)") is bold, gold, and underlined; its total damage
+// number is bold and gold too; each number inside the brackets keeps
+// its own damage-type color (but no longer spells out the type name).
+// Returns '' if there's no damage entered, or nothing hit.
+function buildPerAttackDamageHtml(groups, hitAttacks) {
+  if (groups.length === 0 || hitAttacks.length === 0) return '';
+
+  const lines = hitAttacks.map((hit, index) => {
+    const label = `A${index + 1}${hit.isCrit ? '(crit)' : ''}`;
+    const typeKeys = Object.keys(hit.damageByType);
+
+    const piecesHtml = typeKeys
+      .map((key) => {
+        const cls = damageTypeClass(key);
+        return `<span class="${cls}">${hit.damageByType[key]}</span>`;
+      })
+      .join(', ');
+
+    return `<strong class="per-attack-label">${label}</strong>: <strong>${hit.total}</strong> [${piecesHtml}]`;
+  });
+
+  return lines.map((line) => `<br>${line}`).join('');
 }
 
 // ---- MOB ATTACK CALCULATOR (2024 DMG model) ----
@@ -1137,9 +1217,9 @@ function updateMobAutoResult() {
 
   const dmgInput = document.getElementById('mobDmgInput');
   const damageGroups = parseDamageInput(dmgInput ? dmgInput.value : '');
-  const damageHtml = buildAverageDamageHtml(damageGroups, hits, attacks);
+  const damageHtml = buildAverageDamageHtml(damageGroups, hits);
 
-  resultEl.innerHTML = `<strong>${hits}</strong> automatic hits out of ${attacks} &nbsp;(expected ${expected.toFixed(1)})${damageHtml}`;
+  resultEl.innerHTML = `<strong>${hits}</strong> automatic hits out of ${attacks} &nbsp;<em>(expected ${expected.toFixed(1)} hits)</em>${damageHtml}`;
 }
 
 // Makes sure advantage and disadvantage can't both be checked at once.
@@ -1182,7 +1262,8 @@ function rollMobAttacks() {
 
   const dmgInput = document.getElementById('mobDmgInput');
   const damageGroups = parseDamageInput(dmgInput ? dmgInput.value : '');
-  const perTypeDamageValues = {}; // type key -> array of per-hit damage values
+  const perTypeDamageValues = {}; // type key -> array of { value, isCrit }, one per hit dealing that type
+  const hitAttacks = []; // one entry per hit, in the order it happened: { isCrit, damageByType, total }
 
   let hitCount = 0;
   let critHits = 0;
@@ -1213,12 +1294,19 @@ function rollMobAttacks() {
 
     if (isHit) {
       hitCount += 1;
+      const isCrit = die === 20;
+
       if (damageGroups.length > 0) {
-        const hitDamage = rollDamageForHit(damageGroups, die === 20);
+        const hitDamage = rollDamageForHit(damageGroups, isCrit);
+        let total = 0;
         Object.keys(hitDamage).forEach((key) => {
           if (!perTypeDamageValues[key]) perTypeDamageValues[key] = [];
-          perTypeDamageValues[key].push(hitDamage[key]);
+          perTypeDamageValues[key].push({ value: hitDamage[key], isCrit: isCrit });
+          total += hitDamage[key];
         });
+        hitAttacks.push({ isCrit: isCrit, damageByType: hitDamage, total: total });
+      } else {
+        hitAttacks.push({ isCrit: isCrit, damageByType: {}, total: 0 });
       }
     }
 
@@ -1243,12 +1331,16 @@ function rollMobAttacks() {
   }
 
   const damageHtml = buildRolledDamageHtml(damageGroups, perTypeDamageValues);
+  const perAttackHtml = buildPerAttackDamageHtml(damageGroups, hitAttacks);
 
-  resultEl.innerHTML = `${summary} [${rollsHtml.join(', ')}]${damageHtml}`;
+  resultEl.innerHTML = `${summary} [${rollsHtml.join(', ')}]${damageHtml}${perAttackHtml}`;
 }
 
-// Resets the whole mob attack calculator back to a blank state.
-function clearMobCalculator() {
+// Resets the whole mob attack calculator back to a blank state, after
+// confirmation.
+async function clearMobCalculator() {
+  const confirmed = await confirmAction('Clear the mob attack calculator?');
+  if (!confirmed) return;
   document.getElementById('mobAttacksInput').value = '';
   document.getElementById('mobBonusInput').value = '';
   document.getElementById('mobACInput').value = '';
@@ -1274,13 +1366,24 @@ function openReference(targetId) {
   if (!target) return;
 
   // Open the target itself (if it's a dropdown/entry) plus every
-  // <details> ancestor it's nested inside, top-down.
+  // <details> ancestor it's nested inside, top-down. Also un-hide it
+  // from the search filter (if one is active) so a followed link
+  // always reveals its destination, even if the destination didn't
+  // match whatever's currently typed in the search box.
   let el = target;
   while (el) {
     if (el.tagName === 'DETAILS') {
       el.open = true;
+      el.classList.remove('search-hidden');
     }
     el = el.parentElement;
+  }
+
+  // Remember this newly opened state so a page refresh keeps it —
+  // but only when there's no active search filter, since a
+  // search-driven reveal shouldn't overwrite the saved base layout.
+  if (!referenceSearchActive) {
+    saveReferenceState();
   }
 
   // Give the browser a moment to lay out the newly opened content
@@ -1290,6 +1393,219 @@ function openReference(targetId) {
     target.classList.add('reference-flash');
     setTimeout(() => target.classList.remove('reference-flash'), 1500);
   });
+}
+
+// ---- REFERENCE PANE STATE (which dropdowns are open) ----
+// Saved to sessionStorage rather than localStorage, so refreshing the
+// page keeps whatever was open/closed, but closing the browser tab
+// starts fresh again next time — matching how the pane behaved before
+// this feature existed.
+
+const REFERENCE_STORAGE_KEY = 'dmScreenReferenceState';
+// IDs of the dropdowns that are open by default (a brand-new visit,
+// or after pressing the Reference pane's Reset button).
+const REFERENCE_DEFAULT_OPEN_IDS = ['dropSkills', 'dropCreatureTypes', 'dropCover', 'dropObscured'];
+
+function getAllReferenceDetails() {
+  return Array.from(document.querySelectorAll('.lookup-panel details'));
+}
+
+function saveReferenceState() {
+  const state = {};
+  getAllReferenceDetails().forEach((el) => {
+    state[el.id] = el.open;
+  });
+  try {
+    sessionStorage.setItem(REFERENCE_STORAGE_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.warn('Could not save reference pane state:', err);
+  }
+}
+
+function loadReferenceState() {
+  try {
+    const raw = sessionStorage.getItem(REFERENCE_STORAGE_KEY);
+    if (!raw) return; // nothing saved this browser session — keep the HTML's defaults
+    const state = JSON.parse(raw);
+    getAllReferenceDetails().forEach((el) => {
+      if (Object.prototype.hasOwnProperty.call(state, el.id)) {
+        el.open = state[el.id];
+      }
+    });
+  } catch (err) {
+    console.warn('Could not load saved reference pane state:', err);
+  }
+}
+
+function applyReferenceDefaults() {
+  referenceSearchActive = false;
+  const searchInput = document.getElementById('referenceSearchInput');
+  if (searchInput) searchInput.value = '';
+  clearReferenceHighlights();
+  getAllReferenceDetails().forEach((el) => {
+    el.classList.remove('search-hidden');
+    el.open = REFERENCE_DEFAULT_OPEN_IDS.includes(el.id);
+  });
+  saveReferenceState();
+}
+
+// Resets the Reference pane back to its default open/closed state
+// (and clears any active search), after confirmation.
+async function resetReferencePane() {
+  const confirmed = await confirmAction('Reset the Reference panel back to its default state?');
+  if (!confirmed) return;
+  applyReferenceDefaults();
+}
+
+// ---- REFERENCE PANE SEARCH ----
+// Filters every dropdown in the Reference panel live as the DM types.
+// True while the search box holds a query, so dropdown toggles and
+// gloss-ref link opens don't overwrite the saved pre-search state.
+let referenceSearchActive = false;
+
+// Splits a search query into lowercase terms. A "double-quoted"
+// chunk is kept together as one exact phrase; anything else is split
+// on whitespace into separate terms. A dropdown must contain EVERY
+// term somewhere in its own text (summary + body, including anything
+// nested inside it) to match — the terms can appear in any order, and
+// partial words count (e.g. "cov" matches "Cover").
+function parseReferenceSearchTerms(query) {
+  const terms = [];
+  const pattern = /"([^"]+)"|(\S+)/g;
+  let match;
+  while ((match = pattern.exec(query)) !== null) {
+    const term = (match[1] !== undefined ? match[1] : match[2]).trim().toLowerCase();
+    if (term) terms.push(term);
+  }
+  return terms;
+}
+
+// Collects the text that "belongs" directly to a dropdown — its
+// summary plus any of its own paragraphs/lists — WITHOUT pulling in
+// text from any dropdown nested inside it. This is what stops a huge
+// container like "Lore" (which nests dozens of unrelated entries)
+// from falsely matching a search just because the search terms
+// happen to appear somewhere, in totally unrelated entries, within
+// its enormous combined nested text.
+function collectOwnReferenceText(el) {
+  let text = '';
+  el.childNodes.forEach((child) => {
+    if (child.nodeType === Node.TEXT_NODE) {
+      text += child.nodeValue;
+    } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName !== 'DETAILS') {
+      text += collectOwnReferenceText(child);
+    }
+  });
+  return text;
+}
+
+// Removes any <mark class="search-highlight"> wrappers left over
+// from a previous search, merging the plain text back together.
+function clearReferenceHighlights() {
+  document.querySelectorAll('.lookup-panel mark.search-highlight').forEach((mark) => {
+    const parent = mark.parentNode;
+    if (!parent) return;
+    parent.replaceChild(document.createTextNode(mark.textContent), mark);
+    parent.normalize();
+  });
+}
+
+// Wraps every visible occurrence of any search term in a
+// <mark class="search-highlight">, so the DM can immediately see WHY
+// a dropdown matched. Only text inside currently-visible (non
+// search-hidden) dropdowns is touched.
+function highlightReferenceMatches(terms) {
+  if (terms.length === 0) return;
+  const panel = document.querySelector('.lookup-panel');
+  if (!panel) return;
+
+  const escaped = terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern = new RegExp('(' + escaped.join('|') + ')', 'gi');
+
+  const walker = document.createTreeWalker(panel, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => {
+      if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      const parentEl = node.parentElement;
+      if (!parentEl) return NodeFilter.FILTER_REJECT;
+      if (parentEl.closest('.search-hidden')) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+
+  const textNodes = [];
+  let node;
+  while ((node = walker.nextNode())) {
+    textNodes.push(node);
+  }
+
+  textNodes.forEach((textNode) => {
+    const text = textNode.nodeValue;
+    pattern.lastIndex = 0;
+    if (!pattern.test(text)) return;
+    pattern.lastIndex = 0;
+
+    const frag = document.createDocumentFragment();
+    let lastIndex = 0;
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+      }
+      const mark = document.createElement('mark');
+      mark.className = 'search-highlight';
+      mark.textContent = match[0];
+      frag.appendChild(mark);
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) {
+      frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+    }
+    textNode.parentNode.replaceChild(frag, textNode);
+  });
+}
+
+// Re-filters the Reference panel for the current search box value.
+// Each dropdown is judged in two passes: first, does its OWN text
+// (excluding anything nested inside a further dropdown) contain every
+// search term? Second, a dropdown is shown either because it matched
+// itself, or because a dropdown nested inside it (at any depth)
+// matched — so matching entries stay reachable through their parent
+// sections without those parents falsely matching on their own.
+// Clearing the box removes the filter and restores whatever was
+// open/closed before the search started.
+function performReferenceSearch(rawQuery) {
+  const allDetails = getAllReferenceDetails();
+  const terms = parseReferenceSearchTerms(rawQuery);
+
+  clearReferenceHighlights();
+
+  if (terms.length === 0) {
+    referenceSearchActive = false;
+    allDetails.forEach((el) => el.classList.remove('search-hidden'));
+    loadReferenceState();
+    return;
+  }
+
+  referenceSearchActive = true;
+
+  const ownMatches = new Map();
+  allDetails.forEach((el) => {
+    const text = collectOwnReferenceText(el).toLowerCase();
+    ownMatches.set(el, terms.every((term) => text.includes(term)));
+  });
+
+  allDetails.forEach((el) => {
+    let show = ownMatches.get(el);
+    if (!show) {
+      show = Array.from(el.querySelectorAll('details')).some((child) => ownMatches.get(child));
+    }
+    el.classList.toggle('search-hidden', !show);
+    if (show) {
+      el.open = true;
+    }
+  });
+
+  highlightReferenceMatches(terms);
 }
 
 // ---- NPC REACTIONS ----
@@ -1494,14 +1810,14 @@ function computeJump() {
   runningHigh *= multiplier;
   standingHigh *= multiplier;
 
-  // --- Reach while jumping: standing reach (based on height) + how
-  //     high you jump. Not an official rule in either edition — see
-  //     the note under the Jumping dropdown. ---
+  // --- Reach while jumping: the height of the jump itself, plus
+  //     1.5x your own height — straight from the High Jump rule
+  //     ("you can reach a distance equal to the height of the jump
+  //     plus 1½ times your height"). ---
   const heightFeet = getJumpHeightFeetDecimal();
-  const standingReach = Math.round(heightFeet * 1.3);
 
-  const runReachVal = standingReach + runningHigh;
-  const standReachVal = standingReach + standingHigh;
+  const runReachVal = runningHigh + heightFeet * 1.5;
+  const standReachVal = standingHigh + heightFeet * 1.5;
 
   document.getElementById('runLongJump').textContent = formatJumpNumber(Math.max(0, runningLong));
   document.getElementById('runHighJump').textContent = formatJumpNumber(Math.max(0, runningHigh));
@@ -1526,6 +1842,24 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTimeControls();
   toggleJumpDexVisibility();
   computeJump();
+
+  // Restore the Reference pane's open/closed dropdowns from this
+  // browser session (if any), then start tracking further changes so
+  // they're remembered across a page refresh.
+  loadReferenceState();
+  getAllReferenceDetails().forEach((el) => {
+    el.addEventListener('toggle', () => {
+      if (!referenceSearchActive) saveReferenceState();
+    });
+  });
+
+  // Reference pane: search box filters the dropdowns live
+  const referenceSearchInput = document.getElementById('referenceSearchInput');
+  if (referenceSearchInput) {
+    referenceSearchInput.addEventListener('input', (e) => {
+      performReferenceSearch(e.target.value);
+    });
+  }
 
   // Restore the mob attack calculator's inputs from the last session,
   // then recalculate "Automatic hits" so it's visible right away.
@@ -1623,9 +1957,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Round +/- buttons
+  // Round +/- buttons and reset-round button
   document.getElementById('roundUp').addEventListener('click', incrementRound);
   document.getElementById('roundDown').addEventListener('click', decrementRound);
+  document.getElementById('resetRoundBtn').addEventListener('click', resetRound);
 
   // Time tracker: starting time field
   document.getElementById('startTimeInput').addEventListener('focusout', (e) => commitStartTimeInput(e.target));
@@ -1655,8 +1990,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('durMinutesUp').addEventListener('click', () => adjustDurationMinutes(10));
   document.getElementById('durMinutesDown').addEventListener('click', () => adjustDurationMinutes(-10));
 
-  // Time tracker: reset button
-  document.getElementById('resetTimeBtn').addEventListener('click', resetTime);
+  // Time tracker: "Next day" (no confirmation) and "Reset" (with confirmation) buttons
+  document.getElementById('nextDayBtn').addEventListener('click', resetTime);
+  document.getElementById('resetTimeAllBtn').addEventListener('click', resetTimeAll);
 
   // Bottom control bar
   document.getElementById('swapBtn').addEventListener('click', swapSelected);
@@ -1674,6 +2010,9 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     openReference(ref.dataset.ref);
   });
+
+  // Reference pane: Reset button
+  document.getElementById('resetReferenceBtn').addEventListener('click', resetReferencePane);
 
   // Dice roller: +/- buttons for the dice count field
   document.getElementById('diceCountUp').addEventListener('click', () => {
