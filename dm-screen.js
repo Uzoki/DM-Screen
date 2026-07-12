@@ -882,14 +882,42 @@ function clearDiceRoller() {
 // of one dice expression and the start of the next one "belongs" to
 // the first — that's where its optional +/- modifier and optional
 // damage-type word are pulled from.
+//
+// Each of the fourteen damage types also recognizes a handful of
+// common shorthand spellings (e.g. "pierce" or "prc" for piercing),
+// listed longest-first so a more specific alias always wins over a
+// shorter one that happens to also appear in the text.
 
-const DAMAGE_TYPES = [
-  'acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning', 'necrotic',
-  'piercing', 'poison', 'psychic', 'radiant', 'slashing', 'thunder'
-];
+const DAMAGE_TYPE_ALIASES = {
+  acid: ['acid'],
+  bludgeoning: ['bludgeoning', 'bludgeon', 'blunt', 'blud'],
+  cold: ['cold'],
+  fire: ['fire', 'flame'],
+  force: ['force'],
+  lightning: ['lightning', 'lightn', 'ltng', 'electric'],
+  necrotic: ['necrotic', 'necro'],
+  piercing: ['piercing', 'pierce', 'pierc', 'prc'],
+  poison: ['poison', 'poisn', 'psn'],
+  psychic: ['psychic', 'psych', 'psy'],
+  radiant: ['radiant', 'rad'],
+  slashing: ['slashing', 'slash', 'slsh'],
+  thunder: ['thunder', 'thund']
+};
+
+// Flattened to [{ alias, type }, ...] and sorted so the longest alias
+// is always checked first, regardless of which type it belongs to.
+const DAMAGE_TYPE_ALIAS_LIST = Object.keys(DAMAGE_TYPE_ALIASES)
+  .reduce((list, type) => list.concat(DAMAGE_TYPE_ALIASES[type].map((alias) => ({ alias: alias, type: type }))), [])
+  .sort((a, b) => b.alias.length - a.alias.length);
 
 function capitalizeWord(word) {
   return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+// CSS class used to color a damage type's text (see styles.css for
+// the actual colors). Untyped damage gets no special class.
+function damageTypeClass(type) {
+  return type ? 'dmg-' + type : '';
 }
 
 function parseDamageInput(text) {
@@ -931,9 +959,9 @@ function parseDamageInput(text) {
     }
 
     let type = '';
-    for (const t of DAMAGE_TYPES) {
-      if (tail.includes(t)) {
-        type = t;
+    for (const entry of DAMAGE_TYPE_ALIAS_LIST) {
+      if (tail.includes(entry.alias)) {
+        type = entry.type;
         break;
       }
     }
@@ -957,10 +985,13 @@ function averageDamagePerHitByType(groups) {
   return totals;
 }
 
-// Builds the "Average damage" line for the automatic-hits result,
-// multiplying each type's average-per-hit value by however many hits
-// are landing. Returns '' if there's no damage entered.
-function buildAverageDamageHtml(groups, hitsCount) {
+// Builds the "Average Total Damage" line for the automatic-hits
+// result: the total across however many hits are landing, plus that
+// same total spread evenly across every attack (hits and misses
+// alike) as an "X per attack" figure. Returns '' if there's no
+// damage entered. When more than one damage type is in play, each
+// type's own subtotal is broken out afterward in its own color.
+function buildAverageDamageHtml(groups, hitsCount, attacksCount) {
   if (groups.length === 0) return '';
 
   const perHit = averageDamagePerHitByType(groups);
@@ -970,15 +1001,19 @@ function buildAverageDamageHtml(groups, hitsCount) {
     totalsByType[key] = perHit[key] * hitsCount;
   });
   const overallTotal = types.reduce((sum, key) => sum + totalsByType[key], 0);
+  const perAttack = attacksCount > 0 ? overallTotal / attacksCount : 0;
 
-  if (types.length <= 1) {
-    const onlyKey = types[0] || '';
-    const suffix = onlyKey ? ' ' + capitalizeWord(onlyKey) : '';
-    return `<br>Average damage: <strong>${overallTotal.toFixed(1)}</strong>${suffix}`;
+  if (types.length === 1) {
+    const cls = damageTypeClass(types[0]);
+    return `<br>Average Total Damage: <strong class="${cls}">${overallTotal.toFixed(1)}</strong> (${perAttack.toFixed(1)} per attack)`;
   }
 
-  const parts = types.map((key) => `${capitalizeWord(key)}: <strong>${totalsByType[key].toFixed(1)}</strong>`);
-  return `<br>Average damage: <strong>${overallTotal.toFixed(1)}</strong> (${parts.join(', ')})`;
+  const parts = types.map((key) => {
+    const cls = damageTypeClass(key);
+    const label = key ? capitalizeWord(key) : 'Untyped';
+    return `<span class="${cls}">${label}: <strong class="${cls}">${totalsByType[key].toFixed(1)}</strong></span>`;
+  });
+  return `<br>Average Total Damage: <strong>${overallTotal.toFixed(1)}</strong> (${perAttack.toFixed(1)} per attack) — ${parts.join(', ')}`;
 }
 
 // Rolls the damage for a single hit, doubling the number of dice
@@ -1016,8 +1051,9 @@ function buildRolledDamageHtml(groups, perTypeValues) {
   const parts = types.map((key) => {
     const values = perTypeValues[key];
     const total = values.reduce((a, b) => a + b, 0);
+    const cls = damageTypeClass(key);
     const label = key ? capitalizeWord(key) + ': ' : '';
-    return `${label}<strong>${total}</strong> [${values.join(', ')}]`;
+    return `<span class="${cls}">${label}<strong class="${cls}">${total}</strong> [${values.join(', ')}]</span>`;
   });
 
   if (types.length === 1) {
@@ -1101,7 +1137,7 @@ function updateMobAutoResult() {
 
   const dmgInput = document.getElementById('mobDmgInput');
   const damageGroups = parseDamageInput(dmgInput ? dmgInput.value : '');
-  const damageHtml = buildAverageDamageHtml(damageGroups, hits);
+  const damageHtml = buildAverageDamageHtml(damageGroups, hits, attacks);
 
   resultEl.innerHTML = `<strong>${hits}</strong> automatic hits out of ${attacks} &nbsp;(expected ${expected.toFixed(1)})${damageHtml}`;
 }

@@ -745,6 +745,24 @@ input.row-ini {
     cursor: pointer;
 }
 
+/* Damage-type colors, shared by the average-damage and rolled-damage
+   lines in the Mob Attack Calculator, so each type reads at a glance.
+   !important is needed here because the plain "strong" color set by
+   .dice-result/.mob-auto-result above is otherwise more specific. */
+.dmg-acid { color: #4d7c1f !important; }
+.dmg-bludgeoning { color: #a3855a !important; }
+.dmg-cold { color: #7ec8e3 !important; }
+.dmg-fire { color: #e0632b !important; }
+.dmg-force { color: #9d8cd9 !important; }
+.dmg-lightning { color: #5aa9e6 !important; }
+.dmg-necrotic { color: #8a4fae !important; }
+.dmg-piercing { color: #b6b0a4 !important; }
+.dmg-poison { color: #6fcf3f !important; }
+.dmg-psychic { color: #c261d6 !important; }
+.dmg-radiant { color: #f2e07a !important; }
+.dmg-slashing { color: #c0392b !important; }
+.dmg-thunder { color: #4f6fd1 !important; }
+
 .mob-auto-result {
     background: var(--surface-2);
     border: 1px solid var(--border);
