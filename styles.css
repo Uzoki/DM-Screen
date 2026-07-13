@@ -1257,6 +1257,50 @@ details.condition-dropdown[open] summary::before {
     background: transparent;
 }
 
+/* ===== SCROLL TO TOP BUTTON ===== */
+/* Fixed, semi-transparent round button, bottom-right. Hidden (via
+   opacity/visibility, not display) until JS adds the "visible" class
+   once the page has been scrolled down past the top. */
+
+.scroll-top-btn {
+    position: fixed;
+    bottom: 22px;
+    right: 22px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(42, 35, 27, 0.7);
+    border: 1px solid rgba(201, 162, 39, 0.5);
+    color: var(--gold-bright);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    z-index: 45;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    transition: opacity 0.25s ease, transform 0.25s ease, background 0.2s ease, border-color 0.2s ease;
+    backdrop-filter: blur(2px);
+}
+
+.scroll-top-btn.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.scroll-top-btn:hover {
+    background: rgba(42, 35, 27, 0.92);
+    border-color: var(--gold-bright);
+}
+
+.scroll-top-btn svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
 @media (max-width: 480px) {
     .app-header h1 {
         font-size: 1.05rem;
@@ -1283,5 +1327,12 @@ details.condition-dropdown[open] summary::before {
 
     .time-text-input {
         width: 80px;
+    }
+
+    .scroll-top-btn {
+        bottom: 16px;
+        right: 16px;
+        width: 40px;
+        height: 40px;
     }
 }

@@ -2072,4 +2072,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // NPC Reactions: monster reaction roller and humanoid attitude randomizer
   document.getElementById('monsterReactionBtn').addEventListener('click', rollMonsterReaction);
   document.getElementById('randomizeAttitudeBtn').addEventListener('click', randomizeAttitude);
+
+  // Scroll-to-top button: only visible once the top of the page has
+  // scrolled out of view, and scrolls smoothly back to the top on click.
+  const scrollTopBtn = document.getElementById('scrollTopBtn');
+  if (scrollTopBtn) {
+    const toggleScrollTopBtn = () => {
+      scrollTopBtn.classList.toggle('visible', window.scrollY > 200);
+    };
+    toggleScrollTopBtn();
+    window.addEventListener('scroll', toggleScrollTopBtn);
+    scrollTopBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
 });
