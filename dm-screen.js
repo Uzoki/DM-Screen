@@ -476,28 +476,21 @@ async function addOrReplaceCombatant(name, initiative) {
 // This is the part that reads whatever you paste into the box and
 // turns it into a list of { name, initiative } pairs.
 //
-// It understands two very different kinds of lines:
+// ONLY ONE format is accepted: a block copied straight from D&D
+// Beyond's game log. Instead of trying to recognise the whole shape
+// of a log entry (which changes depending on exactly how you copy
+// it — with or without a date, with or without bullet markers, with
+// or without a duplicated name line), this just scans line by line
+// for the one thing that never changes: a line containing the words
+// "Initiative: roll". Whenever it finds one, it grabs the nearest
+// usable line ABOVE it as the name, and the nearest plain number
+// BELOW it as the roll — skipping over blank lines, stray bullet
+// markers, and duplicate name lines along the way. Nothing else
+// about the surrounding text (dates, timestamps, "*" bullets)
+// matters at all.
 //
-//   A) A quick one-liner, typed by hand — in EITHER order:
-//      number-first, like "18 Aragorn", "18, Aragorn", or
-//      "[18] - Aragorn" (the same shape this app copies out), OR
-//      name-first, like "Aragorn 18", "Aragorn, 18" or "Aragorn - 18"
-//      (name-first only recognizes a single-word name right before
-//      the number, so it doesn't accidentally swallow a stray line
-//      out of a multi-line dice-log block below).
-//
-//   B) A block copied straight from D&D Beyond's game log. Instead of
-//      trying to recognise the whole shape of a log entry (which
-//      changes depending on exactly how you copy it — with or without
-//      a date, with or without bullet markers, with or without a
-//      duplicated name line), this just scans line by line for the
-//      one thing that never changes: a line containing the words
-//      "Initiative: roll". Whenever it finds one, it grabs the
-//      nearest usable line ABOVE it as the name, and the nearest
-//      plain number BELOW it as the roll — skipping over blank lines,
-//      stray bullet markers, and duplicate name lines along the way.
-//      Nothing else about the surrounding text (dates, timestamps,
-//      "*" bullets) matters at all.
+// Any other line in the pasted block (chat messages, other kinds of
+// rolls, timestamps like "37 mins ago", etc.) is simply ignored.
 
 // Cleans a raw name: strips emoji/symbols and any leading junk (bullet
 // markers like "* ", "- ", "• ", etc.), then keeps only the first word
@@ -509,43 +502,12 @@ function cleanName(rawName) {
   return match ? match[0] : cleaned;
 }
 
-// Number-first quick entry: "18 Aragorn", "18, Aragorn", "[18] - Aragorn".
-// The character right after the separator must be a letter — this is
-// what stops a dice-log breakdown line like "14 + 5" (a roll total
-// plus its modifier, no letters anywhere in it) from ever being
-// mistaken for "initiative 14, name 5".
-const QUICK_LINE_PATTERN = /^\[?-?\d+(?:\.\d+)?\]?[\s,-]+[A-Za-zÀ-ÖØ-öø-ÿ].*$/;
-// Name-first quick entry: "Aragorn 18", "Aragorn, 18", "Aragorn - 18".
-// The name portion is deliberately restricted to a single word with no
-// internal spaces AND no digits — no spaces so a stray line from a
-// multi-line log block doesn't get mistaken for a quick entry, and no
-// digits so a numbered name like "Goblin2 15" can't have its "2"
-// mistaken for the initiative instead of the real number, "15".
-const QUICK_LINE_PATTERN_NAME_FIRST = /^[^\s,[\]0-9-]+[\s,-]+-?\d+(?:\.\d+)?\]?$/;
 // A line that is ONLY a plain number, e.g. the roll result "15" sitting
 // on its own line in a D&D Beyond log entry.
 const PURE_NUMBER_LINE = /^-?\d+(?:\.\d+)?$/;
 // A line that mentions an initiative roll, in any of D&D Beyond's
 // phrasings ("Initiative: roll", "Initiative Roll", etc.).
 const INITIATIVE_LINE = /initiative\s*:?\s*roll/i;
-
-// Pulls { name, initiative } out of a single hand-typed quick line
-// like "18 Aragorn" or "Aragorn - 18".
-function parseQuickLine(line) {
-  const text = line.replace(/\s+/g, ' ').trim();
-  const numberMatch = text.match(/-?\d+(?:\.\d+)?/);
-  if (!numberMatch) return null;
-
-  const initiative = parseFloat(numberMatch[0]);
-  let rawName = (text.slice(0, numberMatch.index) + text.slice(numberMatch.index + numberMatch[0].length))
-    .replace(/[,:*[\]]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  rawName = rawName.replace(/^-\s*/, '').trim();
-
-  if (!rawName) return null;
-  return { name: cleanName(rawName), initiative: initiative };
-}
 
 // Reads the whole pasted block and returns a list of { name, initiative }.
 function parseDump(text) {
@@ -590,11 +552,6 @@ function parseDump(text) {
 
       i = numberLineIndex !== -1 ? numberLineIndex + 1 : i + 1;
       continue;
-    }
-
-    if (QUICK_LINE_PATTERN.test(line) || QUICK_LINE_PATTERN_NAME_FIRST.test(line)) {
-      const parsed = parseQuickLine(line);
-      if (parsed) entries.push(parsed);
     }
 
     i += 1;
