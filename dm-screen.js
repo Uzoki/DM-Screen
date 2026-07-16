@@ -476,21 +476,30 @@ async function addOrReplaceCombatant(name, initiative) {
 // This is the part that reads whatever you paste into the box and
 // turns it into a list of { name, initiative } pairs.
 //
-// ONLY ONE format is accepted: a block copied straight from D&D
-// Beyond's game log. Instead of trying to recognise the whole shape
-// of a log entry (which changes depending on exactly how you copy
-// it — with or without a date, with or without bullet markers, with
-// or without a duplicated name line), this just scans line by line
-// for the one thing that never changes: a line containing the words
-// "Initiative: roll". Whenever it finds one, it grabs the nearest
-// usable line ABOVE it as the name, and the nearest plain number
-// BELOW it as the roll — skipping over blank lines, stray bullet
-// markers, and duplicate name lines along the way. Nothing else
-// about the surrounding text (dates, timestamps, "*" bullets)
-// matters at all.
+// Exactly TWO formats are accepted:
+//
+//   A) A block copied straight from D&D Beyond's game log. Instead of
+//      trying to recognise the whole shape of a log entry (which
+//      changes depending on exactly how you copy it — with or without
+//      a date, with or without bullet markers, with or without a
+//      duplicated name line), this just scans line by line for the
+//      one thing that never changes: a line containing the words
+//      "Initiative: roll". Whenever it finds one, it grabs the
+//      nearest usable line ABOVE it as the name, and the nearest
+//      plain number BELOW it as the roll — skipping over blank lines,
+//      stray bullet markers, and duplicate name lines along the way.
+//      Nothing else about the surrounding text (dates, timestamps,
+//      "*" bullets) matters at all.
+//
+//   B) This app's own "Copy list" output format, pasted back in:
+//      "[22] - Zurl" (optionally with leading padding spaces before
+//      the bracket, exactly like what Copy list produces). This is
+//      matched with a strict pattern — it must have the actual
+//      brackets and the " - " separator — so it can never be confused
+//      with unrelated text like a timestamp ("37 mins ago").
 //
 // Any other line in the pasted block (chat messages, other kinds of
-// rolls, timestamps like "37 mins ago", etc.) is simply ignored.
+// rolls, timestamps, etc.) is simply ignored.
 
 // Cleans a raw name: strips emoji/symbols and any leading junk (bullet
 // markers like "* ", "- ", "• ", etc.), then keeps only the first word
@@ -508,6 +517,24 @@ const PURE_NUMBER_LINE = /^-?\d+(?:\.\d+)?$/;
 // A line that mentions an initiative roll, in any of D&D Beyond's
 // phrasings ("Initiative: roll", "Initiative Roll", etc.).
 const INITIATIVE_LINE = /initiative\s*:?\s*roll/i;
+// This app's own "Copy list" output format, pasted back in:
+// "[22] - Zurl". Requires the literal brackets and the " - "
+// separator (spacing around the dash is flexible), so it can never
+// accidentally match unrelated text — unlike a loose "number, then a
+// word" pattern, which is exactly what caused this format to be
+// removed once already (it was matching timestamps like "37 mins
+// ago" pasted from the D&D Beyond log).
+const BRACKET_LINE_PATTERN = /^\[(-?\d+(?:\.\d+)?)\]\s*-\s*(.+)$/;
+
+// Pulls { name, initiative } out of a single "[22] - Zurl" line.
+function parseBracketLine(line) {
+  const match = BRACKET_LINE_PATTERN.exec(line);
+  if (!match) return null;
+  const initiative = parseFloat(match[1]);
+  const name = cleanName(match[2]);
+  if (!name) return null;
+  return { name: name, initiative: initiative };
+}
 
 // Reads the whole pasted block and returns a list of { name, initiative }.
 function parseDump(text) {
@@ -552,6 +579,11 @@ function parseDump(text) {
 
       i = numberLineIndex !== -1 ? numberLineIndex + 1 : i + 1;
       continue;
+    }
+
+    if (BRACKET_LINE_PATTERN.test(line)) {
+      const parsed = parseBracketLine(line);
+      if (parsed) entries.push(parsed);
     }
 
     i += 1;
@@ -1456,6 +1488,29 @@ function collectOwnReferenceText(el) {
   return text;
 }
 
+// Escapes regex special characters in a string so it can be dropped
+// into a `new RegExp(...)` pattern literally.
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Reads the Partial word / Whole word dropdown next to the search
+// box. Defaults to 'partial' if the element isn't found for some
+// reason.
+function getReferenceSearchMode() {
+  const select = document.getElementById('referenceSearchMode');
+  return select && select.value === 'whole' ? 'whole' : 'partial';
+}
+
+// Checks whether "term" appears in "text" — as a plain substring in
+// Partial word mode (the original behavior), or as a whole word only
+// (bounded by word breaks on both sides) in Whole word mode.
+function textContainsTerm(text, term, wholeWord) {
+  if (!wholeWord) return text.includes(term);
+  const pattern = new RegExp('\\b' + escapeRegex(term) + '\\b', 'i');
+  return pattern.test(text);
+}
+
 // Removes any <mark class="search-highlight"> wrappers left over
 // from a previous search, merging the plain text back together.
 function clearReferenceHighlights() {
@@ -1471,13 +1526,15 @@ function clearReferenceHighlights() {
 // <mark class="search-highlight">, so the DM can immediately see WHY
 // a dropdown matched. Only text inside currently-visible (non
 // search-hidden) dropdowns is touched.
-function highlightReferenceMatches(terms) {
+function highlightReferenceMatches(terms, wholeWord) {
   if (terms.length === 0) return;
   const panel = document.querySelector('.lookup-panel');
   if (!panel) return;
 
-  const escaped = terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const pattern = new RegExp('(' + escaped.join('|') + ')', 'gi');
+  const escaped = terms.map((term) => escapeRegex(term));
+  const pattern = wholeWord
+    ? new RegExp('\\b(' + escaped.join('|') + ')\\b', 'gi')
+    : new RegExp('(' + escaped.join('|') + ')', 'gi');
 
   const walker = document.createTreeWalker(panel, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) => {
@@ -1533,6 +1590,7 @@ function highlightReferenceMatches(terms) {
 function performReferenceSearch(rawQuery) {
   const allDetails = getAllReferenceDetails();
   const terms = parseReferenceSearchTerms(rawQuery);
+  const wholeWord = getReferenceSearchMode() === 'whole';
 
   clearReferenceHighlights();
 
@@ -1548,7 +1606,7 @@ function performReferenceSearch(rawQuery) {
   const ownMatches = new Map();
   allDetails.forEach((el) => {
     const text = collectOwnReferenceText(el).toLowerCase();
-    ownMatches.set(el, terms.every((term) => text.includes(term)));
+    ownMatches.set(el, terms.every((term) => textContainsTerm(text, term, wholeWord)));
   });
 
   allDetails.forEach((el) => {
@@ -1562,7 +1620,7 @@ function performReferenceSearch(rawQuery) {
     }
   });
 
-  highlightReferenceMatches(terms);
+  highlightReferenceMatches(terms, wholeWord);
 }
 
 // ---- NPC REACTIONS ----
@@ -1815,6 +1873,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (referenceSearchInput) {
     referenceSearchInput.addEventListener('input', (e) => {
       performReferenceSearch(e.target.value);
+    });
+  }
+
+  // Reference pane: Partial word / Whole word dropdown re-runs the
+  // current search whenever it's changed.
+  const referenceSearchModeSelect = document.getElementById('referenceSearchMode');
+  if (referenceSearchModeSelect) {
+    referenceSearchModeSelect.addEventListener('change', () => {
+      performReferenceSearch(referenceSearchInput ? referenceSearchInput.value : '');
     });
   }
 

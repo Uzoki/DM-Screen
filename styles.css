@@ -852,11 +852,21 @@ input.row-ini {
 }
 
 .reference-search-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 10px;
 }
 
 .reference-search-input {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
+}
+
+.reference-search-mode {
+    flex-shrink: 0;
+    width: auto;
+    margin-bottom: 0;
 }
 
 /* Dropdowns that don't match the current Reference-pane search
