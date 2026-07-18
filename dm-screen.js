@@ -1341,6 +1341,56 @@ async function clearMobCalculator() {
   save();
 }
 
+// ---- DATA-DRIVEN REFERENCE SECTIONS ----
+// Lore, Spells, the Rules Glossary, and Classes are all too large to hand-
+// write in index.html, so their content lives as plain data (see
+// lore-data.js / spells-data.js / rules-glossary-data.js / classes-data.js)
+// in the shape { intro: "<p>...</p>", entries: [ { id, title, html,
+// children? }, ... ] }, where "children" (if present) is an array of more
+// entries in the same shape, nested as deep as needed. This builds the
+// actual <details class="condition-dropdown"> markup from that data, so
+// everything downstream (search, gloss-ref links, openReference, reference
+// pane open/closed state) works exactly the same as hand-written HTML.
+
+// Turns one data entry (and any nested children) into its
+// <details class="condition-dropdown"> HTML string.
+function renderDataEntryHtml(entry) {
+  const hasChildren = Array.isArray(entry.children) && entry.children.length > 0;
+  const bodyHtml = entry.html || '';
+  const childrenHtml = hasChildren
+    ? '<div class="condition-list">' + entry.children.map(renderDataEntryHtml).join('') + '</div>'
+    : '';
+  return (
+    '<details class="condition-dropdown" id="' + entry.id + '">' +
+    '<summary>' + entry.title + '</summary>' +
+    '<div class="condition-body">' + bodyHtml + childrenHtml + '</div>' +
+    '</details>'
+  );
+}
+
+// Renders a whole data object (intro + top-level entries) into the given
+// container element id. Does nothing if either the data or the container
+// isn't present, so any one of these data files can be added later without
+// breaking the others.
+function renderDataSection(data, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container || !data) return;
+  let html = '';
+  if (data.intro) html += data.intro;
+  html += '<div class="condition-list">' + (data.entries || []).map(renderDataEntryHtml).join('') + '</div>';
+  container.innerHTML = html;
+}
+
+// Called first thing on page load, before anything else touches the
+// Reference pane (saved open/closed state, search indexing, etc.), so the
+// dropdowns it builds are already real DOM elements by the time those run.
+function renderDataDrivenReferenceSections() {
+  if (typeof RULES_GLOSSARY_DATA !== 'undefined') renderDataSection(RULES_GLOSSARY_DATA, 'glossaryContainer');
+  if (typeof LORE_DATA !== 'undefined') renderDataSection(LORE_DATA, 'loreContainer');
+  if (typeof SPELLS_DATA !== 'undefined') renderDataSection(SPELLS_DATA, 'spellsContainer');
+  if (typeof CLASSES_DATA !== 'undefined') renderDataSection(CLASSES_DATA, 'classesContainer');
+}
+
 // ---- GLOSSARY / RULES CROSS-REFERENCES ----
 // Anywhere on the page, an important rules term can be a gold clickable
 // link (class "gloss-ref", with data-ref="targetId") pointing at a
@@ -1623,52 +1673,6 @@ function performReferenceSearch(rawQuery) {
   highlightReferenceMatches(terms, wholeWord);
 }
 
-// ---- DATA-DRIVEN REFERENCE SECTIONS (Lore, Spells) ----
-// The Lore and Spells dropdowns are too big to hand-edit as raw HTML,
-// so their content lives in separate files (lore-data.js,
-// spells-data.js) as plain data — just { id, title, html, children }
-// objects — with index.html only holding an empty container for each
-// one (id="loreContainer" / id="spellsContainer"). This turns that
-// data into the exact same nested <details class="condition-dropdown">
-// markup that used to be hand-written in index.html, so every other
-// part of the app (search, gloss-ref links, open/close memory) keeps
-// working exactly as before without knowing the difference.
-
-// Turns one data entry into a <details class="condition-dropdown">
-// block, recursing into "children" (if present) as a nested
-// .condition-list — the same nesting pattern Conditions/Rules Glossary
-// already use elsewhere in the page.
-function buildReferenceEntryHtml(entry) {
-  let inner = entry.html || '';
-  if (entry.children && entry.children.length) {
-    inner += '<div class="condition-list nested-list">' +
-      entry.children.map(buildReferenceEntryHtml).join('') +
-      '</div>';
-  }
-  return '<details class="condition-dropdown" id="' + entry.id + '">' +
-    '<summary>' + entry.title + '</summary>' +
-    '<div class="condition-body">' + inner + '</div>' +
-    '</details>';
-}
-
-// Fills a container (e.g. #loreContainer) with the full dropdown tree
-// built from a data file's { intro, entries } object.
-function renderReferenceDataSection(containerId, data) {
-  const container = document.getElementById(containerId);
-  if (!container || !data) return;
-  const entriesHtml = data.entries.map(buildReferenceEntryHtml).join('');
-  container.innerHTML = (data.intro || '') + '<div class="condition-list">' + entriesHtml + '</div>';
-}
-
-// Called once, right at the start of page load — before anything else
-// touches the Reference pane (saved open/closed state, search, etc.),
-// since those all work by scanning whatever <details> already exist
-// in the page.
-function renderDataDrivenReferenceSections() {
-  if (typeof LORE_DATA !== 'undefined') renderReferenceDataSection('loreContainer', LORE_DATA);
-  if (typeof SPELLS_DATA !== 'undefined') renderReferenceDataSection('spellsContainer', SPELLS_DATA);
-}
-
 // ---- NPC REACTIONS ----
 
 // Rolls 2d6 and returns the sum.
@@ -1898,6 +1902,19 @@ function computeJump() {
 
 document.addEventListener('DOMContentLoaded', () => {
   renderDataDrivenReferenceSections();
+
+  // The header is pinned (position: sticky) to the top of the viewport;
+  // its height varies with screen width (the time/round controls wrap
+  // onto more lines on medium screens), so it's measured here and exposed
+  // as a CSS variable that the sticky reference columns offset below.
+  const syncHeaderHeight = () => {
+    const header = document.querySelector('.app-header');
+    if (!header) return;
+    document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+  };
+  syncHeaderHeight();
+  window.addEventListener('resize', syncHeaderHeight);
+
   load();
   render();
   renderRound();
