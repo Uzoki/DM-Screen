@@ -856,6 +856,18 @@ input.row-ini {
 
 /* ===== REFERENCE COLUMN / DROPDOWNS ===== */
 
+.lookup-sticky-top {
+    position: sticky;
+    top: calc(var(--header-h) + 14px);
+    z-index: 40;
+    background: var(--surface);
+    padding-top: 2px;
+    margin: -2px -14px 0;
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-bottom: 4px;
+}
+
 .lookup-header {
     display: flex;
     align-items: center;
