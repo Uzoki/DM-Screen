@@ -50,6 +50,13 @@ body {
     z-index: 60;
     background: var(--bg);
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+    /* Forces the header onto its own compositing layer. Some browsers
+       (particularly iOS Safari) can otherwise mis-stack nested sticky
+       elements during scroll, letting lower content flash above this
+       bar for a frame or two. */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    isolation: isolate;
 }
 
 .app-header h1 {
@@ -178,7 +185,90 @@ body {
     padding: 6px 6px;
 }
 
+/* ===== DATE TRACKER (header, sits to the left of Starting time) =====
+   Year / Month / Day each get their own labeled field, matching the
+   look of the other header fields (Starting time, Duration, Current
+   time). Each is a text/number input with a small pair of up/down
+   arrow buttons overlaid on its right edge instead of the separate
+   round +/- buttons used elsewhere — Month is a read-only field (it
+   always shows the spelled-out month name and can only be changed
+   with the arrows, so it's never possible to end up with something
+   that isn't an actual month). */
 
+.spinner-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.spinner-input {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--gold-bright);
+    text-align: center;
+    padding: 6px 22px 6px 6px;
+}
+
+.spinner-input::-webkit-outer-spin-button,
+.spinner-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.spinner-input {
+    -moz-appearance: textfield;
+}
+
+.spinner-input[readonly] {
+    cursor: default;
+}
+
+/* Wide enough for a 6-digit year. */
+.date-year-input {
+    width: 82px;
+}
+
+/* Wide enough for "September", the longest month name. */
+.date-month-input {
+    width: 100px;
+}
+
+/* Only ever needs to fit 2 digits. */
+.date-day-input {
+    width: 56px;
+}
+
+.spinner-arrows {
+    position: absolute;
+    right: 3px;
+    top: 3px;
+    bottom: 3px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+}
+
+.spinner-arrow {
+    width: 16px;
+    height: 11px;
+    padding: 0;
+    line-height: 1;
+    font-size: 0.5rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.spinner-arrow:hover {
+    border-color: var(--gold);
+    color: var(--gold-bright);
+}
 
 .duration-control {
     display: flex;
@@ -242,6 +332,9 @@ body {
     flex-direction: column;
     gap: 10px;
     min-width: 0;
+    transition: flex-grow 0.32s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+        max-width 0.32s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.26s ease, margin 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .column-initiative {
@@ -266,11 +359,51 @@ body {
    stack full-width, where sticking would just overlap content, so
    it's switched off there. */
 @media (min-width: 950px) {
-    .column {
+    .column-initiative,
+    .column-dice {
         position: sticky;
         top: calc(var(--header-h) + 14px);
         align-self: flex-start;
     }
+}
+
+/* ===== MAXIMIZED PANE ===== */
+/* Pressing a pane's maximize button hides the other two columns
+   (collapsed to zero width/height/opacity rather than removed from
+   the DOM, so every bit of their state — open dropdowns, scroll
+   positions, form values — survives untouched) and lets the chosen
+   column grow to fill the full width. The collapsed columns' height
+   is explicitly zeroed (not just their width/opacity) — leaving it
+   unset let them keep their full natural height invisibly, which was
+   inflating the row and made the maximized pane appear to "drop"
+   once the browser next recalculated the layout. */
+
+.columns-wrap.has-maximized .column:not(.column-maximized) {
+    flex: 0 1 0px;
+    max-width: 0;
+    max-height: 0;
+    min-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    margin: 0;
+}
+
+.columns-wrap.has-maximized .column-maximized {
+    flex: 1 1 100%;
+    max-width: 100%;
+    width: 100%;
+}
+
+/* While any pane is maximized, the site header (round counter, date,
+   time tracker) is hidden entirely, so the maximized pane can use the
+   full height of the page. The reference pane's own sticky search
+   header reacts automatically — it offsets itself using the
+   --header-h variable, which a ResizeObserver keeps in sync with the
+   header's real rendered height, and that height becomes 0 the
+   instant the header is hidden. */
+body.pane-maximized .app-header {
+    display: none;
 }
 
 section {
@@ -293,6 +426,59 @@ strong,
 b {
     color: var(--gold-bright);
     font-weight: 700;
+}
+
+/* ===== SECTION HEADER ROW (title + maximize button) ===== */
+
+.section-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.section-header-row h2 {
+    margin: 0;
+}
+
+/* ===== PANE MAXIMIZE / MINIMIZE BUTTON ===== */
+
+.pane-maximize-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.pane-maximize-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold-bright);
+}
+
+.pane-maximize-btn svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+}
+
+.pane-maximize-btn .icon-minimize {
+    display: none;
+}
+
+.pane-maximize-btn.is-maximized .icon-maximize {
+    display: none;
+}
+
+.pane-maximize-btn.is-maximized .icon-minimize {
+    display: block;
 }
 
 /* ===== INITIATIVE GROUP BOX ===== */
@@ -866,6 +1052,9 @@ input.row-ini {
     padding-left: 14px;
     padding-right: 14px;
     padding-bottom: 4px;
+    /* Same compositing-layer fix as .app-header, see note there. */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
 }
 
 .lookup-header {
@@ -874,10 +1063,18 @@ input.row-ini {
     justify-content: space-between;
     gap: 10px;
     margin-bottom: 8px;
+    flex-wrap: wrap;
 }
 
 .lookup-header h2 {
     margin: 0;
+}
+
+.lookup-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .reference-reset-btn {
@@ -885,6 +1082,26 @@ input.row-ini {
     font-size: 0.72rem;
     flex-shrink: 0;
     white-space: nowrap;
+}
+
+/* ===== REFERENCE "BACK" BUTTON ===== */
+/* Appears only once at least one gloss-ref link has been followed;
+   each press steps back through the chain of jumps one at a time. */
+
+.reference-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.reference-back-btn .back-arrow-icon {
+    width: 13px;
+    height: 13px;
+    display: block;
 }
 
 .reference-search-row {
@@ -903,6 +1120,34 @@ input.row-ini {
     flex-shrink: 0;
     width: auto;
     margin-bottom: 0;
+}
+
+/* ===== PER-DROPDOWN SEARCH BARS =====
+   Injected by JS (see initDropdownSearchBars in dm-screen.js) at the
+   top of every dropdown's body, generically — nothing here or in
+   dm-screen.js needs to know about specific dropdowns or data files,
+   so newly added reference sections automatically get one too. */
+
+.dropdown-search-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.dropdown-search-input {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.74rem;
+    padding: 5px 7px;
+}
+
+.dropdown-search-mode {
+    flex-shrink: 0;
+    width: auto;
+    margin-bottom: 0;
+    font-size: 0.68rem;
+    padding: 4px 5px;
 }
 
 /* Dropdowns that don't match the current Reference-pane search
@@ -1319,12 +1564,19 @@ details.condition-dropdown[open] summary::before {
     background: transparent;
 }
 
-/* ===== SCROLL TO TOP BUTTON ===== */
-/* Fixed, solid, high-contrast round button, bottom-center. Hidden (via
-   opacity/visibility, not display) until JS adds the "visible" class
-   once the page has been scrolled down past the top. */
+/* ===== SCROLL NAV (up / down) BUTTON =====
+   A single fixed, circular control bottom-center. It can show as:
+     - nothing at all (the whole page already fits on screen)
+     - one full circle (only one direction is possible: an up arrow
+       near the bottom of the page, or a down arrow near the top)
+     - two joined semicircles, an up arrow on top and a down arrow
+       below, when scrolling further is possible in both directions
+   The two halves are plain buttons inside a circular, overflow-hidden
+   wrapper — the wrapper's own rounded corners are what clip each
+   half into a semicircle; nothing about the buttons themselves needs
+   to know which shape it's currently forming. */
 
-.scroll-top-btn {
+.scroll-nav {
     position: fixed;
     bottom: 22px;
     left: 50%;
@@ -1333,35 +1585,61 @@ details.condition-dropdown[open] summary::before {
     border-radius: 50%;
     background: var(--surface);
     border: 2px solid var(--gold);
-    color: var(--gold-bright);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
     z-index: 45;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     opacity: 0;
     visibility: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
     transform: translateX(-50%) translateY(8px);
-    transition: opacity 0.25s ease, transform 0.25s ease, background 0.2s ease, border-color 0.2s ease;
+    transition: opacity 0.25s ease, transform 0.25s ease, border-color 0.2s ease;
 }
 
-.scroll-top-btn.visible {
+.scroll-nav.visible {
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) translateY(0);
 }
 
-.scroll-top-btn:hover {
+.scroll-nav-btn {
+    width: 100%;
+    flex: 1 1 auto;
+    background: transparent;
+    border: none;
+    color: var(--gold-bright);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.scroll-nav-btn.shown {
+    display: flex;
+}
+
+/* When only one half is shown it fills the whole circle. When both
+   are shown, each takes exactly half, with a thin divider between
+   them so the "two joined semicircles" look is obvious. */
+.scroll-nav.both-visible .scroll-nav-up.shown {
+    border-bottom: 1px solid var(--border);
+}
+
+.scroll-nav-btn:hover {
     background: var(--gold);
-    border-color: var(--gold-bright);
     color: #1a1408;
 }
 
-.scroll-top-btn svg {
-    width: 22px;
-    height: 22px;
+.scroll-nav-btn svg {
+    width: 16px;
+    height: 16px;
     display: block;
+}
+
+.scroll-nav.both-visible .scroll-nav-btn svg {
+    width: 14px;
+    height: 14px;
 }
 
 @media (max-width: 480px) {
@@ -1392,7 +1670,7 @@ details.condition-dropdown[open] summary::before {
         width: 80px;
     }
 
-    .scroll-top-btn {
+    .scroll-nav {
         bottom: 16px;
         width: 42px;
         height: 42px;

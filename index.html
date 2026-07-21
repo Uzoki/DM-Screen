@@ -36,6 +36,39 @@
         <div class="time-control">
 
           <div class="time-field">
+            <label>Year</label>
+            <div class="spinner-field">
+              <input type="number" id="dateYearInput" class="spinner-input date-year-input" value="1" />
+              <div class="spinner-arrows">
+                <button type="button" id="dateYearUp" class="spinner-arrow spinner-arrow-up" aria-label="Increase year">▲</button>
+                <button type="button" id="dateYearDown" class="spinner-arrow spinner-arrow-down" aria-label="Decrease year">▼</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="time-field">
+            <label>Month</label>
+            <div class="spinner-field">
+              <input type="text" id="dateMonthInput" class="spinner-input date-month-input" value="January" readonly />
+              <div class="spinner-arrows">
+                <button type="button" id="dateMonthUp" class="spinner-arrow spinner-arrow-up" aria-label="Increase month">▲</button>
+                <button type="button" id="dateMonthDown" class="spinner-arrow spinner-arrow-down" aria-label="Decrease month">▼</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="time-field">
+            <label>Day</label>
+            <div class="spinner-field">
+              <input type="number" id="dateDayInput" class="spinner-input date-day-input" value="1" />
+              <div class="spinner-arrows">
+                <button type="button" id="dateDayUp" class="spinner-arrow spinner-arrow-up" aria-label="Increase day">▲</button>
+                <button type="button" id="dateDayDown" class="spinner-arrow spinner-arrow-down" aria-label="Decrease day">▼</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="time-field">
             <label for="startTimeInput">Starting time</label>
             <input type="text" id="startTimeInput" class="time-text-input" value="8:00 AM" />
           </div>
@@ -73,9 +106,15 @@
 
     <div class="columns-wrap">
 
-      <div class="column column-initiative">
+      <div class="column column-initiative" id="paneInitiative">
         <section class="group-panel">
-          <h2>Initiative</h2>
+          <div class="section-header-row">
+            <h2>Initiative</h2>
+            <button class="pane-maximize-btn" data-column="paneInitiative" type="button" aria-label="Maximize pane">
+              <svg class="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+              <svg class="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4a1 1 0 0 1-1 1H4M15 3v4a1 1 0 0 0 1 1h4M9 21v-4a1 1 0 0 0-1-1H4M15 21v-4a1 1 0 0 1 1-1h4"/></svg>
+            </button>
+          </div>
 
           <div class="sub-panel">
             <h3>Add a combatant</h3>
@@ -110,9 +149,15 @@
         </section>
       </div>
 
-      <div class="column column-dice">
+      <div class="column column-dice" id="paneDice">
         <section class="dice-panel">
-          <h2>Dice Roller</h2>
+          <div class="section-header-row">
+            <h2>Dice Roller</h2>
+            <button class="pane-maximize-btn" data-column="paneDice" type="button" aria-label="Maximize pane">
+              <svg class="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+              <svg class="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4a1 1 0 0 1-1 1H4M15 3v4a1 1 0 0 0 1 1h4M9 21v-4a1 1 0 0 0-1-1H4M15 21v-4a1 1 0 0 1 1-1h4"/></svg>
+            </button>
+          </div>
 
           <div class="dice-count-row">
             <div class="dice-count-control">
@@ -171,16 +216,26 @@
         </section>
       </div>
 
-      <div class="column column-lookup">
+      <div class="column column-lookup" id="paneLookup">
         <section class="lookup-panel">
           <div class="lookup-sticky-top">
             <div class="lookup-header">
               <h2>Reference Information</h2>
-              <button id="resetReferenceBtn" class="btn-danger reference-reset-btn" type="button">Reset</button>
+              <div class="lookup-header-actions">
+                <button id="referenceBackBtn" class="btn-primary reference-back-btn hidden" type="button">
+                  <svg class="back-arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                  Back
+                </button>
+                <button class="pane-maximize-btn" data-column="paneLookup" type="button" aria-label="Maximize pane">
+                  <svg class="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                  <svg class="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4a1 1 0 0 1-1 1H4M15 3v4a1 1 0 0 0 1 1h4M9 21v-4a1 1 0 0 0-1-1H4M15 21v-4a1 1 0 0 1 1-1h4"/></svg>
+                </button>
+                <button id="resetReferenceBtn" class="btn-danger reference-reset-btn" type="button">Reset</button>
+              </div>
             </div>
 
             <div class="reference-search-row">
-              <input type="text" id="referenceSearchInput" class="reference-search-input" placeholder="Search reference... (e.g. cover ac)" />
+              <input type="text" id="referenceSearchInput" class="reference-search-input" placeholder='Search within "Reference Information"' />
               <select id="referenceSearchMode" class="reference-search-mode">
                 <option value="partial" selected>Partial word</option>
                 <option value="whole">Whole word</option>
@@ -214,9 +269,9 @@
             <details class="dropdown" id="dropCover" open>
               <summary>Cover</summary>
               <div class="dropdown-body">
-                <p><strong>Half Cover</strong> = +2 <a href="#" class="gloss-ref" data-ref="glossary-armor-class">AC</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">Saving Throw</a></p>
-                <p><strong>Three-Quarters Cover</strong> = +5 <a href="#" class="gloss-ref" data-ref="glossary-armor-class">AC</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">Saving Throw</a></p>
-                <p><strong>Total Cover</strong> = Can't be targeted directly</p>
+                <p><a href="#" class="gloss-ref" data-ref="glossary-half-cover"><strong>Half Cover</strong></a> = +2 <a href="#" class="gloss-ref" data-ref="glossary-armor-class">AC</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">Saving Throw</a></p>
+                <p><a href="#" class="gloss-ref" data-ref="glossary-three-quarters-cover"><strong>Three-Quarters Cover</strong></a> = +5 <a href="#" class="gloss-ref" data-ref="glossary-armor-class">AC</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">Saving Throw</a></p>
+                <p><a href="#" class="gloss-ref" data-ref="glossary-total-cover"><strong>Total Cover</strong></a> = Can't be targeted directly</p>
               </div>
             </details>
 
@@ -230,288 +285,7 @@
 
             <details class="dropdown" id="dropConditions">
               <summary>Conditions</summary>
-              <div class="dropdown-body">
-
-                <div class="condition-list">
-
-                  <details class="condition-dropdown" id="condition-blinded">
-                    <summary>Blinded</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>You can't see and automatically fail any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> that requires sight.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>, and your <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a>.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>A blinded <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a> can't see and automatically fails any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> that requires sight.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>, and the creature's <a href="#" class="gloss-ref" data-ref="glossary-attack-action">attack</a> rolls have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a>.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-charmed">
-                    <summary>Charmed</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>You can't <a href="#" class="gloss-ref" data-ref="glossary-attack-action">attack</a> the charmer or <a href="#" class="gloss-ref" data-ref="glossary-target">target</a> the charmer with damaging abilities or <a href="#" class="gloss-ref" data-ref="glossary-magical-effect">magical effects</a>.</li>
-                        <li>The charmer has <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a> on any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> to interact with you socially.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>A charmed <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a> can't <a href="#" class="gloss-ref" data-ref="glossary-attack-action">attack</a> the charmer or target the charmer with harmful abilities or magical effects.</li>
-                        <li>The charmer has <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a> on any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> to interact socially with the creature.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-deafened">
-                    <summary>Deafened</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>You can't hear and automatically fail any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> that requires hearing.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>A deafened <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a> can't hear and automatically fails any <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability check</a> that requires hearing.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-exhaustion">
-                    <summary>Exhaustion</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>Exhaustion is cumulative and measured in levels, from 1 to 6.</li>
-                        <li>Each level gives you a cumulative −2 penalty to every <a href="#" class="gloss-ref" data-ref="glossary-d20-test">d20 roll</a> (<a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a>, <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a>, and <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>).</li>
-                        <li>Each level also reduces your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> by 5 feet, cumulative.</li>
-                        <li>If your Exhaustion level reaches 6, you die.</li>
-                        <li>Finishing a <a href="#" class="gloss-ref" data-ref="glossary-long-rest">long rest</a> removes 1 Exhaustion level.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>Exhaustion is cumulative and measured in levels, from 1 to 6, with effects that stack as the level increases.</li>
-                        <li>Level 1: <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a>.</li>
-                        <li>Level 2: <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> halved.</li>
-                        <li>Level 3: <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> and <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
-                        <li>Level 4: Hit point maximum halved.</li>
-                        <li>Level 5: <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> reduced to 0.</li>
-                        <li>Level 6: Death.</li>
-                        <li>Finishing a long rest reduces Exhaustion by 1 level.</li>
-                      </ul>
-                      <p style="margin-top:8px; font-<a href="#" class="gloss-ref" data-ref="glossary-size">size</a>:0.72rem; color:var(--text-muted);">Double-check this one against your books if you can — it's rebuilt from research rather than copied straight from an official source like the rest of this list.</p>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-frightened">
-                    <summary>Frightened</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a> and <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> while the source of fear is within line of sight.</li>
-                        <li>You can't willingly <a href="#" class="gloss-ref" data-ref="glossary-speed">move</a> closer to the source of fear.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>A frightened <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a> has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a> and <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> while the source of its fear is within line of sight.</li>
-                        <li>The creature can't willingly <a href="#" class="gloss-ref" data-ref="glossary-speed">move</a> closer to the source of its fear.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-grappled">
-                    <summary>Grappled</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> is 0 and can't increase.</li>
-                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> against any <a href="#" class="gloss-ref" data-ref="glossary-target">target</a> other than the grappler.</li>
-                        <li>The grappler can drag or carry you when it moves, but every foot of movement costs it 1 extra foot unless you are Tiny or two or more <a href="#" class="gloss-ref" data-ref="glossary-size">sizes</a> smaller than it.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>A grappled <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a>'s <a href="#" class="gloss-ref" data-ref="glossary-speed">speed</a> becomes 0, and it can't benefit from any bonus to its <a href="#" class="gloss-ref" data-ref="glossary-speed">speed</a>.</li>
-                        <li>The <a href="#" class="gloss-ref" data-ref="glossary-condition">condition</a> ends if the grappler is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">incapacitated</a> (see the condition).</li>
-                        <li>The condition also ends if an effect removes the grappled creature from the <a href="#" class="gloss-ref" data-ref="glossary-reach">reach</a> of the grappler or <a href="#" class="gloss-ref" data-ref="glossary-grappling">grappling</a> effect, such as when a creature is hurled away by the thunderwave <a href="#" class="gloss-ref" data-ref="glossary-spell">spell</a>.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-incapacitated">
-                    <summary>Incapacitated</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>You can't take any <a href="#" class="gloss-ref" data-ref="glossary-action">action</a>, <a href="#" class="gloss-ref" data-ref="glossary-bonus-action">Bonus Action</a>, or <a href="#" class="gloss-ref" data-ref="glossary-reaction">Reaction</a>.</li>
-                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-concentration">Concentration</a> is broken.</li>
-                        <li>You can't speak.</li>
-                        <li>If you're Incapacitated when you roll <a href="#" class="gloss-ref" data-ref="glossary-initiative">Initiative</a>, you have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on the roll.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>An incapacitated <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a> can't take <a href="#" class="gloss-ref" data-ref="glossary-action">actions</a> or <a href="#" class="gloss-ref" data-ref="glossary-reaction">reactions</a>.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-invisible">
-                    <summary>Invisible</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>If you're Invisible when you roll <a href="#" class="gloss-ref" data-ref="glossary-initiative">Initiative</a>, you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a> on the roll.</li>
-                        <li>You aren't affected by any effect that requires its <a href="#" class="gloss-ref" data-ref="glossary-target">target</a> to be seen, unless the effect's creator can somehow see you. Any equipment you're wearing or carrying is also concealed.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a>, and your <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>, unless the attacker can somehow see you.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>An invisible <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a> is impossible to see without the aid of <a href="#" class="gloss-ref" data-ref="glossary-magic-action">magic</a> or a special sense. For the purpose of <a href="#" class="gloss-ref" data-ref="glossary-hide">hiding</a>, the creature is <a href="#" class="gloss-ref" data-ref="glossary-heavily-obscured">heavily obscured</a>. The creature's location can be detected by any noise it makes or any tracks it leaves.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a>, and the creature's <a href="#" class="gloss-ref" data-ref="glossary-attack-action">attack</a> rolls have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-paralyzed">
-                    <summary>Paralyzed</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>You have the <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a> <a href="#" class="gloss-ref" data-ref="glossary-condition">condition</a>.</li>
-                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> is 0 and can't increase.</li>
-                        <li>You automatically fail <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>.</li>
-                        <li>Any <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack roll</a> that hits you is a <a href="#" class="gloss-ref" data-ref="glossary-critical-hit">Critical Hit</a> if the attacker is within 5 feet of you.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>A paralyzed <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a> is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">incapacitated</a> (see the condition) and can't move or speak.</li>
-                        <li>The creature automatically fails <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>.</li>
-                        <li>Any <a href="#" class="gloss-ref" data-ref="glossary-attack-action">attack</a> that hits the creature is a <a href="#" class="gloss-ref" data-ref="glossary-critical-hit">critical hit</a> if the attacker is within 5 feet of the creature.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-petrified">
-                    <summary>Petrified</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>You're transformed, along with any nonmagical <a href="#" class="gloss-ref" data-ref="glossary-object">objects</a> you're wearing and carrying, into a solid inanimate substance (usually stone). Your weight increases by a factor of ten, and you cease aging.</li>
-                        <li>You have the <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a> <a href="#" class="gloss-ref" data-ref="glossary-condition">condition</a>.</li>
-                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> is 0 and can't increase.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>.</li>
-                        <li>You automatically fail <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
-                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-resistance">Resistance</a> to all <a href="#" class="gloss-ref" data-ref="glossary-damage">damage</a>.</li>
-                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-immunity">Immunity</a> to the <a href="#" class="gloss-ref" data-ref="condition-poisoned">Poisoned</a> condition (note: as of 2024 you are <strong>no longer</strong> immune to disease while petrified).</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>A petrified <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a> is transformed, along with any nonmagical object it is wearing or carrying, into a solid inanimate substance (usually stone). Its weight increases by a factor of ten, and it ceases aging.</li>
-                        <li>The creature is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">incapacitated</a> (see the condition), can't move or speak, and is unaware of its surroundings.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>.</li>
-                        <li>The creature automatically fails <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
-                        <li>The creature has <a href="#" class="gloss-ref" data-ref="glossary-resistance">resistance</a> to all <a href="#" class="gloss-ref" data-ref="glossary-damage">damage</a>.</li>
-                        <li>The creature is immune to <a href="#" class="gloss-ref" data-ref="glossary-damage-types">poison</a> and disease, although a poison or disease already in its system is suspended, not neutralized.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-poisoned">
-                    <summary>Poisoned</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a>.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>A poisoned <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a> has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> and <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a>.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-prone">
-                    <summary>Prone</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>Your only movement options are to <a href="#" class="gloss-ref" data-ref="glossary-crawling">crawl</a>, or to spend an amount of movement equal to half your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> (<a href="#" class="gloss-ref" data-ref="glossary-round-down">round down</a>) to right yourself and end the <a href="#" class="gloss-ref" data-ref="glossary-condition">condition</a>. If your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> is 0, you can't right yourself.</li>
-                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a>. An <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack roll</a> against you has <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a> if the attacker is within 5 feet of you. Otherwise, that <a href="#" class="gloss-ref" data-ref="glossary-attack-action">attack</a> roll has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a>.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>A prone <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a>'s only movement option is to <a href="#" class="gloss-ref" data-ref="glossary-crawling">crawl</a>, unless it stands up and thereby ends the condition.</li>
-                        <li>The creature has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a>.</li>
-                        <li>An <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack roll</a> against the creature has <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a> if the attacker is within 5 feet of the creature. Otherwise, the attack roll has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a>.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-restrained">
-                    <summary>Restrained</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> is 0 and can't increase.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>, and your <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a> have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a>.</li>
-                        <li>You have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>A restrained <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a>'s <a href="#" class="gloss-ref" data-ref="glossary-speed">speed</a> becomes 0, and it can't benefit from any bonus to its <a href="#" class="gloss-ref" data-ref="glossary-speed">speed</a>.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>, and the creature's <a href="#" class="gloss-ref" data-ref="glossary-attack-action">attack</a> rolls have <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a>.</li>
-                        <li>The creature has <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-stunned">
-                    <summary>Stunned</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>You have the <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a> <a href="#" class="gloss-ref" data-ref="glossary-condition">condition</a>.</li>
-                        <li>You automatically fail <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>A stunned <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a> is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">incapacitated</a> (see the condition), can't <a href="#" class="gloss-ref" data-ref="glossary-speed">move</a>, and can speak only falteringly.</li>
-                        <li>The creature automatically fails <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                  <details class="condition-dropdown" id="condition-unconscious">
-                    <summary>Unconscious</summary>
-                    <div class="condition-body">
-                      <h5>New Rules (2024)</h5>
-                      <ul>
-                        <li>You have the <a href="#" class="gloss-ref" data-ref="condition-incapacitated">Incapacitated</a> and <a href="#" class="gloss-ref" data-ref="condition-prone">Prone</a> <a href="#" class="gloss-ref" data-ref="glossary-condition">conditions</a>, and you drop whatever you're holding. When this condition ends, you remain <a href="#" class="gloss-ref" data-ref="condition-prone">Prone</a>.</li>
-                        <li>Your <a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> is 0 and can't increase.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against you have <a href="#" class="gloss-ref" data-ref="glossary-advantage">Advantage</a>.</li>
-                        <li>You automatically fail <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
-                        <li>Any <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack roll</a> that hits you is a <a href="#" class="gloss-ref" data-ref="glossary-critical-hit">Critical Hit</a> if the attacker is within 5 feet of you.</li>
-                        <li>You're unaware of your surroundings.</li>
-                      </ul>
-                      <h5>Legacy Rules (2014)</h5>
-                      <ul>
-                        <li>An unconscious <a href="#" class="gloss-ref" data-ref="glossary-creature">creature</a> is <a href="#" class="gloss-ref" data-ref="condition-incapacitated">incapacitated</a>, can't <a href="#" class="gloss-ref" data-ref="glossary-speed">move</a> or speak, and is unaware of its surroundings.</li>
-                        <li>The creature drops whatever it's holding and falls <a href="#" class="gloss-ref" data-ref="condition-prone">prone</a>.</li>
-                        <li>The creature automatically fails <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>.</li>
-                        <li><a href="#" class="gloss-ref" data-ref="glossary-attack-roll">Attack rolls</a> against the creature have <a href="#" class="gloss-ref" data-ref="glossary-advantage">advantage</a>.</li>
-                      </ul>
-                    </div>
-                  </details>
-
-                </div>
-
-              </div>
+              <div class="dropdown-body" id="conditionsContainer"></div>
             </details>
 
             <details class="dropdown" id="dropJumping">
@@ -673,14 +447,23 @@
     </div>
   </div>
 
-  <button id="scrollTopBtn" class="scroll-top-btn" type="button" aria-label="Scroll to top">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <line x1="12" y1="19" x2="12" y2="5"/>
-      <polyline points="5 12 12 5 19 12"/>
-    </svg>
-  </button>
+  <div id="scrollNav" class="scroll-nav">
+    <button id="scrollUpBtn" class="scroll-nav-btn scroll-nav-up" type="button" aria-label="Scroll to top">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="19" x2="12" y2="5"/>
+        <polyline points="5 12 12 5 19 12"/>
+      </svg>
+    </button>
+    <button id="scrollDownBtn" class="scroll-nav-btn scroll-nav-down" type="button" aria-label="Scroll to bottom">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <polyline points="19 12 12 19 5 12"/>
+      </svg>
+    </button>
+  </div>
 
   <script src="rules-glossary-data.js"></script>
+  <script src="conditions-data.js"></script>
   <script src="lore-data.js"></script>
   <script src="spells-data.js"></script>
   <script src="classes-data.js"></script>

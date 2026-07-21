@@ -25,8 +25,19 @@ let timeState = {
   durMinutes: 0
 };
 
+// Date-tracking state: an in-world calendar date sitting next to the
+// time tracker. Kept completely separate from timeState so the two
+// can be reset independently if that's ever needed.
+let dateState = {
+  year: 1,
+  month: 1,
+  day: 1
+};
+
 const STORAGE_KEY = 'dmScreenInitiativeState';
 const UNDO_LIMIT = 50; // how many past states the Undo button can step back through
+
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 // Call this right before any change to the "combatants" list, so the
 // Undo button can restore exactly how things looked beforehand.
@@ -78,7 +89,7 @@ function save() {
     dis: disEl ? disEl.checked : false
   };
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ combatants, round, mob, time: timeState }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ combatants, round, mob, time: timeState, date: dateState }));
 }
 
 function load() {
@@ -94,6 +105,13 @@ function load() {
           startTime: typeof data.time.startTime === 'string' ? data.time.startTime : '8:00 AM',
           durHours: typeof data.time.durHours === 'number' ? data.time.durHours : 0,
           durMinutes: typeof data.time.durMinutes === 'number' ? data.time.durMinutes : 0
+        };
+      }
+      if (data.date) {
+        dateState = {
+          year: typeof data.date.year === 'number' ? data.date.year : 1,
+          month: typeof data.date.month === 'number' ? data.date.month : 1,
+          day: typeof data.date.day === 'number' ? data.date.day : 1
         };
       }
     }
@@ -163,6 +181,7 @@ function render() {
   document.getElementById('swapBtn').classList.toggle('hidden', selectedIds.size !== 2);
 
   save();
+  updateScrollNav();
 }
 
 function renderRound() {
@@ -805,24 +824,135 @@ function adjustDurationMinutes(delta) {
 }
 
 // "Next day" button: resets the adventuring clock back to 0h 0m,
-// without touching the chosen Starting time. No confirmation pop-up,
-// since this isn't a destructive Clear/Reset action.
+// without touching the chosen Starting time, and also advances the
+// Date tracker by one day (with rollover into the next month/year).
 function resetTime() {
   timeState.durHours = 0;
   timeState.durMinutes = 0;
+  incrementDateDay(1);
   renderTimeControls();
+  renderDateControls();
   save();
 }
 
-// "Reset" button: resets the ENTIRE time tracker back to its default
-// state, including the starting time, after confirmation.
+// "Reset" button: resets the ENTIRE time tracker (including the Date
+// fields, since they live in the same header box) back to its default
+// state, after confirmation.
 async function resetTimeAll() {
-  const confirmed = await confirmAction('Reset the time tracker back to its default state (8:00 AM, 0h 0m)?');
+  const confirmed = await confirmAction('Reset the time tracker back to its default state (8:00 AM, 0h 0m, and the date)?');
   if (!confirmed) return;
   timeState.startTime = '8:00 AM';
   timeState.durHours = 0;
   timeState.durMinutes = 0;
+  dateState = { year: 1, month: 1, day: 1 };
   renderTimeControls();
+  renderDateControls();
+  save();
+}
+
+// ---- DATE TRACKER ----
+// A small in-world calendar sitting to the left of Starting time:
+// Year (any integer) / Month (1-12) / Day (limited to however many
+// days that month has, factoring in leap years for February).
+
+function isLeapYear(year) {
+  return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+}
+
+// Number of days in a given month (1-12) of a given year.
+function daysInMonthFor(year, month) {
+  const lengths = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const safeMonth = Math.min(12, Math.max(1, month));
+  return lengths[safeMonth - 1];
+}
+
+// Pulls the day back within range for whatever month/year it's
+// currently sitting in (e.g. day 31 in a month that only has 30).
+function clampDateDay() {
+  const max = daysInMonthFor(dateState.year, dateState.month);
+  if (dateState.day > max) dateState.day = max;
+  if (dateState.day < 1) dateState.day = 1;
+}
+
+// Steps the day forward/back by "step" days, rolling over into the
+// next/previous month (and year) as many times as needed.
+function incrementDateDay(step) {
+  const amount = step || 1;
+  if (amount > 0) {
+    for (let i = 0; i < amount; i++) {
+      const max = daysInMonthFor(dateState.year, dateState.month);
+      if (dateState.day < max) {
+        dateState.day += 1;
+      } else {
+        dateState.day = 1;
+        dateState.month += 1;
+        if (dateState.month > 12) {
+          dateState.month = 1;
+          dateState.year += 1;
+        }
+      }
+    }
+  } else {
+    for (let i = 0; i < -amount; i++) {
+      if (dateState.day > 1) {
+        dateState.day -= 1;
+      } else {
+        dateState.month -= 1;
+        if (dateState.month < 1) {
+          dateState.month = 12;
+          dateState.year -= 1;
+        }
+        dateState.day = daysInMonthFor(dateState.year, dateState.month);
+      }
+    }
+  }
+}
+
+// Steps the month forward/back by "step" months, rolling the year
+// over as needed, then clamps the day to fit the new month.
+function adjustDateMonth(step) {
+  dateState.month += step;
+  while (dateState.month > 12) {
+    dateState.month -= 12;
+    dateState.year += 1;
+  }
+  while (dateState.month < 1) {
+    dateState.month += 12;
+    dateState.year -= 1;
+  }
+  clampDateDay();
+}
+
+// Steps the year forward/back by "step" years, then clamps the day
+// (matters only for Feb 29 moving into/out of a leap year).
+function adjustDateYear(step) {
+  dateState.year += step;
+  clampDateDay();
+}
+
+function renderDateControls() {
+  document.getElementById('dateYearInput').value = dateState.year;
+  document.getElementById('dateMonthInput').value = MONTH_NAMES[dateState.month - 1];
+  document.getElementById('dateDayInput').value = dateState.day;
+}
+
+function commitDateYearInput() {
+  const input = document.getElementById('dateYearInput');
+  const val = parseInt(input.value, 10);
+  dateState.year = isNaN(val) ? dateState.year : val;
+  clampDateDay();
+  renderDateControls();
+  save();
+}
+
+function commitDateDayInput() {
+  const input = document.getElementById('dateDayInput');
+  let val = parseInt(input.value, 10);
+  if (isNaN(val)) val = dateState.day;
+  const max = daysInMonthFor(dateState.year, dateState.month);
+  val = Math.max(1, Math.min(max, val));
+  dateState.day = val;
+  renderDateControls();
   save();
 }
 
@@ -1342,15 +1472,17 @@ async function clearMobCalculator() {
 }
 
 // ---- DATA-DRIVEN REFERENCE SECTIONS ----
-// Lore, Spells, the Rules Glossary, and Classes are all too large to hand-
-// write in index.html, so their content lives as plain data (see
-// lore-data.js / spells-data.js / rules-glossary-data.js / classes-data.js)
-// in the shape { intro: "<p>...</p>", entries: [ { id, title, html,
-// children? }, ... ] }, where "children" (if present) is an array of more
-// entries in the same shape, nested as deep as needed. This builds the
-// actual <details class="condition-dropdown"> markup from that data, so
-// everything downstream (search, gloss-ref links, openReference, reference
-// pane open/closed state) works exactly the same as hand-written HTML.
+// Lore, Spells, Conditions, the Rules Glossary, and Classes are all
+// too large to hand-write in index.html, so their content lives as
+// plain data (see lore-data.js / spells-data.js / conditions-data.js /
+// rules-glossary-data.js / classes-data.js) in the shape { intro:
+// "<p>...</p>", entries: [ { id, title, html, children? }, ... ] },
+// where "children" (if present) is an array of more entries in the
+// same shape, nested as deep as needed. This builds the actual
+// <details class="condition-dropdown"> markup from that data, so
+// everything downstream (search, gloss-ref links, openReference, the
+// per-dropdown search bars, reference pane open/closed state) works
+// exactly the same as hand-written HTML.
 
 // Turns one data entry (and any nested children) into its
 // <details class="condition-dropdown"> HTML string.
@@ -1386,6 +1518,7 @@ function renderDataSection(data, containerId) {
 // dropdowns it builds are already real DOM elements by the time those run.
 function renderDataDrivenReferenceSections() {
   if (typeof RULES_GLOSSARY_DATA !== 'undefined') renderDataSection(RULES_GLOSSARY_DATA, 'glossaryContainer');
+  if (typeof CONDITIONS_DATA !== 'undefined') renderDataSection(CONDITIONS_DATA, 'conditionsContainer');
   if (typeof LORE_DATA !== 'undefined') renderDataSection(LORE_DATA, 'loreContainer');
   if (typeof SPELLS_DATA !== 'undefined') renderDataSection(SPELLS_DATA, 'spellsContainer');
   if (typeof CLASSES_DATA !== 'undefined') renderDataSection(CLASSES_DATA, 'classesContainer');
@@ -1399,11 +1532,10 @@ function renderDataDrivenReferenceSections() {
 // Clicking one opens that target AND every dropdown it's nested inside
 // (so a glossary entry buried inside the collapsed Rules Glossary
 // dropdown still opens correctly), scrolls it into view, and briefly
-// flashes it gold so it's easy to spot.
-function openReference(targetId) {
-  const target = document.getElementById(targetId);
-  if (!target) return;
-
+// flashes it gold so it's easy to spot. It also records where you
+// jumped FROM, so the "Back" button in the Reference pane's header can
+// retrace the whole chain of links one step at a time.
+function openAndFlashTarget(target) {
   // Open the target itself (if it's a dropdown/entry) plus every
   // <details> ancestor it's nested inside, top-down. Also un-hide it
   // from the search filter (if one is active) so a followed link
@@ -1431,7 +1563,62 @@ function openReference(targetId) {
     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     target.classList.add('reference-flash');
     setTimeout(() => target.classList.remove('reference-flash'), 1500);
+    updateScrollNav();
   });
+}
+
+function openReference(targetId) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+
+  referenceBackStack.push({ scrollY: window.scrollY, targetId: lastOpenedTargetId });
+  updateBackButtonVisibility();
+
+  openAndFlashTarget(target);
+  lastOpenedTargetId = targetId;
+}
+
+// ---- REFERENCE "BACK" BUTTON ----
+// A stack of { scrollY, targetId } entries, one pushed every time a
+// gloss-ref link is followed (see openReference above) — targetId is
+// whatever section was open/flashed immediately BEFORE that jump (or
+// null if nothing had been opened yet this session). Pressing Back
+// pops the most recent entry: if it has a targetId, that section is
+// re-opened, scrolled to, and flashed again exactly like following a
+// link does; if not, it just scrolls back to where you started. This
+// retraces the whole chain of jumps one step at a time; once the
+// stack is empty the button hides itself again. It lives only in
+// memory — it resets on refresh, and is explicitly cleared whenever
+// the Reference pane's Reset button is used.
+
+let referenceBackStack = [];
+let lastOpenedTargetId = null;
+
+function updateBackButtonVisibility() {
+  const btn = document.getElementById('referenceBackBtn');
+  if (!btn) return;
+  btn.classList.toggle('hidden', referenceBackStack.length === 0);
+}
+
+function goBackReference() {
+  if (referenceBackStack.length === 0) return;
+  const entry = referenceBackStack.pop();
+  updateBackButtonVisibility();
+
+  const target = entry.targetId ? document.getElementById(entry.targetId) : null;
+  if (target) {
+    openAndFlashTarget(target);
+  } else {
+    window.scrollTo({ top: entry.scrollY, behavior: 'smooth' });
+  }
+
+  lastOpenedTargetId = entry.targetId;
+}
+
+function clearBackChain() {
+  referenceBackStack = [];
+  lastOpenedTargetId = null;
+  updateBackButtonVisibility();
 }
 
 // ---- REFERENCE PANE STATE (which dropdowns are open) ----
@@ -1481,23 +1668,36 @@ function applyReferenceDefaults() {
   const searchInput = document.getElementById('referenceSearchInput');
   if (searchInput) searchInput.value = '';
   clearReferenceHighlights();
+  document.querySelectorAll('.dropdown-search-input').forEach((input) => {
+    input.value = '';
+  });
+  document.querySelectorAll('.dropdown-search-mode').forEach((select) => {
+    select.value = 'partial';
+  });
   getAllReferenceDetails().forEach((el) => {
     el.classList.remove('search-hidden');
     el.open = REFERENCE_DEFAULT_OPEN_IDS.includes(el.id);
   });
   saveReferenceState();
+  clearBackChain();
 }
 
 // Resets the Reference pane back to its default open/closed state
-// (and clears any active search), after confirmation.
+// (clears any active search, every per-dropdown search box, and the
+// Back button's chain of jumps), after confirmation.
 async function resetReferencePane() {
   const confirmed = await confirmAction('Reset the Reference panel back to its default state?');
   if (!confirmed) return;
   applyReferenceDefaults();
 }
 
-// ---- REFERENCE PANE SEARCH ----
-// Filters every dropdown in the Reference panel live as the DM types.
+// ---- REFERENCE PANE SEARCH (shared helpers) ----
+// These helpers back BOTH the main "Search within Reference
+// Information" box at the top of the pane AND every individual
+// per-dropdown search box injected by initDropdownSearchBars() below
+// — the only difference between the two is which root element they
+// search underneath.
+
 // True while the search box holds a query, so dropdown toggles and
 // gloss-ref link opens don't overwrite the saved pre-search state.
 let referenceSearchActive = false;
@@ -1521,17 +1721,24 @@ function parseReferenceSearchTerms(query) {
 
 // Collects the text that "belongs" directly to a dropdown — its
 // summary plus any of its own paragraphs/lists — WITHOUT pulling in
-// text from any dropdown nested inside it. This is what stops a huge
-// container like "Lore" (which nests dozens of unrelated entries)
-// from falsely matching a search just because the search terms
-// happen to appear somewhere, in totally unrelated entries, within
-// its enormous combined nested text.
+// text from any dropdown nested inside it, and WITHOUT pulling in the
+// text of an injected per-dropdown search box (its placeholder and
+// "Partial word / Whole word" option text would otherwise pollute
+// every single dropdown's own text with the same boilerplate words).
+// This is what stops a huge container like "Lore" (which nests dozens
+// of unrelated entries) from falsely matching a search just because
+// the search terms happen to appear somewhere in its enormous combined
+// nested text.
 function collectOwnReferenceText(el) {
   let text = '';
   el.childNodes.forEach((child) => {
     if (child.nodeType === Node.TEXT_NODE) {
       text += child.nodeValue;
-    } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName !== 'DETAILS') {
+    } else if (
+      child.nodeType === Node.ELEMENT_NODE &&
+      child.tagName !== 'DETAILS' &&
+      !child.classList.contains('dropdown-search-row')
+    ) {
       text += collectOwnReferenceText(child);
     }
   });
@@ -1544,14 +1751,6 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Reads the Partial word / Whole word dropdown next to the search
-// box. Defaults to 'partial' if the element isn't found for some
-// reason.
-function getReferenceSearchMode() {
-  const select = document.getElementById('referenceSearchMode');
-  return select && select.value === 'whole' ? 'whole' : 'partial';
-}
-
 // Checks whether "term" appears in "text" — as a plain substring in
 // Partial word mode (the original behavior), or as a whole word only
 // (bounded by word breaks on both sides) in Whole word mode.
@@ -1561,10 +1760,10 @@ function textContainsTerm(text, term, wholeWord) {
   return pattern.test(text);
 }
 
-// Removes any <mark class="search-highlight"> wrappers left over
-// from a previous search, merging the plain text back together.
-function clearReferenceHighlights() {
-  document.querySelectorAll('.lookup-panel mark.search-highlight').forEach((mark) => {
+// Removes any <mark class="search-highlight"> wrappers found anywhere
+// underneath rootEl, merging the plain text back together.
+function clearHighlightsWithin(rootEl) {
+  rootEl.querySelectorAll('mark.search-highlight').forEach((mark) => {
     const parent = mark.parentNode;
     if (!parent) return;
     parent.replaceChild(document.createTextNode(mark.textContent), mark);
@@ -1572,26 +1771,31 @@ function clearReferenceHighlights() {
   });
 }
 
-// Wraps every visible occurrence of any search term in a
-// <mark class="search-highlight">, so the DM can immediately see WHY
-// a dropdown matched. Only text inside currently-visible (non
-// search-hidden) dropdowns is touched.
-function highlightReferenceMatches(terms, wholeWord) {
-  if (terms.length === 0) return;
+function clearReferenceHighlights() {
   const panel = document.querySelector('.lookup-panel');
-  if (!panel) return;
+  if (panel) clearHighlightsWithin(panel);
+}
+
+// Wraps every visible occurrence of any search term (anywhere
+// underneath rootEl) in a <mark class="search-highlight">, so it's
+// immediately obvious why something matched. Only text inside
+// currently-visible (non search-hidden) dropdowns is touched, and text
+// belonging to an injected search box itself is skipped.
+function highlightMatchesWithin(rootEl, terms, wholeWord) {
+  if (terms.length === 0) return;
 
   const escaped = terms.map((term) => escapeRegex(term));
   const pattern = wholeWord
     ? new RegExp('\\b(' + escaped.join('|') + ')\\b', 'gi')
     : new RegExp('(' + escaped.join('|') + ')', 'gi');
 
-  const walker = document.createTreeWalker(panel, NodeFilter.SHOW_TEXT, {
+  const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) => {
       if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
       const parentEl = node.parentElement;
       if (!parentEl) return NodeFilter.FILTER_REJECT;
       if (parentEl.closest('.search-hidden')) return NodeFilter.FILTER_REJECT;
+      if (parentEl.closest('.dropdown-search-row')) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     }
   });
@@ -1628,19 +1832,63 @@ function highlightReferenceMatches(terms, wholeWord) {
   });
 }
 
-// Re-filters the Reference panel for the current search box value.
-// Each dropdown is judged in two passes: first, does its OWN text
-// (excluding anything nested inside a further dropdown) contain every
-// search term? Second, a dropdown is shown either because it matched
-// itself, or because a dropdown nested inside it (at any depth)
-// matched — so matching entries stay reachable through their parent
-// sections without those parents falsely matching on their own.
-// Clearing the box removes the filter and restores whatever was
-// open/closed before the search started.
+function highlightReferenceMatches(terms, wholeWord) {
+  const panel = document.querySelector('.lookup-panel');
+  if (panel) highlightMatchesWithin(panel, terms, wholeWord);
+}
+
+// Reads the Partial word / Whole word <select> that sits next to a
+// given search <input>, defaulting to 'partial' if it can't be found.
+function getSearchModeFor(selectEl) {
+  return selectEl && selectEl.value === 'whole' ? 'whole' : 'partial';
+}
+
+// Re-filters every dropdown found underneath "scopeEl" (NOT including
+// scopeEl itself, so a per-dropdown search box never hides the very
+// dropdown it lives inside) for the given query. Each dropdown is
+// judged in two passes, exactly like the main pane-wide search: does
+// its OWN text contain every term, or does a dropdown nested inside it
+// match? Clearing the query simply reveals every dropdown in scope
+// again — it doesn't try to restore whatever finer-grained state
+// existed before the search started.
+function performScopedSearch(scopeEl, rawQuery, wholeWord) {
+  const allDetails = Array.from(scopeEl.querySelectorAll('details'));
+  const terms = parseReferenceSearchTerms(rawQuery);
+
+  clearHighlightsWithin(scopeEl);
+
+  if (terms.length === 0) {
+    allDetails.forEach((el) => el.classList.remove('search-hidden'));
+    updateScrollNav();
+    return;
+  }
+
+  const ownMatches = new Map();
+  allDetails.forEach((el) => {
+    const text = collectOwnReferenceText(el).toLowerCase();
+    ownMatches.set(el, terms.every((term) => textContainsTerm(text, term, wholeWord)));
+  });
+
+  allDetails.forEach((el) => {
+    let show = ownMatches.get(el);
+    if (!show) {
+      show = Array.from(el.querySelectorAll('details')).some((child) => ownMatches.get(child));
+    }
+    el.classList.toggle('search-hidden', !show);
+    if (show) el.open = true;
+  });
+
+  highlightMatchesWithin(scopeEl, terms, wholeWord);
+  updateScrollNav();
+}
+
+// Re-filters the WHOLE Reference panel for the main search box's
+// current value. Clearing the box removes the filter and restores
+// whatever was open/closed before the search started.
 function performReferenceSearch(rawQuery) {
   const allDetails = getAllReferenceDetails();
   const terms = parseReferenceSearchTerms(rawQuery);
-  const wholeWord = getReferenceSearchMode() === 'whole';
+  const wholeWord = getSearchModeFor(document.getElementById('referenceSearchMode')) === 'whole';
 
   clearReferenceHighlights();
 
@@ -1648,6 +1896,7 @@ function performReferenceSearch(rawQuery) {
     referenceSearchActive = false;
     allDetails.forEach((el) => el.classList.remove('search-hidden'));
     loadReferenceState();
+    updateScrollNav();
     return;
   }
 
@@ -1671,6 +1920,65 @@ function performReferenceSearch(rawQuery) {
   });
 
   highlightReferenceMatches(terms, wholeWord);
+  updateScrollNav();
+}
+
+// ---- PER-DROPDOWN SEARCH BARS ----
+// Injects a small "Search within '<title>'" box (with its own Partial
+// word / Whole word selector, defaulting to Partial) at the very top
+// of EVERY dropdown's body in the Reference pane — top-level ones like
+// Cover as well as every nested one (an individual spell, a single
+// glossary term, a lore entry, and so on). This is entirely generic:
+// it just walks whatever <details> elements already exist in the DOM
+// after the data-driven sections have rendered, so a brand-new
+// dropdown added later (by hand or via a new data file) automatically
+// gets one too — nothing here needs to know what's inside any of them.
+function initDropdownSearchBars() {
+  const allDetails = document.querySelectorAll('.lookup-panel details');
+
+  allDetails.forEach((detailsEl) => {
+    const summaryEl = detailsEl.querySelector(':scope > summary');
+    const bodyEl = detailsEl.querySelector(':scope > .dropdown-body, :scope > .condition-body');
+    if (!summaryEl || !bodyEl) return;
+    if (bodyEl.querySelector(':scope > .dropdown-search-row')) return; // already has one
+
+    const title = summaryEl.textContent.trim();
+
+    const row = document.createElement('div');
+    row.className = 'dropdown-search-row';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'dropdown-search-input';
+    input.placeholder = 'Search within "' + title + '"';
+
+    const select = document.createElement('select');
+    select.className = 'dropdown-search-mode';
+    const optPartial = document.createElement('option');
+    optPartial.value = 'partial';
+    optPartial.textContent = 'Partial word';
+    optPartial.selected = true;
+    const optWhole = document.createElement('option');
+    optWhole.value = 'whole';
+    optWhole.textContent = 'Whole word';
+    select.appendChild(optPartial);
+    select.appendChild(optWhole);
+
+    row.appendChild(input);
+    row.appendChild(select);
+    bodyEl.insertBefore(row, bodyEl.firstChild);
+
+    const runSearch = () => {
+      performScopedSearch(detailsEl, input.value, getSearchModeFor(select) === 'whole');
+    };
+
+    input.addEventListener('input', runSearch);
+    select.addEventListener('change', runSearch);
+
+    // Typing/clicking inside the search row shouldn't be treated as a
+    // click on the <summary> that closes the dropdown.
+    row.addEventListener('click', (e) => e.stopPropagation());
+  });
 }
 
 // ---- NPC REACTIONS ----
@@ -1898,27 +2206,114 @@ function computeJump() {
   document.getElementById('runningStartFeet').textContent = feat ? '5' : '10';
 }
 
+// ---- PANE MAXIMIZE / MINIMIZE ----
+// Each of the three columns (Initiative, Dice, Reference) has its own
+// maximize button. Pressing it hides the other two columns (collapsed
+// via CSS rather than removed from the DOM, so nothing about their
+// state is lost) and lets the pressed column fill the page, with the
+// site header hidden out of the way too; pressing it again (now
+// showing as a minimize icon) brings everything back. Only one column
+// can be maximized at a time.
+
+function togglePaneMaximize(columnId) {
+  const wrap = document.querySelector('.columns-wrap');
+  const column = document.getElementById(columnId);
+  if (!wrap || !column) return;
+
+  const wasMaximized = column.classList.contains('column-maximized');
+
+  document.querySelectorAll('.column').forEach((c) => c.classList.remove('column-maximized'));
+
+  if (wasMaximized) {
+    wrap.classList.remove('has-maximized');
+    document.body.classList.remove('pane-maximized');
+  } else {
+    column.classList.add('column-maximized');
+    wrap.classList.add('has-maximized');
+    document.body.classList.add('pane-maximized');
+    // Always start a freshly-maximized pane at its own top, rather
+    // than wherever the page happened to be scrolled to beforehand.
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  updatePaneMaximizeButtons();
+  setTimeout(updateScrollNav, 380); // after the resize transition settles
+}
+
+function updatePaneMaximizeButtons() {
+  document.querySelectorAll('.pane-maximize-btn').forEach((btn) => {
+    const columnId = btn.dataset.column;
+    const column = columnId ? document.getElementById(columnId) : null;
+    const isMax = !!(column && column.classList.contains('column-maximized'));
+    btn.classList.toggle('is-maximized', isMax);
+    btn.setAttribute('aria-label', (isMax ? 'Minimize' : 'Maximize') + ' pane');
+  });
+}
+
+// ---- SCROLL NAV (combined up / down button) ----
+// A single circular control, bottom-center, that can show:
+//   - nothing, if the whole page already fits on screen
+//   - a full circle with just an up arrow, if you're at the bottom
+//   - a full circle with just a down arrow, if you're at the top
+//   - two joined semicircles (up on top, down below), if scrolling
+//     further is currently possible in both directions
+function updateScrollNav() {
+  const nav = document.getElementById('scrollNav');
+  const upBtn = document.getElementById('scrollUpBtn');
+  const downBtn = document.getElementById('scrollDownBtn');
+  if (!nav || !upBtn || !downBtn) return;
+
+  const scrollY = window.scrollY;
+  const viewportH = window.innerHeight;
+  const docH = document.documentElement.scrollHeight;
+  const EPS = 4;
+
+  const canScrollUp = scrollY > EPS;
+  const canScrollDown = scrollY + viewportH < docH - EPS;
+
+  upBtn.classList.toggle('shown', canScrollUp);
+  downBtn.classList.toggle('shown', canScrollDown);
+
+  nav.classList.toggle('both-visible', canScrollUp && canScrollDown);
+  nav.classList.toggle('visible', canScrollUp || canScrollDown);
+}
+
 // ---- WIRING EVERYTHING UP ----
 
 document.addEventListener('DOMContentLoaded', () => {
   renderDataDrivenReferenceSections();
+  initDropdownSearchBars();
 
   // The header is pinned (position: sticky) to the top of the viewport;
-  // its height varies with screen width (the time/round controls wrap
-  // onto more lines on medium screens), so it's measured here and exposed
-  // as a CSS variable that the sticky reference columns offset below.
+  // its height varies with screen width and with its own content (it
+  // grew when the Date fields were added), so it's measured here and
+  // exposed as a CSS variable that the sticky reference columns offset
+  // below. A ResizeObserver (rather than only a window resize
+  // listener) catches every reason that height could change —
+  // including web fonts finishing their async load after first paint,
+  // which could otherwise leave the reference pane's sticky header
+  // pinned a few pixels too high and peeking above the app header.
+  const headerEl = document.querySelector('.app-header');
   const syncHeaderHeight = () => {
-    const header = document.querySelector('.app-header');
-    if (!header) return;
-    document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+    if (!headerEl) return;
+    document.documentElement.style.setProperty('--header-h', headerEl.offsetHeight + 'px');
   };
   syncHeaderHeight();
+  if (headerEl && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncHeaderHeight).observe(headerEl);
+  } else {
+    window.addEventListener('resize', syncHeaderHeight);
+  }
   window.addEventListener('resize', syncHeaderHeight);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(syncHeaderHeight);
+  }
 
   load();
   render();
   renderRound();
   renderTimeControls();
+  renderDateControls();
   toggleJumpDexVisibility();
   computeJump();
 
@@ -1929,10 +2324,11 @@ document.addEventListener('DOMContentLoaded', () => {
   getAllReferenceDetails().forEach((el) => {
     el.addEventListener('toggle', () => {
       if (!referenceSearchActive) saveReferenceState();
+      updateScrollNav();
     });
   });
 
-  // Reference pane: search box filters the dropdowns live
+  // Reference pane: main search box filters the whole pane live
   const referenceSearchInput = document.getElementById('referenceSearchInput');
   if (referenceSearchInput) {
     referenceSearchInput.addEventListener('input', (e) => {
@@ -1941,13 +2337,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Reference pane: Partial word / Whole word dropdown re-runs the
-  // current search whenever it's changed.
+  // current main search whenever it's changed.
   const referenceSearchModeSelect = document.getElementById('referenceSearchMode');
   if (referenceSearchModeSelect) {
     referenceSearchModeSelect.addEventListener('change', () => {
       performReferenceSearch(referenceSearchInput ? referenceSearchInput.value : '');
     });
   }
+
+  // Reference pane: "Back" button, hidden until at least one gloss-ref
+  // link has been followed.
+  const referenceBackBtn = document.getElementById('referenceBackBtn');
+  if (referenceBackBtn) {
+    referenceBackBtn.addEventListener('click', goBackReference);
+  }
+
+  // Reference pane: pane maximize/minimize buttons (Initiative, Dice,
+  // and Reference Information all have one).
+  document.querySelectorAll('.pane-maximize-btn').forEach((btn) => {
+    btn.addEventListener('click', () => togglePaneMaximize(btn.dataset.column));
+  });
+  updatePaneMaximizeButtons();
 
   // Restore the mob attack calculator's inputs from the last session,
   // then recalculate "Automatic hits" so it's visible right away.
@@ -2049,6 +2459,51 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('roundUp').addEventListener('click', incrementRound);
   document.getElementById('roundDown').addEventListener('click', decrementRound);
   document.getElementById('resetRoundBtn').addEventListener('click', resetRound);
+
+  // Date tracker: year/month/day fields (typing directly)
+  document.getElementById('dateYearInput').addEventListener('focusout', commitDateYearInput);
+  document.getElementById('dateYearInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') e.target.blur();
+  });
+  document.getElementById('dateMonthInput').addEventListener('keydown', (e) => {
+    e.preventDefault();
+  });
+  document.getElementById('dateDayInput').addEventListener('focusout', commitDateDayInput);
+  document.getElementById('dateDayInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') e.target.blur();
+  });
+
+  // Date tracker: +/- buttons (with rollover into the next/previous month/year)
+  document.getElementById('dateYearUp').addEventListener('click', () => {
+    adjustDateYear(1);
+    renderDateControls();
+    save();
+  });
+  document.getElementById('dateYearDown').addEventListener('click', () => {
+    adjustDateYear(-1);
+    renderDateControls();
+    save();
+  });
+  document.getElementById('dateMonthUp').addEventListener('click', () => {
+    adjustDateMonth(1);
+    renderDateControls();
+    save();
+  });
+  document.getElementById('dateMonthDown').addEventListener('click', () => {
+    adjustDateMonth(-1);
+    renderDateControls();
+    save();
+  });
+  document.getElementById('dateDayUp').addEventListener('click', () => {
+    incrementDateDay(1);
+    renderDateControls();
+    save();
+  });
+  document.getElementById('dateDayDown').addEventListener('click', () => {
+    incrementDateDay(-1);
+    renderDateControls();
+    save();
+  });
 
   // Time tracker: starting time field
   document.getElementById('startTimeInput').addEventListener('focusout', (e) => commitStartTimeInput(e.target));
@@ -2161,17 +2616,21 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('monsterReactionBtn').addEventListener('click', rollMonsterReaction);
   document.getElementById('randomizeAttitudeBtn').addEventListener('click', randomizeAttitude);
 
-  // Scroll-to-top button: only visible once the top of the page has
-  // scrolled out of view, and scrolls smoothly back to the top on click.
-  const scrollTopBtn = document.getElementById('scrollTopBtn');
-  if (scrollTopBtn) {
-    const toggleScrollTopBtn = () => {
-      scrollTopBtn.classList.toggle('visible', window.scrollY > 200);
-    };
-    toggleScrollTopBtn();
-    window.addEventListener('scroll', toggleScrollTopBtn);
-    scrollTopBtn.addEventListener('click', () => {
+  // Scroll nav: up half scrolls to the very top, down half scrolls to
+  // the very bottom. Visibility/shape is recalculated on scroll,
+  // resize, and anywhere else page height can change (handled above
+  // and inside the relevant functions).
+  const scrollUpBtn = document.getElementById('scrollUpBtn');
+  const scrollDownBtn = document.getElementById('scrollDownBtn');
+  if (scrollUpBtn && scrollDownBtn) {
+    updateScrollNav();
+    window.addEventListener('scroll', updateScrollNav);
+    window.addEventListener('resize', updateScrollNav);
+    scrollUpBtn.addEventListener('click', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    scrollDownBtn.addEventListener('click', () => {
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
     });
   }
 });
