@@ -839,14 +839,12 @@ function resetTime() {
 // fields, since they live in the same header box) back to its default
 // state, after confirmation.
 async function resetTimeAll() {
-  const confirmed = await confirmAction('Reset the time tracker back to its default state (8:00 AM, 0h 0m, and the date)?');
+  const confirmed = await confirmAction('Reset the time tracker back to its default time (8:00 AM, 0h 0m)? NOTE that date is not reset.');
   if (!confirmed) return;
   timeState.startTime = '8:00 AM';
   timeState.durHours = 0;
   timeState.durMinutes = 0;
-  dateState = { year: 1, month: 1, day: 1 };
   renderTimeControls();
-  renderDateControls();
   save();
 }
 
@@ -1567,32 +1565,35 @@ function openAndFlashTarget(target) {
   });
 }
 
-function openReference(targetId) {
+function openReference(targetId, sourceId) {
   const target = document.getElementById(targetId);
   if (!target) return;
 
-  referenceBackStack.push({ scrollY: window.scrollY, targetId: lastOpenedTargetId });
+  referenceBackStack.push({ scrollY: window.scrollY, targetId: sourceId || null });
   updateBackButtonVisibility();
 
   openAndFlashTarget(target);
-  lastOpenedTargetId = targetId;
 }
 
 // ---- REFERENCE "BACK" BUTTON ----
 // A stack of { scrollY, targetId } entries, one pushed every time a
 // gloss-ref link is followed (see openReference above) — targetId is
-// whatever section was open/flashed immediately BEFORE that jump (or
-// null if nothing had been opened yet this session). Pressing Back
+// the section the link itself was sitting inside AT THE MOMENT it was
+// clicked (found by the click handler below via .closest('details')),
+// or null if the link wasn't inside any dropdown at all. Pressing Back
 // pops the most recent entry: if it has a targetId, that section is
 // re-opened, scrolled to, and flashed again exactly like following a
-// link does; if not, it just scrolls back to where you started. This
-// retraces the whole chain of jumps one step at a time; once the
-// stack is empty the button hides itself again. It lives only in
-// memory — it resets on refresh, and is explicitly cleared whenever
-// the Reference pane's Reset button is used.
+// link does — including the very first link in a chain, since that
+// link's enclosing section is captured directly from the DOM rather
+// than from a "what was previously opened" variable that starts out
+// empty. If there's no targetId (an edge case with no enclosing
+// dropdown), it falls back to just scrolling to where the jump
+// happened. This retraces the whole chain of jumps one step at a
+// time; once the stack is empty the button hides itself again. It
+// lives only in memory — it resets on refresh, and is explicitly
+// cleared whenever the Reference pane's Reset button is used.
 
 let referenceBackStack = [];
-let lastOpenedTargetId = null;
 
 function updateBackButtonVisibility() {
   const btn = document.getElementById('referenceBackBtn');
@@ -1611,13 +1612,10 @@ function goBackReference() {
   } else {
     window.scrollTo({ top: entry.scrollY, behavior: 'smooth' });
   }
-
-  lastOpenedTargetId = entry.targetId;
 }
 
 function clearBackChain() {
   referenceBackStack = [];
-  lastOpenedTargetId = null;
   updateBackButtonVisibility();
 }
 
@@ -2215,29 +2213,62 @@ function computeJump() {
 // showing as a minimize icon) brings everything back. Only one column
 // can be maximized at a time.
 
+const PANE_MAXIMIZE_ANIM_MS = 340; // must stay >= the CSS transition duration used on .column-maximized
+
+let paneMaximizeAnimTimeout = null;
+
 function togglePaneMaximize(columnId) {
   const wrap = document.querySelector('.columns-wrap');
   const column = document.getElementById(columnId);
   if (!wrap || !column) return;
 
-  const wasMaximized = column.classList.contains('column-maximized');
+  clearTimeout(paneMaximizeAnimTimeout);
 
-  document.querySelectorAll('.column').forEach((c) => c.classList.remove('column-maximized'));
+  const wasMaximized = column.classList.contains('column-maximized');
+  const otherColumns = Array.from(document.querySelectorAll('.column')).filter((c) => c !== column);
 
   if (wasMaximized) {
+    // MINIMIZING. The other two columns are kept fully collapsed
+    // (zero width, no transition on them) for the whole duration of
+    // this pane's shrink-back animation, so it always has the entire
+    // row's width available to animate through cleanly, instead of
+    // competing with siblings whose width is changing at the same
+    // time. Only once the shrink finishes do the other columns (and
+    // the site header) reappear.
     wrap.classList.remove('has-maximized');
-    document.body.classList.remove('pane-maximized');
-  } else {
-    column.classList.add('column-maximized');
-    wrap.classList.add('has-maximized');
-    document.body.classList.add('pane-maximized');
-    // Always start a freshly-maximized pane at its own top, rather
-    // than wherever the page happened to be scrolled to beforehand.
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  }
+    updatePaneMaximizeButtons();
 
-  updatePaneMaximizeButtons();
-  setTimeout(updateScrollNav, 380); // after the resize transition settles
+    paneMaximizeAnimTimeout = setTimeout(() => {
+      otherColumns.forEach((c) => c.classList.remove('column-collapsed'));
+      column.classList.remove('column-maximized');
+      document.body.classList.remove('pane-maximized');
+      updateScrollNav();
+      syncLookupHeaderMask();
+    }, PANE_MAXIMIZE_ANIM_MS);
+  } else {
+    // MAXIMIZING. The other two columns collapse instantly (no
+    // transition on them at all — see .column-collapsed), so by the
+    // time this pane's own grow transition starts, it already has the
+    // full row width to expand into with nothing else competing for
+    // space, which is what keeps the expand animation smooth.
+    document.body.classList.add('pane-maximized');
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    otherColumns.forEach((c) => c.classList.add('column-collapsed'));
+    column.classList.add('column-maximized');
+    // Force layout to flush the instant collapse above before adding
+    // has-maximized, so the browser has something concrete (0 width)
+    // to grow away from rather than possibly batching both changes
+    // into a single frame.
+    void wrap.offsetWidth;
+    wrap.classList.add('has-maximized');
+    updatePaneMaximizeButtons();
+    syncLookupHeaderMask();
+
+    paneMaximizeAnimTimeout = setTimeout(() => {
+      updateScrollNav();
+      syncLookupHeaderMask();
+    }, PANE_MAXIMIZE_ANIM_MS);
+  }
 }
 
 function updatePaneMaximizeButtons() {
@@ -2257,6 +2288,21 @@ function updatePaneMaximizeButtons() {
 //   - a full circle with just a down arrow, if you're at the top
 //   - two joined semicircles (up on top, down below), if scrolling
 //     further is currently possible in both directions
+// ---- REFERENCE PANE HEADER MASK ----
+// Keeps the fixed-position mask (see .lookup-header-mask in styles.css)
+// aligned with the Reference column's current left edge and width.
+// Needs re-syncing whenever that width can change: on load, on window
+// resize (including the narrow/wide breakpoint that stacks the
+// columns), and whenever a pane is maximized or minimized.
+function syncLookupHeaderMask() {
+  const mask = document.getElementById('lookupHeaderMask');
+  const panel = document.querySelector('.lookup-panel');
+  if (!mask || !panel) return;
+  const rect = panel.getBoundingClientRect();
+  mask.style.left = rect.left + 'px';
+  mask.style.width = rect.width + 'px';
+}
+
 function updateScrollNav() {
   const nav = document.getElementById('scrollNav');
   const upBtn = document.getElementById('scrollUpBtn');
@@ -2308,6 +2354,22 @@ document.addEventListener('DOMContentLoaded', () => {
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(syncHeaderHeight);
   }
+
+  // The mask that covers the gap above the Reference pane's own
+  // sticky header (see .lookup-header-mask) needs its left/width kept
+  // in sync with the Reference column's actual on-screen bounds,
+  // since position:fixed elements don't automatically track a flex
+  // sibling's dynamic width. A ResizeObserver on the lookup panel
+  // itself catches width changes from window resizing, the
+  // narrow/wide layout breakpoint, and pane maximize/minimize (which
+  // is also handled explicitly in togglePaneMaximize for the exact
+  // moment its animation completes).
+  syncLookupHeaderMask();
+  const lookupPanelEl = document.querySelector('.lookup-panel');
+  if (lookupPanelEl && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncLookupHeaderMask).observe(lookupPanelEl);
+  }
+  window.addEventListener('resize', syncLookupHeaderMask);
 
   load();
   render();
@@ -2546,12 +2608,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Anywhere on the page: clicking a gold rules-term link (e.g.
   // "AC" inside Cover, "Incapacitated" inside Stunned, or "Conditions
   // dropdown" inside a glossary entry) opens every dropdown it's
-  // nested inside, then scrolls to and flashes the target.
+  // nested inside, then scrolls to and flashes the target. The
+  // nearest enclosing <details> the link itself lives in is captured
+  // here (not tracked via a "last opened" variable) so the Back
+  // button can correctly flash that source section too, even on the
+  // very last step of a chain (the first link ever clicked).
   document.addEventListener('click', (e) => {
     const ref = e.target.closest('.gloss-ref');
     if (!ref) return;
     e.preventDefault();
-    openReference(ref.dataset.ref);
+    const sourceDetails = ref.closest('details');
+    openReference(ref.dataset.ref, sourceDetails ? sourceDetails.id : null);
   });
 
   // Reference pane: Reset button

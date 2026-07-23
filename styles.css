@@ -50,12 +50,20 @@ body {
     z-index: 60;
     background: var(--bg);
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
-    /* Forces the header onto its own compositing layer. Some browsers
-       (particularly iOS Safari) can otherwise mis-stack nested sticky
-       elements during scroll, letting lower content flash above this
-       bar for a frame or two. */
+    /* Forces the header onto its own compositing layer and its own
+       stacking context. Some browsers (particularly iOS/mobile
+       Safari) can otherwise mis-stack independent position:sticky
+       elements during scroll, letting lower content flash or bleed
+       above this bar for a frame or more — translateZ(0) alone isn't
+       always enough to prevent it, so isolation + will-change are
+       added as well to give the browser a stronger, unambiguous hint
+       that this element owns its own compositing layer. */
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
+    isolation: isolate;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
     isolation: isolate;
 }
 
@@ -332,9 +340,6 @@ body {
     flex-direction: column;
     gap: 10px;
     min-width: 0;
-    transition: flex-grow 0.32s cubic-bezier(0.4, 0, 0.2, 1), flex-basis 0.32s cubic-bezier(0.4, 0, 0.2, 1),
-        max-width 0.32s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
-        opacity 0.26s ease, margin 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .column-initiative {
@@ -368,25 +373,54 @@ body {
 }
 
 /* ===== MAXIMIZED PANE ===== */
-/* Pressing a pane's maximize button hides the other two columns
-   (collapsed to zero width/height/opacity rather than removed from
-   the DOM, so every bit of their state — open dropdowns, scroll
-   positions, form values — survives untouched) and lets the chosen
-   column grow to fill the full width. The collapsed columns' height
-   is explicitly zeroed (not just their width/opacity) — leaving it
-   unset let them keep their full natural height invisibly, which was
-   inflating the row and made the maximized pane appear to "drop"
-   once the browser next recalculated the layout. */
+/* Pressing a pane's maximize button hides the other two columns and
+   lets the chosen column grow to fill the full width. Two dedicated
+   classes drive this (applied/removed by JS in dm-screen.js, in a
+   specific sequence — see togglePaneMaximize):
 
-.columns-wrap.has-maximized .column:not(.column-maximized) {
-    flex: 0 1 0px;
-    max-width: 0;
-    max-height: 0;
-    min-width: 0;
-    opacity: 0;
-    overflow: hidden;
-    pointer-events: none;
-    margin: 0;
+   .column-collapsed — put on the two columns being hidden. Every
+   property changes INSTANTLY (transition: none), so they vanish in a
+   single frame rather than visibly shrinking through a series of
+   awkward intermediate widths (which — since flex-basis approaching 0
+   forces their text to rewrap into a very narrow column — was both
+   ugly and what caused the earlier "pane drops to the bottom" bug, as
+   the reflowed content briefly grew far taller than normal). Nothing
+   about their state is lost; they're only visually hidden
+   (opacity/size), never removed from the DOM.
+
+   .column-maximized — put on the column being expanded. Its own
+   flex-basis/max-width DO transition smoothly, since it's the one
+   pane the animation is meant to draw attention to. position:sticky
+   is also switched off while this class is present — animating a
+   sticky element's width every frame while the browser simultaneously
+   recalculates its sticky offset is what made the expand/collapse
+   feel janky before.
+
+   JS sequences the two directions differently so the animating pane
+   is never fighting a sibling for space at the same time: entering
+   maximize collapses the other two INSTANTLY first (before the
+   maximized one starts growing, so it always has the full row width
+   free to expand into); leaving maximize keeps the other two
+   collapsed until AFTER the previously-maximized pane has finished
+   shrinking back down, then reveals them. */
+
+.column-collapsed {
+    flex: 0 1 0px !important;
+    max-width: 0 !important;
+    max-height: 0 !important;
+    min-width: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    margin: 0 !important;
+    transition: none !important;
+}
+
+.column-maximized {
+    transition: flex-basis 0.34s cubic-bezier(0.22, 0.61, 0.36, 1), max-width 0.34s cubic-bezier(0.22, 0.61, 0.36, 1),
+        flex-grow 0.34s cubic-bezier(0.22, 0.61, 0.36, 1);
+    position: static !important;
+    top: auto !important;
 }
 
 .columns-wrap.has-maximized .column-maximized {
@@ -397,11 +431,10 @@ body {
 
 /* While any pane is maximized, the site header (round counter, date,
    time tracker) is hidden entirely, so the maximized pane can use the
-   full height of the page. The reference pane's own sticky search
-   header reacts automatically — it offsets itself using the
-   --header-h variable, which a ResizeObserver keeps in sync with the
-   header's real rendered height, and that height becomes 0 the
-   instant the header is hidden. */
+   full height of the page. Its reappearance is deferred (via JS
+   timeout) until the previously-maximized pane has finished shrinking
+   back down, so nothing shifts underneath an animation still in
+   progress. */
 body.pane-maximized .app-header {
     display: none;
 }
@@ -1042,19 +1075,58 @@ input.row-ini {
 
 /* ===== REFERENCE COLUMN / DROPDOWNS ===== */
 
+/* ===== REFERENCE PANE HEADER MASK =====
+   A dedicated element that solidly covers the strip between the
+   bottom of the site header and the top of the Reference pane's own
+   sticky bar. Without this, whatever dropdown content has scrolled
+   up to that strip is still there in normal document flow — nothing
+   was ever actually covering it, since .lookup-sticky-top only starts
+   at calc(header-h + 14px) and only ITS OWN box was opaque. That left
+   a real (not just a rendering-glitch) window onto already-scrolled
+   content sitting directly above the Reference Information bar.
+
+   This uses position:fixed rather than sticky specifically because a
+   sticky element still occupies space in normal flow before it's
+   "stuck" — which would shove the Reference Information title down
+   by its own height every time the page loads unscrolled. Fixed
+   positioning has no such side effect, at the cost of needing its
+   left/width kept in sync with the Reference column's own bounds via
+   JS (see syncLookupHeaderMask in dm-screen.js), since fixed elements
+   don't automatically track a flex sibling's width. */
+
+.lookup-header-mask {
+    position: fixed;
+    top: 0;
+    height: calc(var(--header-h) + 15px);
+    background: var(--bg);
+    z-index: 39;
+    pointer-events: none;
+}
+
 .lookup-sticky-top {
     position: sticky;
     top: calc(var(--header-h) + 14px);
     z-index: 40;
     background: var(--surface);
-    padding-top: 2px;
-    margin: -2px -14px 0;
-    padding-left: 14px;
-    padding-right: 14px;
-    padding-bottom: 4px;
-    /* Same compositing-layer fix as .app-header, see note there. */
+    /* The parent <section> has padding:12px 14px; this negative
+       margin cancels ALL of that padding on every side this bar
+       touches (not just a couple of px), so the bar's own opaque
+       background starts exactly at the section's top/left/right
+       edges with no uncovered sliver of the section's own padding
+       peeking out above/beside it. The bar's own padding then
+       restores the intended visual spacing around its contents. */
+    margin: -12px -14px 0;
+    padding: 12px 14px 4px;
+    /* Same compositing-layer + stacking-context hardening as
+       .app-header, see note there — this bar is the other half of
+       the pair of independent sticky elements that can mis-stack
+       during scroll on some browsers. */
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
+    isolation: isolate;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 .lookup-header {
