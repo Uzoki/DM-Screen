@@ -839,7 +839,7 @@ function resetTime() {
 // fields, since they live in the same header box) back to its default
 // state, after confirmation.
 async function resetTimeAll() {
-  const confirmed = await confirmAction('Reset the time tracker back to its default time (8:00 AM, 0h 0m)? NOTE that date is not reset.');
+  const confirmed = await confirmAction('Reset the time tracker back to its default state (8:00 AM, 0h 0m)?');
   if (!confirmed) return;
   timeState.startTime = '8:00 AM';
   timeState.durHours = 0;
@@ -1520,6 +1520,7 @@ function renderDataDrivenReferenceSections() {
   if (typeof LORE_DATA !== 'undefined') renderDataSection(LORE_DATA, 'loreContainer');
   if (typeof SPELLS_DATA !== 'undefined') renderDataSection(SPELLS_DATA, 'spellsContainer');
   if (typeof CLASSES_DATA !== 'undefined') renderDataSection(CLASSES_DATA, 'classesContainer');
+  if (typeof FEATS_DATA !== 'undefined') renderDataSection(FEATS_DATA, 'featsContainer');
 }
 
 // ---- GLOSSARY / RULES CROSS-REFERENCES ----
