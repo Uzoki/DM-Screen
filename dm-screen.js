@@ -1470,17 +1470,18 @@ async function clearMobCalculator() {
 }
 
 // ---- DATA-DRIVEN REFERENCE SECTIONS ----
-// Lore, Spells, Conditions, the Rules Glossary, and Classes are all
-// too large to hand-write in index.html, so their content lives as
-// plain data (see lore-data.js / spells-data.js / conditions-data.js /
-// rules-glossary-data.js / classes-data.js) in the shape { intro:
-// "<p>...</p>", entries: [ { id, title, html, children? }, ... ] },
-// where "children" (if present) is an array of more entries in the
-// same shape, nested as deep as needed. This builds the actual
-// <details class="condition-dropdown"> markup from that data, so
-// everything downstream (search, gloss-ref links, openReference, the
-// per-dropdown search bars, reference pane open/closed state) works
-// exactly the same as hand-written HTML.
+// Lore, Spells, Conditions, the Rules Glossary, Classes, Feats, and
+// most of the new "Rules" dropdown are all too large (or, for Rules,
+// too numerous) to hand-write in index.html, so their content lives
+// as plain data (see lore-data.js / spells-data.js / conditions-data.js
+// / rules-glossary-data.js / classes-data.js / feats-data.js /
+// rules-data.js) in the shape { intro: "<p>...</p>", entries: [ { id,
+// title, html, children? }, ... ] }, where "children" (if present) is
+// an array of more entries in the same shape, nested as deep as
+// needed. This builds the actual <details class="condition-dropdown">
+// markup from that data, so everything downstream (search, gloss-ref
+// links, openReference, the per-dropdown search bars, reference pane
+// open/closed state) works exactly the same as hand-written HTML.
 
 // Turns one data entry (and any nested children) into its
 // <details class="condition-dropdown"> HTML string.
@@ -1511,16 +1512,37 @@ function renderDataSection(data, containerId) {
   container.innerHTML = html;
 }
 
+// Renders RULES_DATA (Skills by Ability, Creature Types by Skill,
+// Cover, Obscured) into the "Rules" dropdown. Unlike renderDataSection
+// above, this INSERTS the rendered entries at the very start of
+// #rulesContainer instead of replacing its whole contents —
+// #rulesContainer's only existing child is the hand-written Jumping
+// dropdown (it needs real inputs/buttons wired up elsewhere in this
+// file, so it can't be plain data like the other four). Inserting
+// rather than replacing leaves Jumping completely untouched while
+// still landing it as the last entry in the list, after the four
+// data-driven ones.
+function renderRulesSection() {
+  const container = document.getElementById('rulesContainer');
+  if (!container || typeof RULES_DATA === 'undefined') return;
+  let html = '';
+  if (RULES_DATA.intro) html += RULES_DATA.intro;
+  html += (RULES_DATA.entries || []).map(renderDataEntryHtml).join('');
+  container.insertAdjacentHTML('afterbegin', html);
+}
+
 // Called first thing on page load, before anything else touches the
 // Reference pane (saved open/closed state, search indexing, etc.), so the
 // dropdowns it builds are already real DOM elements by the time those run.
 function renderDataDrivenReferenceSections() {
+  renderRulesSection();
   if (typeof RULES_GLOSSARY_DATA !== 'undefined') renderDataSection(RULES_GLOSSARY_DATA, 'glossaryContainer');
   if (typeof CONDITIONS_DATA !== 'undefined') renderDataSection(CONDITIONS_DATA, 'conditionsContainer');
   if (typeof LORE_DATA !== 'undefined') renderDataSection(LORE_DATA, 'loreContainer');
   if (typeof SPELLS_DATA !== 'undefined') renderDataSection(SPELLS_DATA, 'spellsContainer');
   if (typeof CLASSES_DATA !== 'undefined') renderDataSection(CLASSES_DATA, 'classesContainer');
   if (typeof FEATS_DATA !== 'undefined') renderDataSection(FEATS_DATA, 'featsContainer');
+  applyDefaultOpenState();
 }
 
 // ---- GLOSSARY / RULES CROSS-REFERENCES ----
@@ -1629,10 +1651,26 @@ function clearBackChain() {
 const REFERENCE_STORAGE_KEY = 'dmScreenReferenceState';
 // IDs of the dropdowns that are open by default (a brand-new visit,
 // or after pressing the Reference pane's Reset button).
-const REFERENCE_DEFAULT_OPEN_IDS = ['dropSkills', 'dropCreatureTypes', 'dropCover', 'dropObscured'];
+const REFERENCE_DEFAULT_OPEN_IDS = ['dropRules', 'dropSkills', 'dropCreatureTypes', 'dropCover', 'dropObscured'];
 
 function getAllReferenceDetails() {
   return Array.from(document.querySelectorAll('.lookup-panel details'));
+}
+
+// Opens every dropdown listed in REFERENCE_DEFAULT_OPEN_IDS. Called
+// once right after the data-driven sections are built (see
+// renderDataDrivenReferenceSections above), so a brand-new visit
+// (nothing saved in sessionStorage yet) shows the same dropdowns open
+// as before this dropdown/data restructuring — loadReferenceState()
+// further below still runs afterward and overrides this with whatever
+// was actually saved, exactly as it already did when these four
+// dropdowns were hand-written with an "open" attribute directly in
+// index.html.
+function applyDefaultOpenState() {
+  REFERENCE_DEFAULT_OPEN_IDS.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el && el.tagName === 'DETAILS') el.open = true;
+  });
 }
 
 function saveReferenceState() {
@@ -1926,12 +1964,13 @@ function performReferenceSearch(rawQuery) {
 // Injects a small "Search within '<title>'" box (with its own Partial
 // word / Whole word selector, defaulting to Partial) at the very top
 // of EVERY dropdown's body in the Reference pane — top-level ones like
-// Cover as well as every nested one (an individual spell, a single
-// glossary term, a lore entry, and so on). This is entirely generic:
-// it just walks whatever <details> elements already exist in the DOM
-// after the data-driven sections have rendered, so a brand-new
-// dropdown added later (by hand or via a new data file) automatically
-// gets one too — nothing here needs to know what's inside any of them.
+// Rules as well as every nested one (an individual spell, a single
+// glossary term, a lore entry, a Rules sub-entry like Cover, and so
+// on). This is entirely generic: it just walks whatever <details>
+// elements already exist in the DOM after the data-driven sections
+// have rendered, so a brand-new dropdown added later (by hand or via a
+// new data file) automatically gets one too — nothing here needs to
+// know what's inside any of them.
 function initDropdownSearchBars() {
   const allDetails = document.querySelectorAll('.lookup-panel details');
 

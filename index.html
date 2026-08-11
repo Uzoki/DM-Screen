@@ -246,109 +246,80 @@
 
           <div class="dropdown-group">
 
-            <details class="dropdown" id="dropSkills" open>
-              <summary>Skills by Ability</summary>
+            <details class="dropdown" id="dropRules" open>
+              <summary>Rules</summary>
               <div class="dropdown-body">
-                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="glossary-athletics">Athletics</a></p>
-                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="glossary-acrobatics">Acrobatics</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-sleight-of-hand">Sleight of Hand</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-stealth">Stealth</a></p>
-                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-intelligence">Intelligence</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="glossary-arcana">Arcana</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-history">History</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-investigation">Investigation</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-nature">Nature</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-religion">Religion</a></p>
-                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-wisdom">Wisdom</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="glossary-animal-handling">Animal Handling</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-insight">Insight</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-medicine">Medicine</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-perception">Perception</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-survival">Survival</a></p>
-                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-charisma">Charisma</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="glossary-deception">Deception</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-intimidation">Intimidation</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-performance">Performance</a>, <a href="#" class="gloss-ref skill-italic" data-ref="glossary-persuasion">Persuasion</a></p>
-              </div>
-            </details>
+                <div class="condition-list" id="rulesContainer">
 
-            <details class="dropdown" id="dropCreatureTypes" open>
-              <summary>Creature Types by Skill</summary>
-              <div class="dropdown-body">
-                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-arcana">Arcana</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-aberration">Aberration</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-construct">Construct</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-elemental">Elemental</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-fey">Fey</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-monstrosity">Monstrosity</a></p>
-                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-history">History</a> / <a href="#" class="gloss-ref" data-ref="glossary-medicine">Medicine</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-giant">Giant</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-humanoid">Humanoid</a></p>
-                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-nature">Nature</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-beast">Beast</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-dragon">Dragon</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-ooze">Ooze</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-plant">Plant</a></p>
-                <p><strong class="skill-label-large"><a href="#" class="gloss-ref" data-ref="glossary-religion">Religion</a>:</strong> <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-celestial">Celestial</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-fiend">Fiend</a>, <a href="#" class="gloss-ref skill-italic" data-ref="creature-type-undead">Undead</a></p>
-              </div>
-            </details>
+                  <details class="condition-dropdown" id="dropJumping">
+                    <summary>Jumping</summary>
+                    <div class="condition-body">
 
-            <details class="dropdown" id="dropCover" open>
-              <summary>Cover</summary>
-              <div class="dropdown-body">
-                <p><a href="#" class="gloss-ref" data-ref="glossary-half-cover"><strong>Half Cover</strong></a> = +2 <a href="#" class="gloss-ref" data-ref="glossary-armor-class">AC</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">Saving Throw</a></p>
-                <p><a href="#" class="gloss-ref" data-ref="glossary-three-quarters-cover"><strong>Three-Quarters Cover</strong></a> = +5 <a href="#" class="gloss-ref" data-ref="glossary-armor-class">AC</a> and <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">Saving Throw</a></p>
-                <p><a href="#" class="gloss-ref" data-ref="glossary-total-cover"><strong>Total Cover</strong></a> = Can't be targeted directly</p>
-              </div>
-            </details>
+                      <div class="jump-inputs">
+                        <div class="jump-input-row">
+                          <label for="jumpStr">Strength score</label>
+                          <input type="number" id="jumpStr" value="10" />
+                        </div>
+                        <div class="jump-input-row hidden" id="jumpDexRow">
+                          <label for="jumpDex">Dexterity score</label>
+                          <input type="number" id="jumpDex" value="10" />
+                        </div>
+                        <div class="jump-input-row jump-height-row">
+                          <label>Height</label>
+                          <div class="jump-height-fields">
+                            <div class="jump-height-group">
+                              <input type="number" id="jumpFeet" class="jump-num-input" placeholder="ft" min="0" value="6" />
+                              <span class="jump-height-unit">ft</span>
+                              <input type="number" id="jumpInches" class="jump-num-input" placeholder="in" min="0" max="11" value="0" />
+                              <span class="jump-height-unit">in</span>
+                            </div>
+                            <span class="jump-height-eq">=</span>
+                            <div class="jump-height-group">
+                              <input type="number" id="jumpCm" class="jump-num-input jump-num-input-cm" placeholder="cm" min="0" value="182.9" />
+                              <span class="jump-height-unit">cm</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-            <details class="dropdown" id="dropObscured" open>
-              <summary>Obscured</summary>
-              <div class="dropdown-body">
-                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-lightly-obscured">Lightly Obscured</a></strong> = Disadvantage on <a href="#" class="gloss-ref" data-ref="glossary-wisdom">Wisdom</a> (<a href="#" class="gloss-ref" data-ref="glossary-perception">Perception</a>) <a href="#" class="gloss-ref" data-ref="glossary-ability-check">checks</a> that rely on sight</p>
-                <p><strong><a href="#" class="gloss-ref" data-ref="glossary-heavily-obscured">Heavily Obscured</a></strong> = You have the <a href="#" class="gloss-ref" data-ref="condition-blinded">Blinded</a> condition while trying to see something in the area</p>
+                      <div class="jump-results">
+                        <h4>With a running start (<span id="runningStartFeet" class="jump-value">10</span> feet of movement)</h4>
+                        <p>Long jump: <span id="runLongJump" class="jump-value">0</span> feet horizontally</p>
+                        <p>High jump: <span id="runHighJump" class="jump-value">0</span> feet off the ground</p>
+                        <p>Reach: <span id="runReach" class="jump-value">0</span> feet off the ground</p>
+
+                        <h4>Without a running start</h4>
+                        <p>Long jump: <span id="standLongJump" class="jump-value">0</span> feet horizontally</p>
+                        <p>High jump: <span id="standHighJump" class="jump-value">0</span> feet off the ground</p>
+                        <p>Reach: <span id="standReach" class="jump-value">0</span> feet off the ground</p>
+
+                        <div class="jump-notes">
+                          <p>If there are obstacles in the way, you might need to make a <strong>DC10 <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> (<a href="#" class="gloss-ref" data-ref="glossary-athletics">Athletics</a>)</strong> <a href="#" class="gloss-ref" data-ref="glossary-ability-check">check</a> to jump over them. You cannot jump over any obstacle taller than your high jump.</p>
+                          <p>If you land in <a href="#" class="gloss-ref" data-ref="glossary-difficult-terrain">difficult terrain</a>, you might need to make a <strong>DC10 <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> (<a href="#" class="gloss-ref" data-ref="glossary-acrobatics">Acrobatics</a>)</strong> <a href="#" class="gloss-ref" data-ref="glossary-ability-check">check</a> or land <a href="#" class="gloss-ref" data-ref="condition-prone">prone</a>.</p>
+                          <p>You cannot jump farther than your remaining <a href="#" class="gloss-ref" data-ref="glossary-speed">movement</a> — you might need to <a href="#" class="gloss-ref" data-ref="glossary-dash">Dash</a> to cover long distances. Your DM might allow you to push beyond your limits with a <strong><a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> (<a href="#" class="gloss-ref" data-ref="glossary-athletics">Athletics</a>)</strong> <a href="#" class="gloss-ref" data-ref="glossary-ability-check">check</a>.</p>
+                        </div>
+                      </div>
+
+                      <div class="jump-modifiers">
+                        <label><input type="checkbox" id="jumpTiger" /> <strong>Barbarian</strong> – Totem Spirit: Tiger (while raging)</label>
+                        <label><input type="checkbox" id="jumpChampion" /> <strong>Fighter</strong> – Champion: Remarkable Athlete</label>
+                        <label><input type="checkbox" id="jumpMonk" /> <strong>Monk</strong> – Step of the Wind</label>
+                        <label><input type="checkbox" id="jumpRogue" /> <strong>Rogue</strong> – Thief: Second-Story Work</label>
+                        <label><input type="checkbox" id="jumpSpell" /> <strong>Spell</strong> – <a href="#" class="gloss-ref" data-ref="spell-jump">Jump</a></label>
+                        <label><input type="checkbox" id="jumpFeat" /> <strong>Feat</strong> – Athlete</label>
+                        <label><input type="checkbox" id="jumpBoots" /> <strong>Magic Item</strong> – Boots of Striding and Springing</label>
+                      </div>
+
+                    </div>
+                  </details>
+
+                </div>
               </div>
             </details>
 
             <details class="dropdown" id="dropConditions">
               <summary>Conditions</summary>
               <div class="dropdown-body" id="conditionsContainer"></div>
-            </details>
-
-            <details class="dropdown" id="dropJumping">
-              <summary>Jumping</summary>
-              <div class="dropdown-body">
-
-                <div class="jump-inputs">
-                  <div class="jump-input-row">
-                    <label for="jumpStr">Strength score</label>
-                    <input type="number" id="jumpStr" value="10" />
-                  </div>
-                  <div class="jump-input-row hidden" id="jumpDexRow">
-                    <label for="jumpDex">Dexterity score</label>
-                    <input type="number" id="jumpDex" value="10" />
-                  </div>
-                  <div class="jump-input-row jump-height-row">
-                    <label>Height</label>
-                    <div class="jump-height-fields">
-                      <div class="jump-height-group">
-                        <input type="number" id="jumpFeet" class="jump-num-input" placeholder="ft" min="0" value="6" />
-                        <span class="jump-height-unit">ft</span>
-                        <input type="number" id="jumpInches" class="jump-num-input" placeholder="in" min="0" max="11" value="0" />
-                        <span class="jump-height-unit">in</span>
-                      </div>
-                      <span class="jump-height-eq">=</span>
-                      <div class="jump-height-group">
-                        <input type="number" id="jumpCm" class="jump-num-input jump-num-input-cm" placeholder="cm" min="0" value="182.9" />
-                        <span class="jump-height-unit">cm</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="jump-results">
-                  <h4>With a running start (<span id="runningStartFeet" class="jump-value">10</span> feet of movement)</h4>
-                  <p>Long jump: <span id="runLongJump" class="jump-value">0</span> feet horizontally</p>
-                  <p>High jump: <span id="runHighJump" class="jump-value">0</span> feet off the ground</p>
-                  <p>Reach: <span id="runReach" class="jump-value">0</span> feet off the ground</p>
-
-                  <h4>Without a running start</h4>
-                  <p>Long jump: <span id="standLongJump" class="jump-value">0</span> feet horizontally</p>
-                  <p>High jump: <span id="standHighJump" class="jump-value">0</span> feet off the ground</p>
-                  <p>Reach: <span id="standReach" class="jump-value">0</span> feet off the ground</p>
-
-                  <div class="jump-notes">
-                    <p>If there are obstacles in the way, you might need to make a <strong>DC10 <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> (<a href="#" class="gloss-ref" data-ref="glossary-athletics">Athletics</a>)</strong> <a href="#" class="gloss-ref" data-ref="glossary-ability-check">check</a> to jump over them. You cannot jump over any obstacle taller than your high jump.</p>
-                    <p>If you land in <a href="#" class="gloss-ref" data-ref="glossary-difficult-terrain">difficult terrain</a>, you might need to make a <strong>DC10 <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a> (<a href="#" class="gloss-ref" data-ref="glossary-acrobatics">Acrobatics</a>)</strong> <a href="#" class="gloss-ref" data-ref="glossary-ability-check">check</a> or land <a href="#" class="gloss-ref" data-ref="condition-prone">prone</a>.</p>
-                    <p>You cannot jump farther than your remaining <a href="#" class="gloss-ref" data-ref="glossary-speed">movement</a> — you might need to <a href="#" class="gloss-ref" data-ref="glossary-dash">Dash</a> to cover long distances. Your DM might allow you to push beyond your limits with a <strong><a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> (<a href="#" class="gloss-ref" data-ref="glossary-athletics">Athletics</a>)</strong> <a href="#" class="gloss-ref" data-ref="glossary-ability-check">check</a>.</p>
-                  </div>
-                </div>
-
-                <div class="jump-modifiers">
-                  <label><input type="checkbox" id="jumpTiger" /> <strong>Barbarian</strong> – Totem Spirit: Tiger (while raging)</label>
-                  <label><input type="checkbox" id="jumpChampion" /> <strong>Fighter</strong> – Champion: Remarkable Athlete</label>
-                  <label><input type="checkbox" id="jumpMonk" /> <strong>Monk</strong> – Step of the Wind</label>
-                  <label><input type="checkbox" id="jumpRogue" /> <strong>Rogue</strong> – Thief: Second-Story Work</label>
-                  <label><input type="checkbox" id="jumpSpell" /> <strong>Spell</strong> – <a href="#" class="gloss-ref" data-ref="spell-jump">Jump</a></label>
-                  <label><input type="checkbox" id="jumpFeat" /> <strong>Feat</strong> – Athlete</label>
-                  <label><input type="checkbox" id="jumpBoots" /> <strong>Magic Item</strong> – Boots of Striding and Springing</label>
-                </div>
-
-              </div>
             </details>
 
             <details class="dropdown" id="dropNpcReactions">
@@ -468,6 +439,7 @@
     </button>
   </div>
 
+  <script src="rules-data.js"></script>
   <script src="rules-glossary-data.js"></script>
   <script src="conditions-data.js"></script>
   <script src="lore-data.js"></script>
