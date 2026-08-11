@@ -1512,23 +1512,36 @@ function renderDataSection(data, containerId) {
   container.innerHTML = html;
 }
 
-// Renders RULES_DATA (Skills by Ability, Creature Types by Skill,
-// Cover, Obscured) into the "Rules" dropdown. Unlike renderDataSection
-// above, this INSERTS the rendered entries at the very start of
-// #rulesContainer instead of replacing its whole contents —
+// Renders RULES_DATA (Ability Score Modifiers, Cover, Creature Types
+// by Skill, Obscured, Skills by Ability) into the "Rules" dropdown.
+// Unlike renderDataSection above, this INSERTS the rendered entries
+// around #rulesContainer's existing content instead of replacing it —
 // #rulesContainer's only existing child is the hand-written Jumping
 // dropdown (it needs real inputs/buttons wired up elsewhere in this
-// file, so it can't be plain data like the other four). Inserting
-// rather than replacing leaves Jumping completely untouched while
-// still landing it as the last entry in the list, after the four
-// data-driven ones.
+// file, so it can't be plain data like the other five).
+//
+// The whole "Rules" dropdown is meant to be alphabetically ordered,
+// and Jumping's correct alphabetical slot is between "Creature Types
+// by Skill" and "Obscured" — so RULES_DATA's entries (which are
+// listed alphabetically already, see rules-data.js) are split into
+// whatever comes before "Jumping" and whatever comes after it, each
+// inserted as one block on the matching side of the hand-written
+// Jumping dropdown. As long as rules-data.js's entries stay
+// alphabetically sorted, this always lands Jumping in the right spot
+// without this file needing to know anything else about it.
 function renderRulesSection() {
   const container = document.getElementById('rulesContainer');
   if (!container || typeof RULES_DATA === 'undefined') return;
-  let html = '';
-  if (RULES_DATA.intro) html += RULES_DATA.intro;
-  html += (RULES_DATA.entries || []).map(renderDataEntryHtml).join('');
-  container.insertAdjacentHTML('afterbegin', html);
+
+  const entries = RULES_DATA.entries || [];
+  const beforeJumping = entries.filter((entry) => entry.title.toLowerCase() < 'jumping');
+  const afterJumping = entries.filter((entry) => entry.title.toLowerCase() >= 'jumping');
+
+  const beforeHtml = (RULES_DATA.intro || '') + beforeJumping.map(renderDataEntryHtml).join('');
+  const afterHtml = afterJumping.map(renderDataEntryHtml).join('');
+
+  if (beforeHtml) container.insertAdjacentHTML('afterbegin', beforeHtml);
+  if (afterHtml) container.insertAdjacentHTML('beforeend', afterHtml);
 }
 
 // Called first thing on page load, before anything else touches the
@@ -1650,22 +1663,24 @@ function clearBackChain() {
 
 const REFERENCE_STORAGE_KEY = 'dmScreenReferenceState';
 // IDs of the dropdowns that are open by default (a brand-new visit,
-// or after pressing the Reference pane's Reset button).
-const REFERENCE_DEFAULT_OPEN_IDS = ['dropRules', 'dropSkills', 'dropCreatureTypes', 'dropCover', 'dropObscured'];
+// or after pressing the Reference pane's Reset button). Currently
+// empty — every dropdown in the Reference pane starts closed. Left as
+// a list (rather than removed) so the Reset button, applyDefaultOpenState()
+// below, and this mechanism generally are all ready to go if any
+// dropdown should default to open again in the future.
+const REFERENCE_DEFAULT_OPEN_IDS = [];
 
 function getAllReferenceDetails() {
   return Array.from(document.querySelectorAll('.lookup-panel details'));
 }
 
-// Opens every dropdown listed in REFERENCE_DEFAULT_OPEN_IDS. Called
-// once right after the data-driven sections are built (see
+// Opens every dropdown listed in REFERENCE_DEFAULT_OPEN_IDS (currently
+// none, so this is a no-op — see the comment on that constant above).
+// Called once right after the data-driven sections are built (see
 // renderDataDrivenReferenceSections above), so a brand-new visit
 // (nothing saved in sessionStorage yet) shows the same dropdowns open
-// as before this dropdown/data restructuring — loadReferenceState()
-// further below still runs afterward and overrides this with whatever
-// was actually saved, exactly as it already did when these four
-// dropdowns were hand-written with an "open" attribute directly in
-// index.html.
+// as this constant lists — loadReferenceState() further below still
+// runs afterward and overrides this with whatever was actually saved.
 function applyDefaultOpenState() {
   REFERENCE_DEFAULT_OPEN_IDS.forEach((id) => {
     const el = document.getElementById(id);
