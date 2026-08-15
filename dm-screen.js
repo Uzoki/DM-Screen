@@ -2261,154 +2261,38 @@ function computeJump() {
 
 // ---- PANE MAXIMIZE / MINIMIZE ----
 // Each of the three columns (Initiative, Dice, Reference) has its own
-// maximize button. Pressing it hides the other two columns (collapsed
-// via CSS rather than removed from the DOM, so nothing about their
-// state is lost) and lets the pressed column fill the page, with the
-// site header hidden out of the way too; pressing it again (now
-// showing as a minimize icon) brings everything back. Only one column
-// can be maximized at a time.
-
-const PANE_MAXIMIZE_ANIM_MS = 340; // must stay >= the CSS transition duration used on .column-maximized
-
-// Each column's own authored flex-basis (the "Ypx" in its
-// `flex: X 1 Ypx` rule in styles.css — see .column-initiative,
-// .column-dice, .column-lookup). Used only while MINIMIZING, as the
-// target width to animate down to before the final instant snap back
-// to the real 3-column layout (see togglePaneMaximize below). If
-// those px values are ever changed in styles.css, update them here
-// too so the minimize animation still shrinks to roughly the right size.
-const COLUMN_BASE_FLEX_BASIS_PX = {
-  paneInitiative: 380,
-  paneDice: 220,
-  paneLookup: 300
-};
-
-let paneMaximizeAnimTimeout = null;
+// maximize button. Pressing it instantly hides the other two columns
+// (collapsed via CSS rather than removed from the DOM, so nothing
+// about their state is lost) and lets the pressed column fill the
+// page, with the site header hidden out of the way too; pressing it
+// again (now showing as a minimize icon) instantly brings everything
+// back. Only one column can be maximized at a time. This is a plain,
+// un-animated state toggle — no transitions, no measuring, no delay.
 
 function togglePaneMaximize(columnId) {
   const wrap = document.querySelector('.columns-wrap');
   const column = document.getElementById(columnId);
   if (!wrap || !column) return;
 
-  clearTimeout(paneMaximizeAnimTimeout);
-
   const wasMaximized = column.classList.contains('column-maximized');
   const otherColumns = Array.from(document.querySelectorAll('.column')).filter((c) => c !== column);
 
   if (wasMaximized) {
-    // MINIMIZING. The other two columns are kept fully collapsed
-    // (zero width, no transition on them) for the whole duration of
-    // this pane's shrink-back animation, so it always has the entire
-    // row's width available to animate through cleanly, instead of
-    // competing with siblings whose width is changing at the same
-    // time. Only once the shrink finishes do the other columns (and
-    // the site header) reappear.
-    //
-    // This column's flex-grow has been pinned at 0 (via the
-    // .column-maximized CSS rule) ever since it was maximized, so
-    // simply animating its inline flex-basis back down to its own
-    // normal base width (captured in COLUMN_BASE_FLEX_BASIS_PX above)
-    // shrinks it smoothly and visibly the whole way — there's no
-    // flex-grow competing for space to short-circuit it, unlike the
-    // bug this replaced. It won't land on the EXACT pixel width the
-    // 3-column layout would normally give it (that also depends on
-    // flex-grow, which only kicks back in once column-maximized is
-    // removed below), but it lands very close, and the small last-inch
-    // adjustment happens together with the siblings reappearing —
-    // one quick, already-expected pop, not a second animation.
-    //
-    // This also doesn't need a requestAnimationFrame delay before
-    // changing flex-basis: the column has had the 'column-maximized'
-    // class (which is what defines the transition rule) sitting on it
-    // continuously since it was maximized, so the browser already has
-    // a real "before" frame rendered to animate away from — the class
-    // carrying the transition isn't brand new in this same tick,
-    // which is what makes the maximizing direction (below) need the
-    // extra step.
-    const restingPx = COLUMN_BASE_FLEX_BASIS_PX[columnId] || column.getBoundingClientRect().width;
-    column.style.flexBasis = restingPx + 'px';
-    updatePaneMaximizeButtons();
-
-    paneMaximizeAnimTimeout = setTimeout(() => {
-      // Final instant snap: reveal the siblings and drop every
-      // override, letting the normal CSS flex ratios (flex-grow
-      // included) take back over in one go — same quick, accepted pop
-      // this already did before, just now starting from a much closer
-      // width instead of from full-screen.
-      otherColumns.forEach((c) => c.classList.remove('column-collapsed'));
-      column.classList.remove('column-maximized');
-      column.style.flexBasis = '';
-      wrap.classList.remove('has-maximized');
-      document.body.classList.remove('pane-maximized');
-      updateScrollNav();
-      syncLookupHeaderMask();
-    }, PANE_MAXIMIZE_ANIM_MS);
+    otherColumns.forEach((c) => c.classList.remove('column-collapsed'));
+    column.classList.remove('column-maximized');
+    wrap.classList.remove('has-maximized');
+    document.body.classList.remove('pane-maximized');
   } else {
-    // MAXIMIZING. Capture this column's CURRENT on-screen pixel width
-    // before touching anything — this is what the grow animation
-    // starts from, so there's no jump at frame 1.
-    const startWidthPx = column.getBoundingClientRect().width;
-
-    // Freeze the column at EXACTLY that width, with its transition
-    // explicitly suppressed for this one step (column.style.transition
-    // = 'none'). This part is critical and easy to get wrong: adding
-    // 'column-maximized' (which is what declares the flex-basis
-    // transition) and setting flex-basis to a new value in the very
-    // same tick does NOT do what it looks like it should. CSS
-    // transitions compare against the property's last actually-
-    // rendered value — which for flex-basis is its plain authored
-    // number (380px/220px/300px, from .column-initiative etc.), NOT
-    // the bigger on-screen width flex-grow was contributing on top of
-    // it. So without suppressing the transition here, the browser
-    // would "animate" from that stale small authored number up to
-    // startWidthPx — meaning the pane would visibly SHRINK down to its
-    // small resting size first, then crawl back out to where it
-    // already was, before ever starting to grow toward full width.
-    // That's what was still happening after the previous attempt at
-    // this fix, and is why it looked like nothing had changed.
-    // Suppressing the transition for this step guarantees it's truly
-    // instant and invisible, so the LATER, real transition (below) has
-    // an accurate, jump-free starting point.
-    column.classList.add('column-maximized');
-    column.style.transition = 'none';
-    column.style.flexBasis = startWidthPx + 'px';
-
-    // Collapse the other two columns in this same instant step — safe
-    // here since this column's width is now pinned to a fixed pixel
-    // basis with flex-grow:0, so their disappearance can't affect it.
     otherColumns.forEach((c) => c.classList.add('column-collapsed'));
+    column.classList.add('column-maximized');
     wrap.classList.add('has-maximized');
     document.body.classList.add('pane-maximized');
     window.scrollTo({ top: 0, behavior: 'auto' });
-    updatePaneMaximizeButtons();
-    syncLookupHeaderMask();
-
-    // Force the browser to actually commit/paint the frozen state
-    // above (with its transition still suppressed) before doing
-    // anything else, so there's a real rendered "before" frame for the
-    // upcoming transition to compare against.
-    void column.offsetWidth;
-
-    // Re-enable the transition, then — a couple of frames later, for
-    // the same reason as always: re-enabling a transition and
-    // changing the value it watches can't safely happen in the same
-    // tick either — set the real target of 100%. THIS is the change
-    // that actually animates, smoothly, starting from startWidthPx.
-    column.style.transition = '';
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        column.style.flexBasis = '100%';
-
-        // The "animation finished" cleanup starts counting from the
-        // moment this transition actually begins, so it still lines
-        // up with when the pane truly finishes growing.
-        paneMaximizeAnimTimeout = setTimeout(() => {
-          updateScrollNav();
-          syncLookupHeaderMask();
-        }, PANE_MAXIMIZE_ANIM_MS);
-      });
-    });
   }
+
+  updatePaneMaximizeButtons();
+  updateScrollNav();
+  syncLookupHeaderMask();
 }
 
 function updatePaneMaximizeButtons() {
