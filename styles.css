@@ -389,8 +389,17 @@ body {
    (opacity/size), never removed from the DOM.
 
    .column-maximized — put on the column being expanded. Its own
-   flex-basis/max-width DO transition smoothly, since it's the one
-   pane the animation is meant to draw attention to. position:sticky
+   flex-basis/flex-grow DO transition smoothly, since it's the one
+   pane the animation is meant to draw attention to. max-width is set
+   to a constant 100% the whole time .column-maximized is present
+   (rather than being switched between "none" and "100%" alongside
+   has-maximized) — max-width can't be smoothly interpolated to/from
+   the keyword "none" per the CSS transitions spec, so leaving it out
+   of what actually changes avoids a hitch in the animation. width is
+   deliberately NOT set here at all: in a row-direction flex container,
+   flex-basis (not width) governs an item's main-axis size whenever
+   flex-basis isn't "auto", so an explicit width would be redundant at
+   best and a source of conflicting layout at worst. position:sticky
    is also switched off while this class is present — animating a
    sticky element's width every frame while the browser simultaneously
    recalculates its sticky offset is what made the expand/collapse
@@ -402,7 +411,16 @@ body {
    maximized one starts growing, so it always has the full row width
    free to expand into); leaving maximize keeps the other two
    collapsed until AFTER the previously-maximized pane has finished
-   shrinking back down, then reveals them. */
+   shrinking back down, then reveals them.
+
+   IMPORTANT for the actual width change to animate at all: the class
+   that carries the transition rule (.column-maximized) and the class
+   that changes the flex values (.columns-wrap.has-maximized) must NOT
+   be added in the exact same script tick — see the double
+   requestAnimationFrame in togglePaneMaximize() in dm-screen.js. Some
+   browsers won't animate a transition that was only just introduced
+   moments earlier in the same synchronous block, even after a manual
+   reflow; they just jump straight to the end state instead. */
 
 .column-collapsed {
     flex: 0 1 0px !important;
@@ -417,16 +435,35 @@ body {
 }
 
 .column-maximized {
-    transition: flex-basis 0.34s cubic-bezier(0.22, 0.61, 0.36, 1), max-width 0.34s cubic-bezier(0.22, 0.61, 0.36, 1),
-        flex-grow 0.34s cubic-bezier(0.22, 0.61, 0.36, 1);
+    /* Only flex-basis is transitioned. flex-grow/flex-shrink are held
+       at a flat 0 for as long as this class is present (the entire
+       maximize<->minimize lifecycle) — NOT transitioned, not even
+       briefly nonzero. This matters more than it looks: the moment
+       ANY flex-grow above 0 is present on an item that's the only one
+       left competing for a row's free space (its two siblings are
+       flex-grow:0 via .column-collapsed below), the browser hands
+       that item the *entire* leftover width immediately, on every
+       single frame — not gradually as flex-grow itself counts down.
+       That's what caused the previous version of this animation to
+       silently jump to full width the instant it started and then
+       sit there doing nothing for the rest of the transition, even
+       though flex-basis/flex-grow really were animating underneath —
+       just invisibly, since flex-grow alone was already giving away
+       all the free space regardless of its exact numeric value.
+       Keeping flex-grow permanently at 0 removes that effect
+       entirely, so flex-basis's own animated value is what actually,
+       visibly, drives the width every frame. dm-screen.js sets this
+       element's flex-basis directly (inline, via JS) rather than
+       through a class-based rule — see togglePaneMaximize(), which
+       also captures the pane's exact on-screen pixel width before
+       starting so the animation has a real, jump-free starting
+       point. */
+    transition: flex-basis 0.34s cubic-bezier(0.22, 0.61, 0.36, 1);
+    flex-grow: 0;
+    flex-shrink: 0;
+    max-width: 100%;
     position: static !important;
     top: auto !important;
-}
-
-.columns-wrap.has-maximized .column-maximized {
-    flex: 1 1 100%;
-    max-width: 100%;
-    width: 100%;
 }
 
 /* While any pane is maximized, the site header (round counter, date,
