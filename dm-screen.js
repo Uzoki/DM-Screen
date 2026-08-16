@@ -1512,36 +1512,56 @@ function renderDataSection(data, containerId) {
   container.innerHTML = html;
 }
 
-// Renders RULES_DATA (Ability Score Modifiers, Cover, Creature Types
-// by Skill, Obscured, Skills by Ability) into the "Rules" dropdown.
-// Unlike renderDataSection above, this INSERTS the rendered entries
-// around #rulesContainer's existing content instead of replacing it —
-// #rulesContainer's only existing child is the hand-written Jumping
-// dropdown (it needs real inputs/buttons wired up elsewhere in this
-// file, so it can't be plain data like the other five).
+// Renders RULES_DATA (Ability Score Modifiers, Businesses, Character
+// Advancement, Cover, Creature Types by Skill, Obscured, Skills by
+// Ability) into the "Rules" dropdown. Unlike renderDataSection above,
+// this INSERTS the rendered entries around #rulesContainer's existing
+// content instead of replacing it — #rulesContainer's existing children
+// are the hand-written calculator dropdowns (Carrying & Encumbrance,
+// Jumping), which need real inputs/selects wired up elsewhere in this
+// file, so they can't be plain data like the rest.
 //
-// The whole "Rules" dropdown is meant to be alphabetically ordered,
-// and Jumping's correct alphabetical slot is between "Creature Types
-// by Skill" and "Obscured" — so RULES_DATA's entries (which are
-// listed alphabetically already, see rules-data.js) are split into
-// whatever comes before "Jumping" and whatever comes after it, each
-// inserted as one block on the matching side of the hand-written
-// Jumping dropdown. As long as rules-data.js's entries stay
-// alphabetically sorted, this always lands Jumping in the right spot
-// without this file needing to know anything else about it.
+// The whole "Rules" dropdown is meant to be alphabetically ordered, so
+// this reads each hand-written child's own <summary> text (rather than
+// hard-coding their titles here) and, for every RULES_DATA entry, finds
+// the first hand-written sibling that alphabetically follows it, then
+// inserts the entry immediately before that sibling — or appends it at
+// the end if every hand-written sibling sorts earlier. Because
+// RULES_DATA's entries are already listed alphabetically (see
+// rules-data.js) and are processed in that order, this naturally lands
+// every entry in the right slot relative to however many hand-written
+// calculators index.html happens to contain, without this file needing
+// to know their names or how many there are — adding another
+// hand-written calculator later only requires placing its <details> in
+// the correct alphabetical spot in index.html.
 function renderRulesSection() {
   const container = document.getElementById('rulesContainer');
   if (!container || typeof RULES_DATA === 'undefined') return;
 
-  const entries = RULES_DATA.entries || [];
-  const beforeJumping = entries.filter((entry) => entry.title.toLowerCase() < 'jumping');
-  const afterJumping = entries.filter((entry) => entry.title.toLowerCase() >= 'jumping');
+  const handWrittenChildren = Array.from(container.children);
 
-  const beforeHtml = (RULES_DATA.intro || '') + beforeJumping.map(renderDataEntryHtml).join('');
-  const afterHtml = afterJumping.map(renderDataEntryHtml).join('');
+  if (RULES_DATA.intro) {
+    container.insertAdjacentHTML('afterbegin', RULES_DATA.intro);
+  }
 
-  if (beforeHtml) container.insertAdjacentHTML('afterbegin', beforeHtml);
-  if (afterHtml) container.insertAdjacentHTML('beforeend', afterHtml);
+  (RULES_DATA.entries || []).forEach((entry) => {
+    const title = entry.title.toLowerCase();
+    const refChild = handWrittenChildren.find((child) => {
+      const summaryEl = child.querySelector(':scope > summary');
+      const childTitle = summaryEl ? summaryEl.textContent.trim().toLowerCase() : '';
+      return childTitle > title;
+    });
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = renderDataEntryHtml(entry);
+    const newEl = wrapper.firstElementChild;
+
+    if (refChild) {
+      container.insertBefore(newEl, refChild);
+    } else {
+      container.appendChild(newEl);
+    }
+  });
 }
 
 // Called first thing on page load, before anything else touches the
@@ -2259,40 +2279,132 @@ function computeJump() {
   document.getElementById('runningStartFeet').textContent = feat ? '5' : '10';
 }
 
+// ---- CARRYING & ENCUMBRANCE CALCULATOR ----
+// A Small or Medium creature can carry 15 x its Strength score in
+// pounds and can drag, push, or lift twice that amount — this is the
+// same rule already summarized as a flat table in the Rules Glossary's
+// "Carrying Capacity" entry, just calculated live here instead. Each
+// size category above Medium doubles both totals (Large x2, Huge x4,
+// Gargantuan x8); a Tiny creature halves them (x0.5). The optional
+// Encumbrance thresholds (5x/10x/15x Strength) scale by the same size
+// multiplier.
+
+// Formats a carrying-capacity weight for display: drops the decimal
+// entirely for whole numbers, otherwise keeps exactly one decimal
+// place (weights here are always either whole or an exact half, since
+// Strength is always a whole number and the size multiplier is always
+// 0.5, 1, 2, 4, or 8).
+function formatCarryWeight(value) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+// Recalculates every Carrying & Encumbrance result from the current
+// Strength score and chosen size, and writes the results into the page.
+function computeCarryingEncumbrance() {
+  const strRaw = parseFloat(document.getElementById('carryStr').value);
+  const str = isNaN(strRaw) ? 10 : strRaw;
+  const sizeMod = parseFloat(document.getElementById('carrySize').value) || 1;
+
+  // "Size Mod" is only shown in the calculation text when it isn't 1 —
+  // Small and Medium creatures use the base 15x/30x/5x/10x/15x formula
+  // with no size multiplier called out at all, matching how the
+  // official rule is normally written.
+  const sizeModDisplay = sizeMod === 0.5 ? '½' : String(sizeMod);
+  const sizeSuffix = sizeMod !== 1 ? ' x Size Mod [x' + sizeModDisplay + ']' : '';
+
+  const carryCapacity = 15 * str * sizeMod;
+  const dragPushLift = 30 * str * sizeMod;
+  const regularMax = 5 * str * sizeMod;
+  const heavyThreshold = 10 * str * sizeMod;
+  const overThreshold = 15 * str * sizeMod;
+
+  document.getElementById('carryStrHeader1').textContent = str;
+  document.getElementById('carryStrHeader2').textContent = str;
+
+  document.getElementById('carryCalcCarry').textContent = '15 x Str [' + str + ']' + sizeSuffix;
+  document.getElementById('carryResultCarry').textContent = formatCarryWeight(carryCapacity) + ' lbs.';
+
+  document.getElementById('carryCalcDrag').textContent = '2x or 30 x Str [' + str + ']' + sizeSuffix;
+  document.getElementById('carryResultDrag').textContent = formatCarryWeight(dragPushLift) + ' lbs.';
+
+  document.getElementById('carryCalcRegular').textContent = '\u2264 5 x Str [' + str + ']' + sizeSuffix;
+  document.getElementById('carryResultRegular').textContent = '\u2264 ' + formatCarryWeight(regularMax) + ' lbs.';
+
+  document.getElementById('carryCalcEncumbered').textContent = '> 5 x Str [' + str + ']' + sizeSuffix;
+  document.getElementById('carryResultEncumbered').textContent = '> ' + formatCarryWeight(regularMax) + ' lbs.';
+
+  document.getElementById('carryCalcHeavy').textContent = '> 10 x Str [' + str + ']' + sizeSuffix;
+  document.getElementById('carryResultHeavy').textContent = '> ' + formatCarryWeight(heavyThreshold) + ' lbs.';
+
+  document.getElementById('carryCalcOver').textContent = '> 15 x Str [' + str + ']' + sizeSuffix;
+  document.getElementById('carryResultOver').textContent = '> ' + formatCarryWeight(overThreshold) + ' lbs.';
+}
+
 // ---- PANE MAXIMIZE / MINIMIZE ----
 // Each of the three columns (Initiative, Dice, Reference) has its own
-// maximize button. Pressing it instantly hides the other two columns
-// (collapsed via CSS rather than removed from the DOM, so nothing
-// about their state is lost) and lets the pressed column fill the
-// page, with the site header hidden out of the way too; pressing it
-// again (now showing as a minimize icon) instantly brings everything
-// back. Only one column can be maximized at a time. This is a plain,
-// un-animated state toggle — no transitions, no measuring, no delay.
+// maximize button. Pressing it hides the other two columns (collapsed
+// via CSS rather than removed from the DOM, so nothing about their
+// state is lost) and lets the pressed column fill the page, with the
+// site header hidden out of the way too; pressing it again (now
+// showing as a minimize icon) brings everything back. Only one column
+// can be maximized at a time.
+
+const PANE_MAXIMIZE_ANIM_MS = 340; // must stay >= the CSS transition duration used on .column-maximized
+
+let paneMaximizeAnimTimeout = null;
 
 function togglePaneMaximize(columnId) {
   const wrap = document.querySelector('.columns-wrap');
   const column = document.getElementById(columnId);
   if (!wrap || !column) return;
 
+  clearTimeout(paneMaximizeAnimTimeout);
+
   const wasMaximized = column.classList.contains('column-maximized');
   const otherColumns = Array.from(document.querySelectorAll('.column')).filter((c) => c !== column);
 
   if (wasMaximized) {
-    otherColumns.forEach((c) => c.classList.remove('column-collapsed'));
-    column.classList.remove('column-maximized');
+    // MINIMIZING. The other two columns are kept fully collapsed
+    // (zero width, no transition on them) for the whole duration of
+    // this pane's shrink-back animation, so it always has the entire
+    // row's width available to animate through cleanly, instead of
+    // competing with siblings whose width is changing at the same
+    // time. Only once the shrink finishes do the other columns (and
+    // the site header) reappear.
     wrap.classList.remove('has-maximized');
-    document.body.classList.remove('pane-maximized');
+    updatePaneMaximizeButtons();
+
+    paneMaximizeAnimTimeout = setTimeout(() => {
+      otherColumns.forEach((c) => c.classList.remove('column-collapsed'));
+      column.classList.remove('column-maximized');
+      document.body.classList.remove('pane-maximized');
+      updateScrollNav();
+      syncLookupHeaderMask();
+    }, PANE_MAXIMIZE_ANIM_MS);
   } else {
-    otherColumns.forEach((c) => c.classList.add('column-collapsed'));
-    column.classList.add('column-maximized');
-    wrap.classList.add('has-maximized');
+    // MAXIMIZING. The other two columns collapse instantly (no
+    // transition on them at all — see .column-collapsed), so by the
+    // time this pane's own grow transition starts, it already has the
+    // full row width to expand into with nothing else competing for
+    // space, which is what keeps the expand animation smooth.
     document.body.classList.add('pane-maximized');
     window.scrollTo({ top: 0, behavior: 'auto' });
-  }
+    otherColumns.forEach((c) => c.classList.add('column-collapsed'));
+    column.classList.add('column-maximized');
+    // Force layout to flush the instant collapse above before adding
+    // has-maximized, so the browser has something concrete (0 width)
+    // to grow away from rather than possibly batching both changes
+    // into a single frame.
+    void wrap.offsetWidth;
+    wrap.classList.add('has-maximized');
+    updatePaneMaximizeButtons();
+    syncLookupHeaderMask();
 
-  updatePaneMaximizeButtons();
-  updateScrollNav();
-  syncLookupHeaderMask();
+    paneMaximizeAnimTimeout = setTimeout(() => {
+      updateScrollNav();
+      syncLookupHeaderMask();
+    }, PANE_MAXIMIZE_ANIM_MS);
+  }
 }
 
 function updatePaneMaximizeButtons() {
@@ -2402,6 +2514,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderDateControls();
   toggleJumpDexVisibility();
   computeJump();
+  computeCarryingEncumbrance();
 
   // Restore the Reference pane's open/closed dropdowns from this
   // browser session (if any), then start tracking further changes so
@@ -2702,6 +2815,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('jumpFeet').addEventListener('input', syncHeightFromFeetInches);
   document.getElementById('jumpInches').addEventListener('input', syncHeightFromFeetInches);
   document.getElementById('jumpCm').addEventListener('input', syncHeightFromCm);
+
+  // Carrying & Encumbrance calculator: Strength score and Size both
+  // recalculate every result live, with no separate "calculate" button.
+  document.getElementById('carryStr').addEventListener('input', computeCarryingEncumbrance);
+  document.getElementById('carrySize').addEventListener('change', computeCarryingEncumbrance);
 
   // NPC Reactions: monster reaction roller and humanoid attitude randomizer
   document.getElementById('monsterReactionBtn').addEventListener('click', rollMonsterReaction);

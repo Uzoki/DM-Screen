@@ -251,6 +251,61 @@
               <div class="dropdown-body">
                 <div class="condition-list" id="rulesContainer">
 
+                  <details class="condition-dropdown" id="dropCarryingEncumbrance">
+                    <summary>Carrying &amp; Encumbrance</summary>
+                    <div class="condition-body">
+
+                      <p>A Small or Medium creature can carry 15 × its <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> score in pounds, and can drag, push, or lift twice that amount. Each size category above Medium doubles both totals; a Tiny creature halves them.</p>
+
+                      <div class="jump-inputs">
+                        <div class="jump-input-row">
+                          <label for="carryStr">Strength score</label>
+                          <input type="number" id="carryStr" value="10" />
+                        </div>
+                        <div class="jump-input-row">
+                          <label for="carrySize">Size</label>
+                          <select id="carrySize">
+                            <option value="0.5">Tiny</option>
+                            <option value="1">Small</option>
+                            <option value="1" selected>Medium</option>
+                            <option value="2">Large</option>
+                            <option value="4">Huge</option>
+                            <option value="8">Gargantuan</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div class="jump-results">
+                        <h4>Carrying Capacity</h4>
+                        <table class="humanoid-grid">
+                          <thead>
+                            <tr><th>Situation/Size</th><th>Calculation</th><th>Str = <span id="carryStrHeader1">10</span></th></tr>
+                          </thead>
+                          <tbody>
+                            <tr><td>Carry Capacity</td><td id="carryCalcCarry">15 x Str [10]</td><td id="carryResultCarry">150 lbs.</td></tr>
+                            <tr><td>Drag, Push, Lift</td><td id="carryCalcDrag">2x or 30 x Str [10]</td><td id="carryResultDrag">300 lbs.</td></tr>
+                          </tbody>
+                        </table>
+
+                        <h4>Encumbrance (Optional Rule)</h4>
+                        <p>Carrying more than 5 × <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a> imposes the Encumbered condition (<a href="#" class="gloss-ref" data-ref="glossary-speed">Speed</a> −10 feet). Carrying more than 10 × Strength, up to the maximum carrying capacity, imposes Heavily Encumbered instead (Speed −20 feet, plus <a href="#" class="gloss-ref" data-ref="glossary-disadvantage">Disadvantage</a> on <a href="#" class="gloss-ref" data-ref="glossary-strength">Strength</a>, <a href="#" class="gloss-ref" data-ref="glossary-dexterity">Dexterity</a>, and Constitution <a href="#" class="gloss-ref" data-ref="glossary-ability-check">ability checks</a>, <a href="#" class="gloss-ref" data-ref="glossary-attack-roll">attack rolls</a>, and <a href="#" class="gloss-ref" data-ref="glossary-saving-throw">saving throws</a>).</p>
+
+                        <table class="humanoid-grid">
+                          <thead>
+                            <tr><th>Situation/Size</th><th>Calculation</th><th>Str = <span id="carryStrHeader2">10</span></th><th>Penalty</th></tr>
+                          </thead>
+                          <tbody>
+                            <tr><td>Regular Capacity</td><td id="carryCalcRegular">&le; 5 x Str [10]</td><td id="carryResultRegular">&le; 50 lbs.</td><td>No penalty</td></tr>
+                            <tr><td>Encumbered</td><td id="carryCalcEncumbered">&gt; 5 x Str [10]</td><td id="carryResultEncumbered">&gt; 50 lbs.</td><td>Movement speed −10 ft.</td></tr>
+                            <tr><td>Heavily Encumbered</td><td id="carryCalcHeavy">&gt; 10 x Str [10]</td><td id="carryResultHeavy">&gt; 100 lbs.</td><td>Movement speed −20 ft.; Disadvantage on ability checks, attack rolls, and saving throws that use Str, Dex, or Con</td></tr>
+                            <tr><td>Over Encumbered</td><td id="carryCalcOver">&gt; 15 x Str [10]</td><td id="carryResultOver">&gt; 150 lbs.</td><td>Movement speed is 0; Disadvantage on ability checks, attack rolls, and saving throws that use Str, Dex, or Con</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                    </div>
+                  </details>
+
                   <details class="condition-dropdown" id="dropJumping">
                     <summary>Jumping</summary>
                     <div class="condition-body">
