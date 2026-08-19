@@ -1512,39 +1512,26 @@ function renderDataSection(data, containerId) {
   container.innerHTML = html;
 }
 
-// Renders RULES_DATA (Ability Score Modifiers, Businesses, Character
-// Advancement, Cover, Creature Types by Skill, Obscured, Skills by
-// Ability) into the "Rules" dropdown. Unlike renderDataSection above,
-// this INSERTS the rendered entries around #rulesContainer's existing
-// content instead of replacing it — #rulesContainer's existing children
-// are the hand-written calculator dropdowns (Carrying & Encumbrance,
-// Jumping), which need real inputs/selects wired up elsewhere in this
-// file, so they can't be plain data like the rest.
-//
-// The whole "Rules" dropdown is meant to be alphabetically ordered, so
-// this reads each hand-written child's own <summary> text (rather than
-// hard-coding their titles here) and, for every RULES_DATA entry, finds
-// the first hand-written sibling that alphabetically follows it, then
-// inserts the entry immediately before that sibling — or appends it at
-// the end if every hand-written sibling sorts earlier. Because
-// RULES_DATA's entries are already listed alphabetically (see
-// rules-data.js) and are processed in that order, this naturally lands
-// every entry in the right slot relative to however many hand-written
-// calculators index.html happens to contain, without this file needing
-// to know their names or how many there are — adding another
-// hand-written calculator later only requires placing its <details> in
-// the correct alphabetical spot in index.html.
-function renderRulesSection() {
-  const container = document.getElementById('rulesContainer');
-  if (!container || typeof RULES_DATA === 'undefined') return;
-
+// Inserts a list of data entries into "container" around whatever
+// hand-written children it already has (calculator dropdowns with real
+// inputs/selects, which can't be plain data), keeping everything in
+// alphabetical order by title. Reads each hand-written child's own
+// <summary> text (rather than hard-coding their titles) and, for every
+// data entry, finds the first hand-written sibling that alphabetically
+// follows it, then inserts the entry immediately before that sibling —
+// or appends it at the end if every hand-written sibling sorts earlier.
+// Because the entries list is already alphabetically sorted and is
+// processed in that order, this naturally lands every entry in the
+// right slot relative to however many hand-written calculators the
+// container happens to contain, without this function needing to know
+// their names or how many there are — adding another hand-written
+// calculator later only requires placing its <details> in the correct
+// alphabetical spot in index.html.
+function insertDataEntriesAroundHandWritten(container, entries) {
+  if (!container) return;
   const handWrittenChildren = Array.from(container.children);
 
-  if (RULES_DATA.intro) {
-    container.insertAdjacentHTML('afterbegin', RULES_DATA.intro);
-  }
-
-  (RULES_DATA.entries || []).forEach((entry) => {
+  (entries || []).forEach((entry) => {
     const title = entry.title.toLowerCase();
     const refChild = handWrittenChildren.find((child) => {
       const summaryEl = child.querySelector(':scope > summary');
@@ -1562,6 +1549,29 @@ function renderRulesSection() {
       container.appendChild(newEl);
     }
   });
+}
+
+// Renders RULES_DATA.entries (Ability Score Modifiers, Businesses,
+// Character Advancement, Cover, Creature Types by Skill, Obscured,
+// Skills by Ability, etc.) into the "Rules" dropdown, and
+// RULES_DATA.downtimeActivities (Businesses, Craft an Item, etc.) into
+// the nested "Downtime Activities" dropdown one level down — each
+// using insertDataEntriesAroundHandWritten above, since both
+// #rulesContainer and #downtimeActivitiesContainer mix data-driven
+// entries with hand-written calculator dropdowns (Carrying &
+// Encumbrance and Jumping at the top level; Buy a Magic Item, and
+// more to come, inside Downtime Activities).
+function renderRulesSection() {
+  if (typeof RULES_DATA === 'undefined') return;
+
+  const rulesContainer = document.getElementById('rulesContainer');
+  if (rulesContainer && RULES_DATA.intro) {
+    rulesContainer.insertAdjacentHTML('afterbegin', RULES_DATA.intro);
+  }
+  insertDataEntriesAroundHandWritten(rulesContainer, RULES_DATA.entries);
+
+  const downtimeContainer = document.getElementById('downtimeActivitiesContainer');
+  insertDataEntriesAroundHandWritten(downtimeContainer, RULES_DATA.downtimeActivities);
 }
 
 // Called first thing on page load, before anything else touches the
@@ -2340,6 +2350,85 @@ function computeCarryingEncumbrance() {
   document.getElementById('carryResultOver').textContent = '> ' + formatCarryWeight(overThreshold) + ' lbs.';
 }
 
+// ---- DOWNTIME: BUY A MAGIC ITEM CALCULATOR ----
+// Xanathar's Guide to Everything: finding a magic item to buy takes at
+// least 1 workweek and 100 gp. Every additional 100 gp spent (beyond
+// the first 100) or every additional workweek spent (beyond the
+// first) gives a cumulative +1 bonus on the Persuasion check, up to a
+// combined maximum of +10 from both sources together.
+
+// Recalculates the live "search bonus" display from the money/time
+// fields, and returns the numeric bonus for use when rolling.
+function computeBuyMagicItemSearchBonus() {
+  const moneyRaw = parseFloat(document.getElementById('buyItemMoneySpent').value);
+  const timeRaw = parseFloat(document.getElementById('buyItemTimeSpent').value);
+  const money = isNaN(moneyRaw) ? 100 : moneyRaw;
+  const time = isNaN(timeRaw) ? 1 : timeRaw;
+
+  const moneyBonus = Math.max(0, Math.floor((money - 100) / 100));
+  const timeBonus = Math.max(0, Math.floor(time - 1));
+  const combined = Math.min(moneyBonus + timeBonus, 10);
+
+  document.getElementById('buyItemSearchBonus').textContent = (combined >= 0 ? '+' : '') + combined;
+  return combined;
+}
+
+// Looks up the "Items Available" row for a given Persuasion check total.
+function buyMagicItemResultForTotal(total) {
+  if (total <= 5) return 'Roll 1d6 times on Magic Item Table A';
+  if (total <= 10) return 'Roll 1d4 times on Magic Item Table B';
+  if (total <= 15) return 'Roll 1d4 times on Magic Item Table C';
+  if (total <= 20) return 'Roll 1d4 times on Magic Item Table D';
+  if (total <= 25) return 'Roll 1d4 times on Magic Item Table E';
+  if (total <= 30) return 'Roll 1d4 times on Magic Item Table F';
+  if (total <= 35) return 'Roll 1d4 times on Magic Item Table G';
+  if (total <= 40) return 'Roll 1d4 times on Magic Item Table H';
+  return 'Roll 1d4 times on Magic Item Table I';
+}
+
+// Rolls 1d20 and adds the Persuasion modifier, the live search bonus,
+// and the chosen campaign modifier, then displays the breakdown and
+// the resulting Items Available row.
+function rollBuyMagicItemCheck() {
+  const searchBonus = computeBuyMagicItemSearchBonus();
+  const persuasionRaw = parseFloat(document.getElementById('buyItemPersuasionMod').value);
+  const persuasionMod = isNaN(persuasionRaw) ? 0 : persuasionRaw;
+  const campaignMod = parseFloat(document.getElementById('buyItemCampaignMod').value) || 0;
+
+  const d20 = rollDie(20);
+  const total = d20 + persuasionMod + searchBonus + campaignMod;
+
+  let html = `<strong>${d20}</strong> [d20] + ${persuasionMod} [Persuasion] + ${searchBonus} [search bonus]`;
+  if (campaignMod !== 0) {
+    html += ` ${campaignMod > 0 ? '+' : '-'} ${Math.abs(campaignMod)} [campaign]`;
+  }
+  html += ` = <strong>${total}</strong><br>${buyMagicItemResultForTotal(total)}`;
+
+  document.getElementById('buyItemRollResult').innerHTML = html;
+}
+
+// Rolls 1d12 on the (optional) Magic Item Purchase Complication table.
+const BUY_MAGIC_ITEM_COMPLICATIONS = {
+  1: "The item is a fake, planted by an enemy.†",
+  2: "The item is stolen by the party's enemies.†",
+  3: "The item is cursed by a god.",
+  4: "The item's original owner will kill to reclaim it; the party's enemies spread news of its sale.†",
+  5: "The item is at the center of a dark prophecy.",
+  6: "The seller is murdered before the sale.",
+  7: "The seller is a devil looking to make a bargain.",
+  8: "The item is the key to freeing an evil entity.",
+  9: "A third party bids on the item, doubling its price.†",
+  10: "The item is an enslaved, intelligent entity.",
+  11: "The item is tied to a cult.",
+  12: "The party's enemies spread rumors that the item is an artifact of evil.†"
+};
+
+function rollBuyMagicItemComplication() {
+  const roll = rollDie(12);
+  document.getElementById('buyItemComplicationResult').innerHTML =
+    `<strong>d12 = ${roll}</strong>: ${BUY_MAGIC_ITEM_COMPLICATIONS[roll]}`;
+}
+
 // ---- PANE MAXIMIZE / MINIMIZE ----
 // Each of the three columns (Initiative, Dice, Reference) has its own
 // maximize button. Pressing it hides the other two columns (collapsed
@@ -2515,6 +2604,7 @@ document.addEventListener('DOMContentLoaded', () => {
   toggleJumpDexVisibility();
   computeJump();
   computeCarryingEncumbrance();
+  computeBuyMagicItemSearchBonus();
 
   // Restore the Reference pane's open/closed dropdowns from this
   // browser session (if any), then start tracking further changes so
@@ -2820,6 +2910,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // recalculate every result live, with no separate "calculate" button.
   document.getElementById('carryStr').addEventListener('input', computeCarryingEncumbrance);
   document.getElementById('carrySize').addEventListener('change', computeCarryingEncumbrance);
+
+  // Downtime — Buy a Magic Item: the search bonus recalculates live as
+  // money/time change; rolling the actual check is a button (it uses
+  // real dice), same split as every other calculator on this page.
+  document.getElementById('buyItemMoneySpent').addEventListener('input', computeBuyMagicItemSearchBonus);
+  document.getElementById('buyItemTimeSpent').addEventListener('input', computeBuyMagicItemSearchBonus);
+  document.getElementById('buyItemRollBtn').addEventListener('click', rollBuyMagicItemCheck);
+  document.getElementById('buyItemComplicationBtn').addEventListener('click', rollBuyMagicItemComplication);
 
   // NPC Reactions: monster reaction roller and humanoid attitude randomizer
   document.getElementById('monsterReactionBtn').addEventListener('click', rollMonsterReaction);

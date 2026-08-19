@@ -306,6 +306,111 @@
                     </div>
                   </details>
 
+                  <details class="condition-dropdown" id="rules-downtime-activities">
+                    <summary>Downtime Activities</summary>
+                    <div class="condition-body">
+                      <div class="condition-list" id="downtimeActivitiesContainer">
+
+                        <details class="condition-dropdown" id="rules-downtime-buy-magic-item">
+                          <summary>Buy a Magic Item</summary>
+                          <div class="condition-body">
+
+                            <p>A character can spend downtime searching for a magic item to buy. This requires at least one workweek and 100 gp in expenses, covering the cost of maintaining a wealthier lifestyle needed to make contact with sellers. Spending extra money or time improves the search: for every additional 100 gp spent beyond the initial 100, or every additional workweek spent beyond the first, the character gains a cumulative +1 bonus on their <a href="#" class="gloss-ref" data-ref="glossary-charisma">Charisma</a> (Persuasion) check — up to a maximum combined bonus of +10.</p>
+
+                            <div class="jump-inputs">
+                              <div class="jump-input-row">
+                                <label for="buyItemPersuasionMod">Persuasion modifier</label>
+                                <input type="number" id="buyItemPersuasionMod" value="0" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="buyItemMoneySpent">Money spent searching (gp)</label>
+                                <input type="number" id="buyItemMoneySpent" value="100" min="100" step="100" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="buyItemTimeSpent">Time spent searching (workweeks)</label>
+                                <input type="number" id="buyItemTimeSpent" value="1" min="1" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="buyItemCampaignMod">Campaign type</label>
+                                <select id="buyItemCampaignMod">
+                                  <option value="0" selected>Standard (no modifier)</option>
+                                  <option value="-10">Low Magic (-10)</option>
+                                  <option value="10">High Magic (+10)</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div class="jump-results">
+                              <p>Search bonus: <span id="buyItemSearchBonus" class="jump-value">+0</span> <span style="color:var(--text-muted); font-size:0.72rem;">(from money/time spent, capped at +10 combined)</span></p>
+                              <div class="panel-footer" style="justify-content:flex-start;">
+                                <button id="buyItemRollBtn" class="btn-primary" type="button">Roll Persuasion Check</button>
+                              </div>
+                              <div id="buyItemRollResult" class="dice-result"></div>
+                            </div>
+
+                            <h4>Buying a Magic Item Check</h4>
+                            <p>The Persuasion check total determines how many magic items are available, and which of the nine Magic Item Tables (A through I) the DM rolls on for each — higher totals give access to more valuable and more numerous items.</p>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>Check Total</th><th>Items Available</th></tr></thead>
+                              <tbody>
+                                <tr><td>1-5</td><td>Roll 1d6 times on Magic Item Table A</td></tr>
+                                <tr><td>6-10</td><td>Roll 1d4 times on Magic Item Table B</td></tr>
+                                <tr><td>11-15</td><td>Roll 1d4 times on Magic Item Table C</td></tr>
+                                <tr><td>16-20</td><td>Roll 1d4 times on Magic Item Table D</td></tr>
+                                <tr><td>21-25</td><td>Roll 1d4 times on Magic Item Table E</td></tr>
+                                <tr><td>26-30</td><td>Roll 1d4 times on Magic Item Table F</td></tr>
+                                <tr><td>31-35</td><td>Roll 1d4 times on Magic Item Table G</td></tr>
+                                <tr><td>36-40</td><td>Roll 1d4 times on Magic Item Table H</td></tr>
+                                <tr><td>41+</td><td>Roll 1d4 times on Magic Item Table I</td></tr>
+                              </tbody>
+                            </table>
+
+                            <h4>Magic Item Price</h4>
+                            <p>Pricing magic items is a matter of debate among D&amp;D players. The DMG bases price on an item's rarity, though rarity isn't always a reliable measure of an item's true power. The table below gives the asking price by rarity as described in Xanathar's Guide to Everything.</p>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>Rarity</th><th>Asking Price*</th></tr></thead>
+                              <tbody>
+                                <tr><td>Common</td><td>(1d6 + 1) x 10 gp</td></tr>
+                                <tr><td>Uncommon</td><td>1d6 x 100 gp</td></tr>
+                                <tr><td>Rare</td><td>2d10 x 1,000 gp</td></tr>
+                                <tr><td>Very Rare</td><td>(1d4 + 1) x 10,000 gp</td></tr>
+                                <tr><td>Legendary</td><td>2d6 x 25,000 gp</td></tr>
+                              </tbody>
+                            </table>
+                            <p>* Halved for a consumable item like a potion or scroll.</p>
+
+                            <h4>Magic Item Purchase Complication (Optional)</h4>
+                            <p>The magic item trade is fraught with peril — the large sums of money involved, and the power offered by magic items, attract thieves, con artists, and other villains. Unlike most downtime activities, Xanathar's Guide to Everything makes complications for buying a magic item entirely optional; roll on the table below (or invent your own) only if you want to make things more interesting.</p>
+                            <div class="panel-footer" style="justify-content:flex-start;">
+                              <button id="buyItemComplicationBtn" class="btn-secondary" type="button">Roll Complication (d12)</button>
+                            </div>
+                            <div id="buyItemComplicationResult" class="dice-result"></div>
+                            <table class="humanoid-grid" style="margin-top:8px;">
+                              <thead><tr><th>d12</th><th>Complication</th></tr></thead>
+                              <tbody>
+                                <tr><td>1</td><td>The item is a fake, planted by an enemy.†</td></tr>
+                                <tr><td>2</td><td>The item is stolen by the party's enemies.†</td></tr>
+                                <tr><td>3</td><td>The item is cursed by a god.</td></tr>
+                                <tr><td>4</td><td>The item's original owner will kill to reclaim it; the party's enemies spread news of its sale.†</td></tr>
+                                <tr><td>5</td><td>The item is at the center of a dark prophecy.</td></tr>
+                                <tr><td>6</td><td>The seller is murdered before the sale.</td></tr>
+                                <tr><td>7</td><td>The seller is a devil looking to make a bargain.</td></tr>
+                                <tr><td>8</td><td>The item is the key to freeing an evil entity.</td></tr>
+                                <tr><td>9</td><td>A third party bids on the item, doubling its price.†</td></tr>
+                                <tr><td>10</td><td>The item is an enslaved, intelligent entity.</td></tr>
+                                <tr><td>11</td><td>The item is tied to a cult.</td></tr>
+                                <tr><td>12</td><td>The party's enemies spread rumors that the item is an artifact of evil.†</td></tr>
+                              </tbody>
+                            </table>
+                            <p>† Might involve a rival.</p>
+
+                          </div>
+                        </details>
+
+                      </div>
+                    </div>
+                  </details>
+
                   <details class="condition-dropdown" id="dropJumping">
                     <summary>Jumping</summary>
                     <div class="condition-body">
