@@ -407,6 +407,350 @@
                           </div>
                         </details>
 
+
+                        <details class="condition-dropdown" id="rules-downtime-carousing">
+                          <summary>Carousing</summary>
+                          <div class="condition-body">
+
+                            <p>A character can spend downtime carousing — throwing parties, drinking, gossiping, and making contacts among a chosen social class. Carousing requires 1 workweek and an amount of gold based on the social class the character carouses among.</p>
+
+                            <div class="jump-inputs">
+                              <div class="jump-input-row">
+                                <label for="carouseClass">Social class</label>
+                                <select id="carouseClass">
+                                  <option value="lower">Lower Class (10 gp)</option>
+                                  <option value="middle" selected>Middle Class (25 gp)</option>
+                                  <option value="upper">Upper Class (250 gp)</option>
+                                </select>
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="carousePersuasionMod">Persuasion modifier</label>
+                                <input type="number" id="carousePersuasionMod" value="0" />
+                              </div>
+                            </div>
+
+                            <div class="jump-results">
+                              <div class="panel-footer" style="justify-content:flex-start;">
+                                <button id="carouseRollBtn" class="btn-primary" type="button">Roll Persuasion Check</button>
+                              </div>
+                              <div id="carouseRollResult" class="dice-result"></div>
+                            </div>
+
+                            <h4>Carousing Results</h4>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>Check Total</th><th>Result</th></tr></thead>
+                              <tbody>
+                                <tr><td>1-5</td><td>The character has made a hostile contact.</td></tr>
+                                <tr><td>6-10</td><td>The character makes no new contacts.</td></tr>
+                                <tr><td>11-15</td><td>The character makes one allied contact.</td></tr>
+                                <tr><td>16-20</td><td>The character makes two allied contacts.</td></tr>
+                                <tr><td>21+</td><td>The character makes three allied contacts.</td></tr>
+                              </tbody>
+                            </table>
+
+                            <h4>Carousing Complications</h4>
+                            <p>Each workweek spent carousing brings a 10% chance of a complication, drawn from a table specific to the social class carousing was done among.</p>
+
+                            <p><strong>Lower Class</strong></p>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>d8</th><th>Complication</th></tr></thead>
+                              <tbody>
+                                <tr><td>1</td><td>You awaken in an unfamiliar place with no memory of the previous night, and 2d6 x 5 gp lighter.</td></tr>
+                                <tr><td>2</td><td>A vagrant recognizes you and begins to follow you around, asking for money and trying to protect you.</td></tr>
+                                <tr><td>3</td><td>You wake up in the wrong bed, with an angry spouse standing over you.</td></tr>
+                                <tr><td>4</td><td>You gain a reputation as a rabble-rouser. Guards keep a close eye on you for the next 1d4 downtime periods.</td></tr>
+                                <tr><td>5</td><td>You are enlisted, willingly or not, to help with a criminal task (moving contraband, acting as a lookout, or similar).†</td></tr>
+                                <tr><td>6</td><td>A brawl breaks out. Succeed on a DC 15 Dexterity or Strength check (your choice) or take 1d6 damage and spend one additional workweek recovering.</td></tr>
+                                <tr><td>7</td><td>You are robbed, and lose 1d6 x 5 gp. Succeed on a DC 15 Wisdom (Perception) check to notice and prevent it.</td></tr>
+                                <tr><td>8</td><td>You make a lifelong friend (or enemy) of someone important to the local community.†</td></tr>
+                              </tbody>
+                            </table>
+
+                            <p><strong>Middle Class</strong></p>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>d8</th><th>Complication</th></tr></thead>
+                              <tbody>
+                                <tr><td>1</td><td>You awaken in an unfamiliar place with no memory of the previous night, and 2d6 x 10 gp lighter.</td></tr>
+                                <tr><td>2</td><td>You gain a reputation as an eccentric. Merchants overcharge you by 10% for the next 1d4 downtime periods.</td></tr>
+                                <tr><td>3</td><td>You wake up in the wrong bed, with an angry spouse standing over you.</td></tr>
+                                <tr><td>4</td><td>A merchant tries to rope you into a risky business venture.†</td></tr>
+                                <tr><td>5</td><td>You're challenged to a duel of wit, cards, or dice by a local notable. Succeed on a DC 15 check (your choice of relevant skill) or lose 2d6 x 10 gp.</td></tr>
+                                <tr><td>6</td><td>A brawl breaks out at a tavern or gambling hall you're in. Succeed on a DC 15 Dexterity or Strength check (your choice) or take 1d6 damage.</td></tr>
+                                <tr><td>7</td><td>You're pickpocketed for 1d6 x 10 gp. Succeed on a DC 15 Wisdom (Perception) check to notice and prevent it.</td></tr>
+                                <tr><td>8</td><td>You make a lifelong friend (or enemy) of a prominent local merchant or official.†</td></tr>
+                              </tbody>
+                            </table>
+
+                            <p><strong>Upper Class</strong></p>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>d8</th><th>Complication</th></tr></thead>
+                              <tbody>
+                                <tr><td>1</td><td>You awaken in an unfamiliar place with no memory of the previous night, and 2d6 x 20 gp lighter.</td></tr>
+                                <tr><td>2</td><td>You become entangled in a noble's scheme or scandal, whether you want to be or not.†</td></tr>
+                                <tr><td>3</td><td>You wake up in the wrong bed, with an angry (and powerful) spouse standing over you.</td></tr>
+                                <tr><td>4</td><td>A noble tries to recruit you for a dangerous, clandestine task.†</td></tr>
+                                <tr><td>5</td><td>You're challenged to a formal duel over a perceived slight. Succeed on a DC 15 Charisma (Persuasion) check to talk your way out of it.</td></tr>
+                                <tr><td>6</td><td>You're accused of a crime you didn't commit (theft, cheating, insulting a noble house).†</td></tr>
+                                <tr><td>7</td><td>Your extravagant spending draws the attention of thieves. Succeed on a DC 15 Wisdom (Perception) check or lose 2d6 x 20 gp to a pickpocket.</td></tr>
+                                <tr><td>8</td><td>You make a lifelong friend (or enemy) of a powerful noble.†</td></tr>
+                              </tbody>
+                            </table>
+                            <p>† Might involve a rival.</p>
+
+                          </div>
+                        </details>
+
+                        <details class="condition-dropdown" id="rules-downtime-crime">
+                          <summary>Crime</summary>
+                          <div class="condition-body">
+
+                            <p>A character can spend downtime committing a crime — robbing a mark chosen ahead of time. This requires 1 workweek of preparation and surveillance, and no gold up front. The character picks a target, then makes three checks: a Dexterity (Stealth) check, a Dexterity (Thieves' Tools) check, and a third check of the player's choice (Intelligence (Investigation), Wisdom (Perception), or Charisma (Deception), depending on how the crime is being pulled off) — all three against the same DC, set by the target chosen.</p>
+
+                            <div class="jump-inputs">
+                              <div class="jump-input-row">
+                                <label for="crimeTarget">Target</label>
+                                <select id="crimeTarget">
+                                  <option value="10|50">Struggling Merchant (DC 10, 50 gp)</option>
+                                  <option value="15|100" selected>Prosperous Merchant (DC 15, 100 gp)</option>
+                                  <option value="20|200">Noble (DC 20, 200 gp)</option>
+                                  <option value="25|1000">Richest Person in Town (DC 25, 1,000 gp)</option>
+                                </select>
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="crimeStealthMod">Stealth modifier</label>
+                                <input type="number" id="crimeStealthMod" value="0" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="crimeToolsMod">Thieves' Tools modifier</label>
+                                <input type="number" id="crimeToolsMod" value="0" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="crimeThirdMod">Third check modifier</label>
+                                <input type="number" id="crimeThirdMod" value="0" />
+                              </div>
+                            </div>
+
+                            <div class="jump-results">
+                              <div class="panel-footer" style="justify-content:flex-start;">
+                                <button id="crimeRollBtn" class="btn-primary" type="button">Roll All Three Checks</button>
+                              </div>
+                              <div id="crimeRollResult" class="dice-result"></div>
+                            </div>
+
+                            <h4>Crime Results</h4>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>Successes</th><th>Result</th></tr></thead>
+                              <tbody>
+                                <tr><td>3</td><td>The character earns the target's full loot value.</td></tr>
+                                <tr><td>2</td><td>The character earns half the target's loot value.</td></tr>
+                                <tr><td>1</td><td>The heist fails, but the character escapes unnoticed.</td></tr>
+                                <tr><td>0</td><td>The character is caught. They must pay a fine equal to the target's full loot value, and spend one workweek in jail for every 25 gp owed (unless the fine is paid).</td></tr>
+                              </tbody>
+                            </table>
+
+                            <h4>Crime Complications</h4>
+                            <p>Even a well-planned crime can go wrong. There's a 10% chance of a complication for the workweek spent planning and pulling off the crime.</p>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>d8</th><th>Complication</th></tr></thead>
+                              <tbody>
+                                <tr><td>1</td><td>You are wanted by the law. Guards keep an eye out for you for the next 1d4 downtime periods.†</td></tr>
+                                <tr><td>2</td><td>A witness can identify you.†</td></tr>
+                                <tr><td>3</td><td>You gain a criminal reputation, good or bad, among the local underworld.</td></tr>
+                                <tr><td>4</td><td>Your target survives and seeks revenge.†</td></tr>
+                                <tr><td>5</td><td>A local thieves' guild takes notice of your work and wants you to join, or pay them tribute.†</td></tr>
+                                <tr><td>6</td><td>You find evidence implicating an important local figure in a separate crime.</td></tr>
+                                <tr><td>7</td><td>Your target was under the protection of a rival criminal, who is now displeased with you.†</td></tr>
+                                <tr><td>8</td><td>You accidentally steal something far more valuable, or far more dangerous, than you expected.</td></tr>
+                              </tbody>
+                            </table>
+                            <p>† Might involve a rival.</p>
+
+                          </div>
+                        </details>
+
+                        <details class="condition-dropdown" id="rules-downtime-gambling">
+                          <summary>Gambling</summary>
+                          <div class="condition-body">
+
+                            <p>A character can spend downtime gambling — at cards, dice, or any other game of chance. This activity requires one workweek of effort plus a stake of at least 10 gp (up to 1,000 gp or more, as the player sees fit). The character makes three checks — a Wisdom (Insight) check, a Charisma (Deception) check, and a Charisma (Intimidation) check — each against its own DC, since each represents a different opponent or hand faced during the week. Proficiency with an appropriate gaming set can replace the relevant skill for any of the three checks.</p>
+
+                            <div class="jump-inputs">
+                              <div class="jump-input-row">
+                                <label for="gambleBet">Bet (gp)</label>
+                                <input type="number" id="gambleBet" value="10" min="10" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="gambleInsightMod">Insight modifier</label>
+                                <input type="number" id="gambleInsightMod" value="0" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="gambleDeceptionMod">Deception modifier</label>
+                                <input type="number" id="gambleDeceptionMod" value="0" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="gambleIntimidationMod">Intimidation modifier</label>
+                                <input type="number" id="gambleIntimidationMod" value="0" />
+                              </div>
+                            </div>
+
+                            <div class="jump-results">
+                              <div class="panel-footer" style="justify-content:flex-start;">
+                                <button id="gambleRollBtn" class="btn-primary" type="button">Roll All Three Checks</button>
+                              </div>
+                              <div id="gambleRollResult" class="dice-result"></div>
+                              <p style="font-size:0.72rem; color:var(--text-muted); margin-top:6px;">Each check rolls against its own DC of 5 + 2d10, representing a different opponent.</p>
+                            </div>
+
+                            <h4>Gambling Results</h4>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>Successes</th><th>Result</th></tr></thead>
+                              <tbody>
+                                <tr><td>0</td><td>Lose the entire bet, and accrue a debt equal to that amount.</td></tr>
+                                <tr><td>1</td><td>Lose half the bet.</td></tr>
+                                <tr><td>2</td><td>Gain the bet back plus half again (1.5x).</td></tr>
+                                <tr><td>3</td><td>Gain twice the bet (2x).</td></tr>
+                              </tbody>
+                            </table>
+
+                            <h4>Gambling Complications</h4>
+                            <p>Games of chance draw a colorful (and sometimes dangerous) crowd. There's a 10% chance of a complication for the workweek spent gambling.</p>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>d6</th><th>Complication</th></tr></thead>
+                              <tbody>
+                                <tr><td>1</td><td>You're accused of cheating, whether or not you actually did.†</td></tr>
+                                <tr><td>2</td><td>You attract the attention of a local gambling ring or crime boss.†</td></tr>
+                                <tr><td>3</td><td>You win big against someone who can't afford to lose, and they resent you for it.†</td></tr>
+                                <tr><td>4</td><td>A fellow gambler tries to recruit you into a scheme to cheat other players.</td></tr>
+                                <tr><td>5</td><td>You make a valuable contact who enjoys your company at the table.</td></tr>
+                                <tr><td>6</td><td>A brawl breaks out over the game. Succeed on a DC 15 Dexterity or Strength check (your choice) or take 1d6 damage.</td></tr>
+                              </tbody>
+                            </table>
+                            <p>† Might involve a rival.</p>
+
+                          </div>
+                        </details>
+
+                        <details class="condition-dropdown" id="rules-downtime-pit-fighting">
+                          <summary>Pit Fighting</summary>
+                          <div class="condition-body">
+
+                            <p>A character can spend downtime pit fighting — competing in organized (if not always legal) combat for money. This requires one workweek of effort and no gold up front. The character makes three checks — a Strength (Athletics) check, a Dexterity (Acrobatics) check, and a Constitution check (adding their largest Hit Die as a bonus, not rolling it) — each against its own DC, representing a different bout. A weapon attack roll can replace any one of the three checks.</p>
+
+                            <div class="jump-inputs">
+                              <div class="jump-input-row">
+                                <label for="pitAthleticsMod">Athletics modifier</label>
+                                <input type="number" id="pitAthleticsMod" value="0" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="pitAcrobaticsMod">Acrobatics modifier</label>
+                                <input type="number" id="pitAcrobaticsMod" value="0" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="pitConMod">Constitution + Hit Die modifier</label>
+                                <input type="number" id="pitConMod" value="0" />
+                              </div>
+                            </div>
+
+                            <div class="jump-results">
+                              <div class="panel-footer" style="justify-content:flex-start;">
+                                <button id="pitRollBtn" class="btn-primary" type="button">Roll All Three Checks</button>
+                              </div>
+                              <div id="pitRollResult" class="dice-result"></div>
+                              <p style="font-size:0.72rem; color:var(--text-muted); margin-top:6px;">Each check rolls against its own DC of 5 + 2d10, representing a different bout.</p>
+                            </div>
+
+                            <h4>Pit Fighting Results</h4>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>Successes</th><th>Result</th></tr></thead>
+                              <tbody>
+                                <tr><td>0</td><td>Lose all your bouts, earning nothing.</td></tr>
+                                <tr><td>1</td><td>Win 50 gp.</td></tr>
+                                <tr><td>2</td><td>Win 100 gp.</td></tr>
+                                <tr><td>3</td><td>Win 200 gp.</td></tr>
+                              </tbody>
+                            </table>
+
+                            <h4>Pit Fighting Complications</h4>
+                            <p>The pit fighting circuit is a rough crowd. There's a 10% chance of a complication for the workweek spent fighting.</p>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>d8</th><th>Complication</th></tr></thead>
+                              <tbody>
+                                <tr><td>1</td><td>You suffer a lasting injury. You have Disadvantage on Strength or Dexterity checks (your choice) until you finish a long rest after a week of recovery.</td></tr>
+                                <tr><td>2</td><td>An opponent you beat holds a grudge against you.†</td></tr>
+                                <tr><td>3</td><td>You're accused of cheating, whether or not you actually did.†</td></tr>
+                                <tr><td>4</td><td>A promoter tries to recruit you into an illegal, high-stakes fighting circuit.†</td></tr>
+                                <tr><td>5</td><td>You gain a following of fans, who now recognize you in public.</td></tr>
+                                <tr><td>6</td><td>A gambler who bet against you is furious at your win, or delighted by your loss.†</td></tr>
+                                <tr><td>7</td><td>You're offered a bribe to throw your next match.†</td></tr>
+                                <tr><td>8</td><td>You catch the eye of a noble or wealthy patron who wants to sponsor you.</td></tr>
+                              </tbody>
+                            </table>
+                            <p>† Might involve a rival.</p>
+
+                          </div>
+                        </details>
+
+                        <details class="condition-dropdown" id="rules-downtime-research">
+                          <summary>Research</summary>
+                          <div class="condition-body">
+
+                            <p>A character can spend downtime researching a topic — a piece of lore, a rumor, a person, or anything else that requires digging through records, questioning contacts, or poring over old texts. Research costs at least 50 gp, requires access to a library, sage, or other useful resource, and takes one workweek. The character makes an Intelligence check. If they have access to a well-stocked library or a knowledgeable sage, the check is made with Advantage.</p>
+
+                            <div class="jump-inputs">
+                              <div class="jump-input-row">
+                                <label for="researchIntMod">Intelligence modifier</label>
+                                <input type="number" id="researchIntMod" value="0" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="researchGoldSpent">Gold spent (gp)</label>
+                                <input type="number" id="researchGoldSpent" value="50" min="50" />
+                              </div>
+                              <div class="jump-input-row">
+                                <label for="researchAdvantage">Library / sage access</label>
+                                <select id="researchAdvantage">
+                                  <option value="0" selected>No (normal roll)</option>
+                                  <option value="1">Yes (Advantage)</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div class="jump-results">
+                              <p>Gold bonus: <span id="researchGoldBonus" class="jump-value">+0</span> <span style="color:var(--text-muted); font-size:0.72rem;">(+1 per 100 gp spent beyond the base 50 gp, capped at +6)</span></p>
+                              <div class="panel-footer" style="justify-content:flex-start;">
+                                <button id="researchRollBtn" class="btn-primary" type="button">Roll Intelligence Check</button>
+                              </div>
+                              <div id="researchRollResult" class="dice-result"></div>
+                            </div>
+
+                            <h4>Research Results</h4>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>Check Total</th><th>Result</th></tr></thead>
+                              <tbody>
+                                <tr><td>1-5</td><td>No useful information is found.</td></tr>
+                                <tr><td>6-10</td><td>The character learns one piece of information relevant to their research.</td></tr>
+                                <tr><td>11-20</td><td>The character learns two pieces of information relevant to their research.</td></tr>
+                                <tr><td>21+</td><td>The character learns three pieces of information relevant to their research.</td></tr>
+                              </tbody>
+                            </table>
+
+                            <h4>Research Complications</h4>
+                            <p>Digging into old records and rumors doesn't always stay quiet. There's a 10% chance of a complication for the workweek spent researching.</p>
+                            <table class="humanoid-grid">
+                              <thead><tr><th>d6</th><th>Complication</th></tr></thead>
+                              <tbody>
+                                <tr><td>1</td><td>You draw the attention of someone else interested in the same topic.†</td></tr>
+                                <tr><td>2</td><td>The information you find is outdated, incomplete, or subtly wrong.</td></tr>
+                                <tr><td>3</td><td>You discover a secret someone would rather keep hidden.†</td></tr>
+                                <tr><td>4</td><td>Your research is confiscated or destroyed before you can finish.</td></tr>
+                                <tr><td>5</td><td>A librarian, sage, or archivist takes a personal interest in your work and wants to help (or hinder) further.</td></tr>
+                                <tr><td>6</td><td>You uncover a lead pointing toward a much larger mystery.</td></tr>
+                              </tbody>
+                            </table>
+                            <p>† Might involve a rival.</p>
+
+                          </div>
+                        </details>
+
                       </div>
                     </div>
                   </details>

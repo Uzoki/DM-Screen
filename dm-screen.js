@@ -2429,6 +2429,201 @@ function rollBuyMagicItemComplication() {
     `<strong>d12 = ${roll}</strong>: ${BUY_MAGIC_ITEM_COMPLICATIONS[roll]}`;
 }
 
+// ---- DOWNTIME: CAROUSING CALCULATOR ----
+// A single Persuasion check against a flat lookup table — social class
+// only affects the gp cost (shown for reference in the dropdown text),
+// not the check itself, so the calculator just needs the modifier.
+
+function carousingResultForTotal(total) {
+  if (total <= 5) return 'The character has made a hostile contact.';
+  if (total <= 10) return 'The character makes no new contacts.';
+  if (total <= 15) return 'The character makes one allied contact.';
+  if (total <= 20) return 'The character makes two allied contacts.';
+  return 'The character makes three allied contacts.';
+}
+
+function rollCarousing() {
+  const modRaw = parseFloat(document.getElementById('carousePersuasionMod').value);
+  const mod = isNaN(modRaw) ? 0 : modRaw;
+  const d20 = rollDie(20);
+  const total = d20 + mod;
+  document.getElementById('carouseRollResult').innerHTML =
+    `<strong>${d20}</strong> [d20] + ${mod} [Persuasion] = <strong>${total}</strong><br>${carousingResultForTotal(total)}`;
+}
+
+// ---- SHARED HELPER: rolling several checks and counting successes ----
+// Used by Crime (same DC for all checks), and Gambling/Pit Fighting
+// (each check gets its own randomly rolled DC of 5 + 2d10, representing
+// a different opponent or bout). Returns an array of
+// { label, mod, dc, roll, total, success }.
+function rollChecksAgainstDCs(checks, fixedDC) {
+  return checks.map((c) => {
+    const dc = fixedDC !== undefined ? fixedDC : (5 + rollDie(10) + rollDie(10));
+    const roll = rollDie(20);
+    const total = roll + c.mod;
+    return { label: c.label, mod: c.mod, dc: dc, roll: roll, total: total, success: total >= dc };
+  });
+}
+
+// Builds one line per check, showing its DC (only if perCheckDC is
+// true, since Crime's DC is already shown once, up front), roll,
+// modifier, total, and a checkmark/cross for success.
+function buildCheckBreakdownHtml(results, perCheckDC) {
+  return results
+    .map((c) => {
+      const dcPart = perCheckDC ? ` (DC ${c.dc})` : '';
+      const mark = c.success ? '<span class="crit-hit">\u2713</span>' : '<span class="crit-miss">\u2717</span>';
+      return `${c.label}${dcPart}: <strong>${c.roll}</strong> + ${c.mod} = <strong>${c.total}</strong> ${mark}`;
+    })
+    .join('<br>');
+}
+
+// ---- DOWNTIME: CRIME CALCULATOR ----
+// Three checks (Stealth, Thieves' Tools, and a third skill of the
+// player's choice) all against the same DC, set by the chosen target.
+// 3 successes = full loot, 2 = half loot, 1 = escape with nothing,
+// 0 = caught (fine equal to the full loot value, or a workweek in
+// jail per 25 gp owed).
+
+function rollCrime() {
+  const [dcStr, lootStr] = document.getElementById('crimeTarget').value.split('|');
+  const dc = parseInt(dcStr, 10);
+  const loot = parseInt(lootStr, 10);
+
+  const stealthMod = parseFloat(document.getElementById('crimeStealthMod').value) || 0;
+  const toolsMod = parseFloat(document.getElementById('crimeToolsMod').value) || 0;
+  const thirdMod = parseFloat(document.getElementById('crimeThirdMod').value) || 0;
+
+  const results = rollChecksAgainstDCs(
+    [
+      { label: 'Stealth', mod: stealthMod },
+      { label: "Thieves' Tools", mod: toolsMod },
+      { label: 'Third check', mod: thirdMod }
+    ],
+    dc
+  );
+  const successes = results.filter((c) => c.success).length;
+
+  let outcome;
+  if (successes === 3) {
+    outcome = `Full success \u2014 the character earns <strong>${loot} gp</strong>.`;
+  } else if (successes === 2) {
+    outcome = `Partial success \u2014 the character earns <strong>${Math.floor(loot / 2)} gp</strong>.`;
+  } else if (successes === 1) {
+    outcome = 'The heist fails, but the character escapes unnoticed.';
+  } else {
+    const jailWeeks = Math.ceil(loot / 25);
+    outcome = `Caught! Pay a <strong>${loot} gp</strong> fine, or spend <strong>${jailWeeks}</strong> workweek${jailWeeks === 1 ? '' : 's'} in jail.`;
+  }
+
+  const breakdown = buildCheckBreakdownHtml(results, false);
+  document.getElementById('crimeRollResult').innerHTML =
+    `DC ${dc}<br>${breakdown}<br><strong>${successes} success${successes === 1 ? '' : 'es'}</strong> \u2014 ${outcome}`;
+}
+
+// ---- DOWNTIME: GAMBLING CALCULATOR ----
+// Three checks (Insight, Deception, Intimidation), each against its
+// own randomly rolled DC of 5 + 2d10. 3 successes doubles the bet, 2
+// wins 1.5x, 1 loses half the bet, 0 loses the whole bet plus an
+// equal debt.
+
+function rollGambling() {
+  const betRaw = parseFloat(document.getElementById('gambleBet').value);
+  const bet = isNaN(betRaw) || betRaw < 0 ? 10 : betRaw;
+
+  const insightMod = parseFloat(document.getElementById('gambleInsightMod').value) || 0;
+  const deceptionMod = parseFloat(document.getElementById('gambleDeceptionMod').value) || 0;
+  const intimidationMod = parseFloat(document.getElementById('gambleIntimidationMod').value) || 0;
+
+  const results = rollChecksAgainstDCs([
+    { label: 'Insight', mod: insightMod },
+    { label: 'Deception', mod: deceptionMod },
+    { label: 'Intimidation', mod: intimidationMod }
+  ]);
+  const successes = results.filter((c) => c.success).length;
+
+  let outcome;
+  if (successes === 3) {
+    outcome = `Win <strong>${formatCarryWeight(bet * 2)} gp</strong> (twice the bet).`;
+  } else if (successes === 2) {
+    outcome = `Win <strong>${formatCarryWeight(bet * 1.5)} gp</strong> (the bet plus half again).`;
+  } else if (successes === 1) {
+    outcome = `Lose <strong>${formatCarryWeight(bet / 2)} gp</strong> (half the bet).`;
+  } else {
+    outcome = `Lose the entire <strong>${formatCarryWeight(bet)} gp</strong> bet, and accrue a debt of ${formatCarryWeight(bet)} gp.`;
+  }
+
+  const breakdown = buildCheckBreakdownHtml(results, true);
+  document.getElementById('gambleRollResult').innerHTML =
+    `${breakdown}<br><strong>${successes} success${successes === 1 ? '' : 'es'}</strong> \u2014 ${outcome}`;
+}
+
+// ---- DOWNTIME: PIT FIGHTING CALCULATOR ----
+// Three checks (Athletics, Acrobatics, Constitution + largest Hit
+// Die), each against its own randomly rolled DC of 5 + 2d10.
+// 0/1/2/3 successes earn 0/50/100/200 gp.
+
+function rollPitFighting() {
+  const athleticsMod = parseFloat(document.getElementById('pitAthleticsMod').value) || 0;
+  const acrobaticsMod = parseFloat(document.getElementById('pitAcrobaticsMod').value) || 0;
+  const conMod = parseFloat(document.getElementById('pitConMod').value) || 0;
+
+  const results = rollChecksAgainstDCs([
+    { label: 'Athletics', mod: athleticsMod },
+    { label: 'Acrobatics', mod: acrobaticsMod },
+    { label: 'Constitution', mod: conMod }
+  ]);
+  const successes = results.filter((c) => c.success).length;
+  const winnings = [0, 50, 100, 200][successes];
+  const outcome = successes === 0 ? 'Lose all bouts, earning nothing.' : `Win <strong>${winnings} gp</strong>.`;
+
+  const breakdown = buildCheckBreakdownHtml(results, true);
+  document.getElementById('pitRollResult').innerHTML =
+    `${breakdown}<br><strong>${successes} success${successes === 1 ? '' : 'es'}</strong> \u2014 ${outcome}`;
+}
+
+// ---- DOWNTIME: RESEARCH CALCULATOR ----
+// A single Intelligence check, boosted by gold spent (+1 per 100 gp
+// beyond the base 50 gp, capped at +6) and optionally rolled with
+// Advantage if the character has library/sage access.
+
+function computeResearchGoldBonus() {
+  const goldRaw = parseFloat(document.getElementById('researchGoldSpent').value);
+  const gold = isNaN(goldRaw) ? 50 : goldRaw;
+  const bonus = Math.min(Math.max(0, Math.floor((gold - 50) / 100)), 6);
+  document.getElementById('researchGoldBonus').textContent = '+' + bonus;
+  return bonus;
+}
+
+function researchResultForTotal(total) {
+  if (total <= 5) return 'No useful information is found.';
+  if (total <= 10) return 'The character learns one piece of information relevant to their research.';
+  if (total <= 20) return 'The character learns two pieces of information relevant to their research.';
+  return 'The character learns three pieces of information relevant to their research.';
+}
+
+function rollResearch() {
+  const goldBonus = computeResearchGoldBonus();
+  const intRaw = parseFloat(document.getElementById('researchIntMod').value);
+  const intMod = isNaN(intRaw) ? 0 : intRaw;
+  const hasAdvantage = document.getElementById('researchAdvantage').value === '1';
+
+  let d20, rollLabel;
+  if (hasAdvantage) {
+    const a = rollDie(20);
+    const b = rollDie(20);
+    d20 = Math.max(a, b);
+    rollLabel = `[${a}, ${b}, Advantage]`;
+  } else {
+    d20 = rollDie(20);
+    rollLabel = '[d20]';
+  }
+  const total = d20 + intMod + goldBonus;
+
+  document.getElementById('researchRollResult').innerHTML =
+    `<strong>${d20}</strong> ${rollLabel} + ${intMod} [Intelligence] + ${goldBonus} [gold bonus] = <strong>${total}</strong><br>${researchResultForTotal(total)}`;
+}
+
 // ---- PANE MAXIMIZE / MINIMIZE ----
 // Each of the three columns (Initiative, Dice, Reference) has its own
 // maximize button. Pressing it hides the other two columns (collapsed
@@ -2605,6 +2800,7 @@ document.addEventListener('DOMContentLoaded', () => {
   computeJump();
   computeCarryingEncumbrance();
   computeBuyMagicItemSearchBonus();
+  computeResearchGoldBonus();
 
   // Restore the Reference pane's open/closed dropdowns from this
   // browser session (if any), then start tracking further changes so
@@ -2918,6 +3114,19 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('buyItemTimeSpent').addEventListener('input', computeBuyMagicItemSearchBonus);
   document.getElementById('buyItemRollBtn').addEventListener('click', rollBuyMagicItemCheck);
   document.getElementById('buyItemComplicationBtn').addEventListener('click', rollBuyMagicItemComplication);
+
+  // Downtime — Carousing, Crime, Gambling, Pit Fighting: each is a
+  // single "roll the checks" button (all involve real dice, so there's
+  // nothing to precompute live the way search/gold bonuses are).
+  document.getElementById('carouseRollBtn').addEventListener('click', rollCarousing);
+  document.getElementById('crimeRollBtn').addEventListener('click', rollCrime);
+  document.getElementById('gambleRollBtn').addEventListener('click', rollGambling);
+  document.getElementById('pitRollBtn').addEventListener('click', rollPitFighting);
+
+  // Downtime — Research: gold bonus recalculates live as gold spent
+  // changes, same split as Buy a Magic Item's search bonus.
+  document.getElementById('researchGoldSpent').addEventListener('input', computeResearchGoldBonus);
+  document.getElementById('researchRollBtn').addEventListener('click', rollResearch);
 
   // NPC Reactions: monster reaction roller and humanoid attitude randomizer
   document.getElementById('monsterReactionBtn').addEventListener('click', rollMonsterReaction);
