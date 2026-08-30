@@ -353,15 +353,15 @@
                             <table class="humanoid-grid">
                               <thead><tr><th>Check Total</th><th>Items Available</th></tr></thead>
                               <tbody>
-                                <tr><td>1-5</td><td>Roll 1d6 times on Magic Item Table A</td></tr>
-                                <tr><td>6-10</td><td>Roll 1d4 times on Magic Item Table B</td></tr>
-                                <tr><td>11-15</td><td>Roll 1d4 times on Magic Item Table C</td></tr>
-                                <tr><td>16-20</td><td>Roll 1d4 times on Magic Item Table D</td></tr>
-                                <tr><td>21-25</td><td>Roll 1d4 times on Magic Item Table E</td></tr>
-                                <tr><td>26-30</td><td>Roll 1d4 times on Magic Item Table F</td></tr>
-                                <tr><td>31-35</td><td>Roll 1d4 times on Magic Item Table G</td></tr>
-                                <tr><td>36-40</td><td>Roll 1d4 times on Magic Item Table H</td></tr>
-                                <tr><td>41+</td><td>Roll 1d4 times on Magic Item Table I</td></tr>
+                                <tr><td>1-5</td><td>Roll 1d6 times on <a href="#" class="gloss-ref" data-ref="rules-magic-item-table-a">Magic Item Table A</a></td></tr>
+                                <tr><td>6-10</td><td>Roll 1d4 times on <a href="#" class="gloss-ref" data-ref="rules-magic-item-table-b">Magic Item Table B</a></td></tr>
+                                <tr><td>11-15</td><td>Roll 1d4 times on <a href="#" class="gloss-ref" data-ref="rules-magic-item-table-c">Magic Item Table C</a></td></tr>
+                                <tr><td>16-20</td><td>Roll 1d4 times on <a href="#" class="gloss-ref" data-ref="rules-magic-item-table-d">Magic Item Table D</a></td></tr>
+                                <tr><td>21-25</td><td>Roll 1d4 times on <a href="#" class="gloss-ref" data-ref="rules-magic-item-table-e">Magic Item Table E</a></td></tr>
+                                <tr><td>26-30</td><td>Roll 1d4 times on <a href="#" class="gloss-ref" data-ref="rules-magic-item-table-f">Magic Item Table F</a></td></tr>
+                                <tr><td>31-35</td><td>Roll 1d4 times on <a href="#" class="gloss-ref" data-ref="rules-magic-item-table-g">Magic Item Table G</a></td></tr>
+                                <tr><td>36-40</td><td>Roll 1d4 times on <a href="#" class="gloss-ref" data-ref="rules-magic-item-table-h">Magic Item Table H</a></td></tr>
+                                <tr><td>41+</td><td>Roll 1d4 times on <a href="#" class="gloss-ref" data-ref="rules-magic-item-table-i">Magic Item Table I</a></td></tr>
                               </tbody>
                             </table>
 
@@ -817,6 +817,66 @@
                     </div>
                   </details>
 
+                  <details class="condition-dropdown" id="dropNpcReactions">
+                    <summary>NPC Reactions</summary>
+                    <div class="condition-body">
+
+                      <div class="npc-reactions-columns">
+
+                        <div class="npc-box">
+                          <h4>Humanoid Reactions</h4>
+                          <button id="randomizeAttitudeBtn" class="btn-secondary" type="button">Randomize Attitude</button>
+                          <div id="attitudeResult" class="npc-result"></div>
+
+                          <table class="humanoid-grid">
+                            <thead>
+                              <tr>
+                                <th></th>
+                                <th><a href="#" class="gloss-ref" data-ref="glossary-friendly">Friendly</a></th>
+                                <th><a href="#" class="gloss-ref" data-ref="glossary-indifferent">Indifferent</a></th>
+                                <th><a href="#" class="gloss-ref" data-ref="glossary-hostile">Hostile</a></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <th>0</th>
+                                <td>Won't take risks</td>
+                                <td>Won't help or harm</td>
+                                <td>Will try to hinder</td>
+                              </tr>
+                              <tr>
+                                <th>10</th>
+                                <td>Take minor risks</td>
+                                <td>Won't take risks</td>
+                                <td>Won't help or harm</td>
+                              </tr>
+                              <tr>
+                                <th>20</th>
+                                <td>Take significant risk</td>
+                                <td>Take minor risks</td>
+                                <td>Help without risks</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+
+                        <div class="npc-box">
+                          <h4>Monster Reactions</h4>
+                          <select id="monsterReactionAttitude">
+                            <option value="">Random</option>
+                            <option value="friendly">Friendly</option>
+                            <option value="uncertain">Uncertain</option>
+                            <option value="hostile">Hostile</option>
+                          </select>
+                          <button id="monsterReactionBtn" class="btn-secondary" type="button">Roll Monster Reaction</button>
+                          <div id="monsterReactionResult" class="npc-result"></div>
+                        </div>
+
+                      </div>
+
+                    </div>
+                  </details>
+
                 </div>
               </div>
             </details>
@@ -824,66 +884,6 @@
             <details class="dropdown" id="dropConditions">
               <summary>Conditions</summary>
               <div class="dropdown-body" id="conditionsContainer"></div>
-            </details>
-
-            <details class="dropdown" id="dropNpcReactions">
-              <summary>NPC Reactions</summary>
-              <div class="dropdown-body">
-
-                <div class="npc-reactions-columns">
-
-                  <div class="npc-box">
-                    <h4>Humanoid Reactions</h4>
-                    <button id="randomizeAttitudeBtn" class="btn-secondary" type="button">Randomize Attitude</button>
-                    <div id="attitudeResult" class="npc-result"></div>
-
-                    <table class="humanoid-grid">
-                      <thead>
-                        <tr>
-                          <th></th>
-                          <th><a href="#" class="gloss-ref" data-ref="glossary-friendly">Friendly</a></th>
-                          <th><a href="#" class="gloss-ref" data-ref="glossary-indifferent">Indifferent</a></th>
-                          <th><a href="#" class="gloss-ref" data-ref="glossary-hostile">Hostile</a></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <th>0</th>
-                          <td>Won't take risks</td>
-                          <td>Won't help or harm</td>
-                          <td>Will try to hinder</td>
-                        </tr>
-                        <tr>
-                          <th>10</th>
-                          <td>Take minor risks</td>
-                          <td>Won't take risks</td>
-                          <td>Won't help or harm</td>
-                        </tr>
-                        <tr>
-                          <th>20</th>
-                          <td>Take significant risk</td>
-                          <td>Take minor risks</td>
-                          <td>Help without risks</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div class="npc-box">
-                    <h4>Monster Reactions</h4>
-                    <select id="monsterReactionAttitude">
-                      <option value="">Random</option>
-                      <option value="friendly">Friendly</option>
-                      <option value="uncertain">Uncertain</option>
-                      <option value="hostile">Hostile</option>
-                    </select>
-                    <button id="monsterReactionBtn" class="btn-secondary" type="button">Roll Monster Reaction</button>
-                    <div id="monsterReactionResult" class="npc-result"></div>
-                  </div>
-
-                </div>
-
-              </div>
             </details>
 
             <details class="dropdown" id="dropRulesGlossary">
