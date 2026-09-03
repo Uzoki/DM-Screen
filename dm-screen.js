@@ -1585,6 +1585,7 @@ function renderDataDrivenReferenceSections() {
   if (typeof SPELLS_DATA !== 'undefined') renderDataSection(SPELLS_DATA, 'spellsContainer');
   if (typeof CLASSES_DATA !== 'undefined') renderDataSection(CLASSES_DATA, 'classesContainer');
   if (typeof FEATS_DATA !== 'undefined') renderDataSection(FEATS_DATA, 'featsContainer');
+  if (typeof ITEMS_DATA !== 'undefined') renderDataSection(ITEMS_DATA, 'itemsContainer');
   applyDefaultOpenState();
 }
 
