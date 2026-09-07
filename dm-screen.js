@@ -1475,13 +1475,14 @@ async function clearMobCalculator() {
 // too numerous) to hand-write in index.html, so their content lives
 // as plain data (see lore-data.js / spells-data.js / conditions-data.js
 // / rules-glossary-data.js / classes-data.js / feats-data.js /
-// rules-data.js) in the shape { intro: "<p>...</p>", entries: [ { id,
-// title, html, children? }, ... ] }, where "children" (if present) is
-// an array of more entries in the same shape, nested as deep as
-// needed. This builds the actual <details class="condition-dropdown">
-// markup from that data, so everything downstream (search, gloss-ref
-// links, openReference, the per-dropdown search bars, reference pane
-// open/closed state) works exactly the same as hand-written HTML.
+// rules-data.js / items-data.js / magic-items-data.js) in the shape
+// { intro: "<p>...</p>", entries: [ { id, title, html, children? },
+// ... ] }, where "children" (if present) is an array of more entries
+// in the same shape, nested as deep as needed. This builds the actual
+// <details class="condition-dropdown"> markup from that data, so
+// everything downstream (search, gloss-ref links, openReference, the
+// per-dropdown search bars, reference pane open/closed state) works
+// exactly the same as hand-written HTML.
 
 // Turns one data entry (and any nested children) into its
 // <details class="condition-dropdown"> HTML string.
@@ -1586,6 +1587,7 @@ function renderDataDrivenReferenceSections() {
   if (typeof CLASSES_DATA !== 'undefined') renderDataSection(CLASSES_DATA, 'classesContainer');
   if (typeof FEATS_DATA !== 'undefined') renderDataSection(FEATS_DATA, 'featsContainer');
   if (typeof ITEMS_DATA !== 'undefined') renderDataSection(ITEMS_DATA, 'itemsContainer');
+  if (typeof MAGIC_ITEMS_DATA !== 'undefined') renderDataSection(MAGIC_ITEMS_DATA, 'magicItemsContainer');
   applyDefaultOpenState();
 }
 
