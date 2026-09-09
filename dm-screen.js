@@ -1587,7 +1587,19 @@ function renderDataDrivenReferenceSections() {
   if (typeof CLASSES_DATA !== 'undefined') renderDataSection(CLASSES_DATA, 'classesContainer');
   if (typeof FEATS_DATA !== 'undefined') renderDataSection(FEATS_DATA, 'featsContainer');
   if (typeof ITEMS_DATA !== 'undefined') renderDataSection(ITEMS_DATA, 'itemsContainer');
-  if (typeof MAGIC_ITEMS_DATA !== 'undefined') renderDataSection(MAGIC_ITEMS_DATA, 'magicItemsContainer');
+  // Magic Items isn't its own top-level dropdown -- it's a sibling of
+  // Equipment (items-equipment) inside the "Items" dropdown, so instead
+  // of rendering into its own container, its single entry is appended
+  // right after Equipment inside the same #itemsContainer that
+  // renderDataSection(ITEMS_DATA, ...) just built above. MAGIC_ITEMS_DATA
+  // is a single {id, title, html, children} entry (not an {intro,
+  // entries} wrapper like the other *_DATA objects), so it's rendered
+  // directly with renderDataEntryHtml() rather than renderDataSection().
+  if (typeof MAGIC_ITEMS_DATA !== 'undefined') {
+    const itemsContainer = document.getElementById('itemsContainer');
+    const itemsList = itemsContainer ? itemsContainer.querySelector('.condition-list') : null;
+    if (itemsList) itemsList.insertAdjacentHTML('beforeend', renderDataEntryHtml(MAGIC_ITEMS_DATA));
+  }
   applyDefaultOpenState();
 }
 
