@@ -15,6 +15,22 @@ html {
     --success: #5a9c5a;
     --radius: 8px;
     --header-h: 90px;
+
+    /* Spacing. Change these to make the page tighter or looser:
+       --gap            space between panes, between the columns inside
+                        the Combat pane, and between boxes in a column
+       --section-pad-*  space between a box's edge and its contents
+       --page-pad-*     space between the page edges and everything else
+       --left-col-min   the width each of the two columns in the Combat
+                        pane needs to look comfortable (see the layout
+                        notes further down) */
+    --gap: 8px;
+    --section-pad-y: 10px;
+    --section-pad-x: 12px;
+    --page-pad-x: 8px;
+    --page-pad-top: 12px;
+    --page-pad-bottom: 20px;
+    --left-col-min: 345px;
     --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
     --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
@@ -30,7 +46,7 @@ body {
     color: var(--text);
     font-family: var(--font-body);
     line-height: 1.4;
-    padding: 18px 14px 32px;
+    padding: var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom);
 }
 
 .app {
@@ -43,8 +59,8 @@ body {
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
-    margin: -18px -14px 16px;
-    padding: 14px 14px;
+    margin: calc(-1 * var(--page-pad-top)) calc(-1 * var(--page-pad-x)) var(--gap);
+    padding: 10px var(--page-pad-x);
     position: sticky;
     top: 0;
     z-index: 60;
@@ -82,13 +98,13 @@ body {
     flex-wrap: wrap;
 }
 
-/* ===== ROUND COUNTER (header) ===== */
+/* ===== ROUND COUNTER (sits in the Combat pane header) ===== */
 
 .round-control-wrapper {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 12px;
+    padding: 6px 10px;
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -321,13 +337,15 @@ body {
 }
 
 /* ===== PAGE LAYOUT (two panes) =====
-   The page is two panes side by side, each exactly half the width:
-     - LEFT PANE  (.column-group): a visible box that holds the
-       Initiative column and the Dice Roller / Mob Attack Calculator
-       column next to each other, as one combined pane. It has a
-       single maximize button in its own header row. The Initiative
-       column is the wider share of the two.
-     - RIGHT PANE (.column-lookup): the Reference Information pane.
+   The page is two panes side by side:
+     - LEFT PANE  (.column-group, titled "Combat"): a visible box that
+       holds the Initiative column and the Dice Roller / Mob Attack
+       Calculator column next to each other, as one combined pane. Its
+       header row holds the title, the round counter and the single
+       maximize button. It takes half of the page width by default, but
+       grows when it needs more room (see below).
+     - RIGHT PANE (.column-lookup): the Reference Information pane. It
+       gets whatever the left pane leaves over.
    On a narrow screen (below 1100px) the two panes stack, with
    Initiative and Dice sitting side by side inside the left pane
    whenever there is room for both. */
@@ -336,23 +354,23 @@ body {
     display: flex;
     align-items: flex-start;
     flex-wrap: wrap;
-    gap: 14px;
+    gap: var(--gap);
 }
 
 .column {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--gap);
     min-width: 0;
 }
 
 /* The visible box around Initiative + Dice Roller + Mob Attack
-   Calculator. The small bottom padding is because the last section
-   inside it already brings its own 10px bottom margin. */
+   Calculator. There is no bottom padding because the last section
+   inside it already brings its own bottom margin. */
 .column-group {
     flex: 1 1 100%;
     min-width: 0;
-    padding: 12px 12px 2px;
+    padding: var(--gap) var(--gap) 0;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -364,26 +382,38 @@ body {
     background: var(--bg);
 }
 
+/* Title, round counter and maximize button, in one row. The maximize
+   button is pushed to the far right. */
 .group-header-row {
     display: flex;
-    justify-content: flex-end;
-    margin-bottom: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: var(--gap);
+}
+
+.group-header-row h2 {
+    margin: 0;
+}
+
+.group-header-row .pane-maximize-btn {
+    margin-left: auto;
 }
 
 .column-group-body {
     display: flex;
     align-items: flex-start;
     flex-wrap: wrap;
-    gap: 14px;
+    gap: var(--gap);
     min-width: 0;
 }
 
 .column-initiative {
-    flex: 5 1 260px;
+    flex: 1 1 260px;
 }
 
 .column-dice {
-    flex: 4 1 200px;
+    flex: 1 1 260px;
 }
 
 .column-lookup {
@@ -406,13 +436,22 @@ body {
         flex-wrap: nowrap;
     }
 
-    /* Each pane is exactly half of the row: half of the width, minus
-       half of the 14px gap between them. (A plain "flex: 1 1 0" would
-       make the left pane 26px wider, because its padding and border
-       would be added on top of an equal share.) */
+    /* Both panes START at exactly half of the row: half of the width,
+       minus half of the gap between them. (A plain "flex: 1 1 0" would
+       make the left pane wider, because its padding and border would
+       be added on top of an equal share.) */
     .column-group,
     .column-lookup {
-        flex: 1 1 calc(50% - 7px);
+        flex: 1 1 calc(50% - var(--gap) / 2);
+    }
+
+    /* The left pane may grow beyond half when its two columns would
+       otherwise be cramped: it needs room for two columns of
+       --left-col-min each (plus the gap between them and the box's own
+       padding and border), but never more than 60% of the row. The
+       Reference pane simply gets what is left. */
+    .column-group {
+        min-width: min(60%, calc(2 * var(--left-col-min) + 3 * var(--gap) + 2px));
     }
 
     .column-group-body {
@@ -422,7 +461,7 @@ body {
     .column-group,
     .column {
         position: sticky;
-        top: calc(var(--header-h) + 14px);
+        top: calc(var(--header-h) + var(--gap));
         align-self: flex-start;
     }
 }
@@ -477,8 +516,8 @@ section {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 12px 14px;
-    margin-bottom: 10px;
+    padding: var(--section-pad-y) var(--section-pad-x);
+    margin-bottom: var(--gap);
 }
 
 h2 {
@@ -551,7 +590,7 @@ b {
 /* ===== INITIATIVE GROUP BOX ===== */
 
 .sub-panel {
-    margin-bottom: 14px;
+    margin-bottom: 10px;
 }
 
 .sub-panel:last-of-type {
@@ -599,7 +638,7 @@ select {
 
 #iniInput {
     flex: 1;
-    min-width: 80px;
+    min-width: 96px;
     font-family: var(--font-mono);
 }
 
@@ -727,7 +766,7 @@ button {
     font-weight: 500;
     font-size: 0.82rem;
     padding: 0;
-    width: 50%;
+    width: 100%;
     min-width: 60px;
     cursor: text;
 }
@@ -1020,7 +1059,7 @@ input.row-ini {
 
 .mob-inputs input {
     flex: 1;
-    min-width: 70px;
+    min-width: 88px;
     font-family: var(--font-mono);
 }
 
@@ -1115,7 +1154,7 @@ input.row-ini {
    sticky bar. Without this, whatever dropdown content has scrolled
    up to that strip is still there in normal document flow — nothing
    was ever actually covering it, since .lookup-sticky-top only starts
-   at calc(header-h + 14px) and only ITS OWN box was opaque. That left
+   at calc(header-h + gap) and only ITS OWN box was opaque. That left
    a real (not just a rendering-glitch) window onto already-scrolled
    content sitting directly above the Reference Information bar.
 
@@ -1131,7 +1170,7 @@ input.row-ini {
 .lookup-header-mask {
     position: fixed;
     top: 0;
-    height: calc(var(--header-h) + 15px);
+    height: calc(var(--header-h) + var(--gap) + 1px);
     background: var(--bg);
     z-index: 39;
     pointer-events: none;
@@ -1139,18 +1178,18 @@ input.row-ini {
 
 .lookup-sticky-top {
     position: sticky;
-    top: calc(var(--header-h) + 14px);
+    top: calc(var(--header-h) + var(--gap));
     z-index: 40;
     background: var(--surface);
-    /* The parent <section> has padding:12px 14px; this negative
+    /* The parent <section> has padding var(--section-pad-y) var(--section-pad-x); this negative
        margin cancels ALL of that padding on every side this bar
        touches (not just a couple of px), so the bar's own opaque
        background starts exactly at the section's top/left/right
        edges with no uncovered sliver of the section's own padding
        peeking out above/beside it. The bar's own padding then
        restores the intended visual spacing around its contents. */
-    margin: -12px -14px 0;
-    padding: 12px 14px 4px;
+    margin: calc(-1 * var(--section-pad-y)) calc(-1 * var(--section-pad-x)) 0;
+    padding: var(--section-pad-y) var(--section-pad-x) 4px;
     /* Same compositing-layer + stacking-context hardening as
        .app-header, see note there — this bar is the other half of
        the pair of independent sticky elements that can mis-stack

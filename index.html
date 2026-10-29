@@ -21,18 +21,6 @@
 
       <div class="header-controls">
 
-        <div class="round-control-wrapper">
-          <div class="round-control">
-            <button id="roundDown" class="round-btn" type="button" aria-label="Decrease round">−</button>
-            <div class="round-badge">
-              <span class="round-label">Round</span>
-              <span id="roundNumber">1</span>
-            </div>
-            <button id="roundUp" class="round-btn" type="button" aria-label="Increase round">+</button>
-          </div>
-          <button id="resetRoundBtn" class="btn-danger round-reset-btn" type="button">Reset round</button>
-        </div>
-
         <div class="time-control">
 
           <div class="time-field">
@@ -109,6 +97,20 @@
       <div class="column-group" id="paneGroup">
 
         <div class="group-header-row">
+          <h2>Combat</h2>
+
+          <div class="round-control-wrapper">
+            <div class="round-control">
+              <button id="roundDown" class="round-btn" type="button" aria-label="Decrease round">−</button>
+              <div class="round-badge">
+                <span class="round-label">Round</span>
+                <span id="roundNumber">1</span>
+              </div>
+              <button id="roundUp" class="round-btn" type="button" aria-label="Increase round">+</button>
+            </div>
+            <button id="resetRoundBtn" class="btn-danger round-reset-btn" type="button">Reset round</button>
+          </div>
+
           <button class="pane-maximize-btn" data-column="paneGroup" type="button" aria-label="Maximize pane">
             <svg class="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
             <svg class="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4a1 1 0 0 1-1 1H4M15 3v4a1 1 0 0 0 1 1h4M9 21v-4a1 1 0 0 0-1-1H4M15 21v-4a1 1 0 0 1 1-1h4"/></svg>

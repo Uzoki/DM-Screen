@@ -775,6 +775,29 @@ function renderTimeControls() {
   updateCurrentTimeDisplay();
 }
 
+// How many whole days the Current time is past the Starting time's own
+// day: 0 = still the same day, 1 = past midnight, 2 = past the next
+// midnight, and so on. Only the DIFFERENCE between two of these values
+// matters (see followClockWithDate below).
+function currentDayOffset() {
+  const startMinutes = parseTimeToMinutes(timeState.startTime);
+  const base = startMinutes === null ? 0 : startMinutes;
+  return Math.floor((base + timeState.durHours * 60 + timeState.durMinutes) / 1440);
+}
+
+// Called after Duration adventured has been changed. Moves the Date
+// tracker forward (or back, if the duration was reduced again) by
+// however many midnights the Current time has passed since
+// "offsetBefore" (a value taken from currentDayOffset() BEFORE the
+// change was made). Does nothing if no midnight was crossed.
+function followClockWithDate(offsetBefore) {
+  const change = currentDayOffset() - offsetBefore;
+  if (change !== 0) {
+    incrementDateDay(change);
+    renderDateControls();
+  }
+}
+
 // Called when the Starting time field loses focus or Enter is pressed.
 // Invalid input is rejected (with a toast) and reverted to the last
 // good value instead of silently breaking the current-time math.
@@ -809,6 +832,7 @@ function commitCurrentTimeInput(input) {
 
   const startMinutes = parseTimeToMinutes(timeState.startTime);
   const base = startMinutes === null ? 0 : startMinutes;
+  const offsetBefore = currentDayOffset();
 
   let diff = parsed - base;
   if (diff < 0) diff += 1440;
@@ -817,6 +841,7 @@ function commitCurrentTimeInput(input) {
   timeState.durMinutes = diff % 60;
 
   renderTimeControls();
+  followClockWithDate(offsetBefore);
   save();
 }
 
@@ -828,26 +853,32 @@ function commitDurationInputs() {
   const minutesInput = document.getElementById('durMinutesInput');
   const hoursVal = parseInt(hoursInput.value, 10);
   const minutesVal = parseInt(minutesInput.value, 10);
+  const offsetBefore = currentDayOffset();
 
   timeState.durHours = isNaN(hoursVal) ? 0 : hoursVal;
   timeState.durMinutes = isNaN(minutesVal) ? 0 : minutesVal;
   normalizeDuration();
   renderTimeControls();
+  followClockWithDate(offsetBefore);
   save();
 }
 
 // Duration +/- buttons: hours step by 1, minutes step by 10.
 function adjustDurationHours(delta) {
+  const offsetBefore = currentDayOffset();
   timeState.durHours += delta;
   normalizeDuration();
   renderTimeControls();
+  followClockWithDate(offsetBefore);
   save();
 }
 
 function adjustDurationMinutes(delta) {
+  const offsetBefore = currentDayOffset();
   timeState.durMinutes += delta;
   normalizeDuration();
   renderTimeControls();
+  followClockWithDate(offsetBefore);
   save();
 }
 
@@ -2696,8 +2727,15 @@ function rollResearch() {
 // whenever a size changes or the window is resized.
 
 const STICKY_LAYOUT_QUERY = '(min-width: 1100px)'; // must match the media query in styles.css
-const STICKY_TOP_GAP = 14;     // space left under the site header (same 14px used in styles.css)
-const STICKY_BOTTOM_GAP = 32;  // matches the 32px of padding at the bottom of <body>
+
+// The gap left under the site header is the --gap value in styles.css,
+// and the gap left at the bottom is the padding at the bottom of
+// <body>, so both are read from the page's own styles. That way
+// changing the spacing in styles.css never leaves this file out of step.
+function readCssPixels(value, fallback) {
+  const number = parseFloat(value);
+  return isNaN(number) ? fallback : number;
+}
 
 // A column inside the wrapper box ends a little above the wrapper's own
 // bottom edge (the wrapper's padding and border). Returns that distance,
@@ -2724,12 +2762,14 @@ function updateStickyColumns() {
 
   const headerEl = document.querySelector('.app-header');
   const headerH = headerEl ? headerEl.offsetHeight : 0;
-  const topOffset = headerH + STICKY_TOP_GAP;
+  const topGap = readCssPixels(window.getComputedStyle(document.documentElement).getPropertyValue('--gap'), 8);
+  const bottomGap = readCssPixels(window.getComputedStyle(document.body).paddingBottom, 20);
+  const topOffset = headerH + topGap;
   const viewportH = document.documentElement.clientHeight;
 
   panes.forEach((pane) => {
     const paneH = pane.getBoundingClientRect().height;
-    const top = Math.min(topOffset, viewportH - paneH - STICKY_BOTTOM_GAP - stickyExtraBottomGap(pane));
+    const top = Math.min(topOffset, viewportH - paneH - bottomGap - stickyExtraBottomGap(pane));
     pane.style.top = top + 'px';
   });
 }
