@@ -320,13 +320,17 @@ body {
     height: 30px;
 }
 
-/* ===== 3-COLUMN LAYOUT =====
-   Each column has a flex-basis (its natural minimum width) and a
-   flex-grow weight (how much of the leftover space it soaks up
-   compared to the others). There are no max-width caps anymore, so
-   together the three columns always stretch to fill the full width
-   of the screen. flex-wrap still lets columns drop onto their own
-   line and stack automatically on a narrow phone/tablet screen. */
+/* ===== PAGE LAYOUT (two panes) =====
+   The page is two panes side by side, each exactly half the width:
+     - LEFT PANE  (.column-group): a visible box that holds the
+       Initiative column and the Dice Roller / Mob Attack Calculator
+       column next to each other, as one combined pane. It has a
+       single maximize button in its own header row. The Initiative
+       column is the wider share of the two.
+     - RIGHT PANE (.column-lookup): the Reference Information pane.
+   On a narrow screen (below 1100px) the two panes stack, with
+   Initiative and Dice sitting side by side inside the left pane
+   whenever there is room for both. */
 
 .columns-wrap {
     display: flex;
@@ -342,30 +346,81 @@ body {
     min-width: 0;
 }
 
+/* The visible box around Initiative + Dice Roller + Mob Attack
+   Calculator. The small bottom padding is because the last section
+   inside it already brings its own 10px bottom margin. */
+.column-group {
+    flex: 1 1 100%;
+    min-width: 0;
+    padding: 12px 12px 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+/* Inside the box, the three section squares sit slightly darker than
+   the box itself, so they stand out as squares within it. */
+.column-group section {
+    background: var(--bg);
+}
+
+.group-header-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+.column-group-body {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 14px;
+    min-width: 0;
+}
+
 .column-initiative {
-    flex: 2 1 380px;
+    flex: 5 1 260px;
 }
 
 .column-dice {
-    flex: 1 1 220px;
+    flex: 4 1 200px;
 }
 
 .column-lookup {
-    flex: 1.5 1 300px;
+    flex: 1 1 100%;
 }
 
-/* Above the point where the three columns sit side-by-side, each
-   column sticks to the top of the viewport as you scroll — so a
-   shorter column (e.g. Dice) "freezes" in place once you've scrolled
-   past it, instead of scrolling away, while the taller columns keep
-   moving. It naturally releases again once the tallest column's own
-   bottom comes into view, since a sticky element can never scroll
-   past the bottom of its own box. Below the breakpoint the columns
-   stack full-width, where sticking would just overlap content, so
-   it's switched off there. */
-@media (min-width: 950px) {
-    .column-initiative,
-    .column-dice {
+/* Wide screens: the two panes sit side by side, and everything is
+   sticky: both panes, plus the Initiative and Dice columns inside the
+   left pane. The exact "top" value of each is worked out by
+   updateStickyColumns() in dm-screen.js:
+     - something shorter than the screen sticks to the top of the
+       viewport (just under the site header);
+     - something taller than the screen scrolls until ITS OWN bottom
+       is in view, then stays fixed there while the rest keeps
+       scrolling.
+   The value below is only the fallback used until that script runs.
+   The 1100px here must match STICKY_LAYOUT_QUERY in dm-screen.js. */
+@media (min-width: 1100px) {
+    .columns-wrap {
+        flex-wrap: nowrap;
+    }
+
+    /* Each pane is exactly half of the row: half of the width, minus
+       half of the 14px gap between them. (A plain "flex: 1 1 0" would
+       make the left pane 26px wider, because its padding and border
+       would be added on top of an equal share.) */
+    .column-group,
+    .column-lookup {
+        flex: 1 1 calc(50% - 7px);
+    }
+
+    .column-group-body {
+        flex-wrap: nowrap;
+    }
+
+    .column-group,
+    .column {
         position: sticky;
         top: calc(var(--header-h) + 14px);
         align-self: flex-start;
@@ -393,6 +448,8 @@ body {
     overflow: hidden !important;
     pointer-events: none !important;
     margin: 0 !important;
+    padding: 0 !important;
+    border-width: 0 !important;
 }
 
 .columns-wrap.has-maximized .column-maximized {
@@ -400,6 +457,13 @@ body {
     max-width: 100%;
     position: static !important;
     top: auto !important;
+}
+
+/* The hidden panes have zero width, but the gaps between flex items
+   would still be there — remove them so the maximized pane really
+   does span the whole width. */
+.columns-wrap.has-maximized {
+    gap: 0;
 }
 
 /* While any pane is maximized, the site header (round counter, date,
@@ -746,7 +810,7 @@ input.row-ini {
 
 .controls-panel button {
     flex: 1;
-    min-width: 100px;
+    min-width: 80px;
 }
 
 .hidden {

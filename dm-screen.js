@@ -555,7 +555,21 @@ function parseBracketLine(line) {
   return { name: name, initiative: initiative };
 }
 
-// Reads the whole pasted block and returns a list of { name, initiative }.
+// How many lines below an "Initiative: roll" line the parser will look
+// for that roll's total. The search ALSO stops at the next "Initiative:
+// roll" line, so one roll can never pick up a number that belongs to
+// the next person's roll. (This used to be a fixed 3 lines, which was
+// too short whenever a roll's entry had extra lines in it — for example
+// an advantage/disadvantage roll — and the roll was then dropped
+// without any message.)
+const MAX_ROLL_LINES_AHEAD = 12;
+
+// Reads the whole pasted block. Returns { entries, skipped }:
+//   entries - the list of { name, initiative } that could be read
+//   skipped - one name per "Initiative: roll" line that was found but
+//             could not be read (no name above it, or no total below
+//             it), so the caller can tell you instead of silently
+//             ignoring it.
 function parseDump(text) {
   const rawLines = text.split('\n').map((l) => l.trim());
   // Drop blank lines and lines that are nothing but a lone bullet
@@ -563,6 +577,7 @@ function parseDump(text) {
   const lines = rawLines.filter((l) => l !== '' && !/^[*\-•]$/.test(l));
 
   const entries = [];
+  const skipped = [];
   let i = 0;
 
   while (i < lines.length) {
@@ -581,10 +596,21 @@ function parseDump(text) {
         }
       }
 
-      // Look up to 3 lines ahead for the roll result.
+      // This roll's own lines end where the next "Initiative: roll"
+      // line begins (or at the end of the pasted text).
+      let blockEnd = lines.length;
+      for (let next = i + 1; next < lines.length; next++) {
+        if (INITIATIVE_LINE.test(lines[next])) {
+          blockEnd = next;
+          break;
+        }
+      }
+      const searchEnd = Math.min(blockEnd, i + MAX_ROLL_LINES_AHEAD + 1);
+
+      // Look ahead (within this roll's own lines) for the roll result.
       let initiative = null;
       let numberLineIndex = -1;
-      for (let fwd = i + 1; fwd < lines.length && fwd <= i + 3; fwd++) {
+      for (let fwd = i + 1; fwd < searchEnd; fwd++) {
         if (PURE_NUMBER_LINE.test(lines[fwd])) {
           initiative = parseFloat(lines[fwd]);
           numberLineIndex = fwd;
@@ -594,6 +620,8 @@ function parseDump(text) {
 
       if (name && initiative !== null) {
         entries.push({ name: name, initiative: initiative });
+      } else {
+        skipped.push(name || '(no name found)');
       }
 
       i = numberLineIndex !== -1 ? numberLineIndex + 1 : i + 1;
@@ -608,7 +636,7 @@ function parseDump(text) {
     i += 1;
   }
 
-  return entries;
+  return { entries: entries, skipped: skipped };
 }
 
 // Groups entries by name (case-insensitively, so "Aragorn" and
@@ -823,10 +851,13 @@ function adjustDurationMinutes(delta) {
   save();
 }
 
-// "Next day" button: resets the adventuring clock back to 0h 0m,
-// without touching the chosen Starting time, and also advances the
+// "Next day" button: after confirmation, sets the Starting time to
+// 8:00 AM, resets the adventuring clock back to 0h 0m, and advances the
 // Date tracker by one day (with rollover into the next month/year).
-function resetTime() {
+async function resetTime() {
+  const confirmed = await confirmAction('Do you want to skip to 8AM the next day?');
+  if (!confirmed) return;
+  timeState.startTime = '8:00 AM';
   timeState.durHours = 0;
   timeState.durMinutes = 0;
   incrementDateDay(1);
@@ -835,16 +866,26 @@ function resetTime() {
   save();
 }
 
-// "Reset" button: resets the ENTIRE time tracker (including the Date
-// fields, since they live in the same header box) back to its default
-// state, after confirmation.
-async function resetTimeAll() {
-  const confirmed = await confirmAction('Reset the time tracker back to its default state (8:00 AM, 0h 0m)?');
+// "Sleep" button: after confirmation, moves the Starting time to 8
+// hours after the CURRENT time (Starting time + Duration adventured),
+// then sets Duration adventured back to 0h 0m. If those 8 hours of
+// sleep pass midnight (including landing exactly on 12:00 AM), the Date
+// tracker also advances by one day, rolling into the next month/year
+// when needed.
+async function sleepTime() {
+  const confirmed = await confirmAction('Do you want to sleep for 8 hours?');
   if (!confirmed) return;
-  timeState.startTime = '8:00 AM';
+  const startMinutes = parseTimeToMinutes(timeState.startTime);
+  const base = startMinutes === null ? 0 : startMinutes;
+  // Current time of day, in minutes since midnight (0-1439).
+  const currentMinutes = (((base + timeState.durHours * 60 + timeState.durMinutes) % 1440) + 1440) % 1440;
+  const wakeMinutes = currentMinutes + 8 * 60; // 1440 or more means the sleep passed midnight
+  if (wakeMinutes >= 1440) incrementDateDay(1);
+  timeState.startTime = formatMinutesToTimeString(wakeMinutes);
   timeState.durHours = 0;
   timeState.durMinutes = 0;
   renderTimeControls();
+  renderDateControls();
   save();
 }
 
@@ -1639,7 +1680,7 @@ function openAndFlashTarget(target) {
   // Give the browser a moment to lay out the newly opened content
   // before scrolling, so it lands in the right place.
   requestAnimationFrame(() => {
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    scrollTargetToCenter(target);
     target.classList.add('reference-flash');
     setTimeout(() => target.classList.remove('reference-flash'), 1500);
     updateScrollNav();
@@ -2639,14 +2680,91 @@ function rollResearch() {
     `<strong>${d20}</strong> ${rollLabel} + ${intMod} [Intelligence] + ${goldBonus} [gold bonus] = <strong>${total}</strong><br>${researchResultForTotal(total)}`;
 }
 
+// ---- STICKY COLUMNS (each pane scrolls to ITS bottom, then stays put) ----
+// On a wide screen the two panes (the left wrapper box, and Reference
+// Information) sit side by side and are both "sticky"; inside the
+// wrapper box, the Initiative column and the Dice Roller / Mob Attack
+// Calculator column are sticky within it as well. Each one gets its own
+// sticky "top" value:
+//   - something SHORTER than the screen is pinned just under the site
+//     header, so it stays in view while the page scrolls;
+//   - something TALLER than the screen gets a negative "top", which
+//     makes it scroll normally until ITS OWN bottom reaches the bottom
+//     of the screen, and then stay fixed there while the rest keeps
+//     scrolling.
+// The values depend on current heights, so they are recalculated
+// whenever a size changes or the window is resized.
+
+const STICKY_LAYOUT_QUERY = '(min-width: 1100px)'; // must match the media query in styles.css
+const STICKY_TOP_GAP = 14;     // space left under the site header (same 14px used in styles.css)
+const STICKY_BOTTOM_GAP = 32;  // matches the 32px of padding at the bottom of <body>
+
+// A column inside the wrapper box ends a little above the wrapper's own
+// bottom edge (the wrapper's padding and border). Returns that distance,
+// so the column's "stay fixed" position can allow for it. Zero for the
+// wrapper box itself and for the Reference pane.
+function stickyExtraBottomGap(pane) {
+  const outer = pane.closest('.column-group');
+  if (!outer || outer === pane || !pane.parentElement) return 0;
+  const gap = outer.getBoundingClientRect().bottom - pane.parentElement.getBoundingClientRect().bottom;
+  return gap > 0 ? gap : 0;
+}
+
+function updateStickyColumns() {
+  const panes = document.querySelectorAll('.column-group, .column');
+  const sideBySide = window.matchMedia(STICKY_LAYOUT_QUERY).matches;
+
+  if (!sideBySide) {
+    // Stacked (narrow) layout: nothing sticks, so remove any value set earlier.
+    panes.forEach((pane) => {
+      pane.style.top = '';
+    });
+    return;
+  }
+
+  const headerEl = document.querySelector('.app-header');
+  const headerH = headerEl ? headerEl.offsetHeight : 0;
+  const topOffset = headerH + STICKY_TOP_GAP;
+  const viewportH = document.documentElement.clientHeight;
+
+  panes.forEach((pane) => {
+    const paneH = pane.getBoundingClientRect().height;
+    const top = Math.min(topOffset, viewportH - paneH - STICKY_BOTTOM_GAP - stickyExtraBottomGap(pane));
+    pane.style.top = top + 'px';
+  });
+}
+
+// Scrolls the page so that "target" ends up in the vertical middle of
+// the screen. This replaces scrollIntoView for the Reference links:
+// a pane that is currently pinned (sticky) is drawn away from the spot
+// it would normally occupy, and scrollIntoView doesn't know that, so
+// it could scroll the wrong distance. This works out where the target
+// would normally sit and scrolls to centre THAT.
+function scrollTargetToCenter(target) {
+  updateStickyColumns();
+
+  let shift = 0;
+  const column = target.closest('.column');
+  if (column && column.parentElement && window.getComputedStyle(column).position === 'sticky') {
+    shift = column.getBoundingClientRect().top - column.parentElement.getBoundingClientRect().top;
+    if (shift < 0) shift = 0;
+  }
+
+  const rect = target.getBoundingClientRect();
+  const normalCenter = rect.top + rect.height / 2 - shift;
+  const delta = normalCenter - document.documentElement.clientHeight / 2;
+  window.scrollBy({ top: delta, behavior: 'smooth' });
+}
+
 // ---- PANE MAXIMIZE / MINIMIZE ----
-// Each of the three columns (Initiative, Dice, Reference) has its own
-// maximize button. Pressing it hides the other two columns (collapsed
-// via CSS rather than removed from the DOM, so nothing about their
-// state is lost) and lets the pressed column fill the page, with the
-// site header hidden out of the way too; pressing it again (now
-// showing as a minimize icon) brings everything back. Only one column
-// can be maximized at a time.
+// The page has two panes, each with its own maximize button: the
+// left-half wrapper box (Initiative + Dice Roller + Mob Attack
+// Calculator, one combined pane) and the Reference pane. Pressing a
+// pane's button hides the other pane (collapsed via CSS rather than
+// removed from the DOM, so nothing about its state is lost) and lets
+// the pressed pane fill the page, with the site header hidden out of
+// the way too; pressing it again (now showing as a minimize icon)
+// brings everything back. Only one pane can be maximized at a time.
 
 const PANE_MAXIMIZE_ANIM_MS = 340; // must stay >= the CSS transition duration used on .column-maximized
 
@@ -2659,36 +2777,37 @@ function togglePaneMaximize(columnId) {
 
   clearTimeout(paneMaximizeAnimTimeout);
 
+  // The other pane (a direct child of the page row): the Reference
+  // pane while the wrapper box is pressed, and vice versa.
+  const otherPanes = Array.from(wrap.children).filter(
+    (el) => el !== column && (el.classList.contains('column-group') || el.classList.contains('column'))
+  );
+
   const wasMaximized = column.classList.contains('column-maximized');
-  const otherColumns = Array.from(document.querySelectorAll('.column')).filter((c) => c !== column);
 
   if (wasMaximized) {
-    // MINIMIZING. The other two columns are kept fully collapsed
-    // (zero width, no transition on them) for the whole duration of
-    // this pane's shrink-back animation, so it always has the entire
-    // row's width available to animate through cleanly, instead of
-    // competing with siblings whose width is changing at the same
-    // time. Only once the shrink finishes do the other columns (and
-    // the site header) reappear.
+    // MINIMIZING. The other pane is kept fully collapsed (zero width,
+    // no transition on it) until the delay below has passed. Only then
+    // does it (and the site header) reappear.
     wrap.classList.remove('has-maximized');
     updatePaneMaximizeButtons();
 
     paneMaximizeAnimTimeout = setTimeout(() => {
-      otherColumns.forEach((c) => c.classList.remove('column-collapsed'));
+      otherPanes.forEach((el) => el.classList.remove('column-collapsed'));
       column.classList.remove('column-maximized');
       document.body.classList.remove('pane-maximized');
+      updatePaneMaximizeButtons();
       updateScrollNav();
       syncLookupHeaderMask();
+      updateStickyColumns();
     }, PANE_MAXIMIZE_ANIM_MS);
   } else {
-    // MAXIMIZING. The other two columns collapse instantly (no
-    // transition on them at all — see .column-collapsed), so by the
-    // time this pane's own grow transition starts, it already has the
-    // full row width to expand into with nothing else competing for
-    // space, which is what keeps the expand animation smooth.
+    // MAXIMIZING. The other pane collapses instantly (no transition on
+    // it at all — see .column-collapsed), so the pressed pane already
+    // has the full row width to expand into.
     document.body.classList.add('pane-maximized');
     window.scrollTo({ top: 0, behavior: 'auto' });
-    otherColumns.forEach((c) => c.classList.add('column-collapsed'));
+    otherPanes.forEach((el) => el.classList.add('column-collapsed'));
     column.classList.add('column-maximized');
     // Force layout to flush the instant collapse above before adding
     // has-maximized, so the browser has something concrete (0 width)
@@ -2778,6 +2897,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const syncHeaderHeight = () => {
     if (!headerEl) return;
     document.documentElement.style.setProperty('--header-h', headerEl.offsetHeight + 'px');
+    updateStickyColumns();
   };
   syncHeaderHeight();
   if (headerEl && typeof ResizeObserver !== 'undefined') {
@@ -2805,6 +2925,17 @@ document.addEventListener('DOMContentLoaded', () => {
     new ResizeObserver(syncLookupHeaderMask).observe(lookupPanelEl);
   }
   window.addEventListener('resize', syncLookupHeaderMask);
+
+  // Sticky panes: recalculate each pane's sticky position whenever
+  // anything changes height (combatants added, dropdowns opened or
+  // closed, search filtering, roll results appearing, ...) and
+  // whenever the window is resized.
+  updateStickyColumns();
+  if (typeof ResizeObserver !== 'undefined') {
+    const stickyObserver = new ResizeObserver(updateStickyColumns);
+    document.querySelectorAll('.column-group, .column').forEach((pane) => stickyObserver.observe(pane));
+  }
+  window.addEventListener('resize', updateStickyColumns);
 
   load();
   render();
@@ -2894,15 +3025,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // "Parse & add" button for the pasted list
   document.getElementById('parseBtn').addEventListener('click', async () => {
     const textarea = document.getElementById('dumpInput');
-    const entries = parseDump(textarea.value);
+    const parsed = parseDump(textarea.value);
+    const entries = parsed.entries;
+    const skipped = parsed.skipped;
 
-    if (entries.length === 0) {
+    if (entries.length === 0 && skipped.length === 0) {
       showToast('No valid rolls found in the pasted text');
       return;
     }
 
-    const addedCount = await processParsedEntries(entries);
-    textarea.value = '';
+    const addedCount = entries.length > 0 ? await processParsedEntries(entries) : 0;
+
+    if (skipped.length > 0) {
+      // Some "Initiative: roll" lines were spotted but couldn't be read.
+      // Say so, and leave the pasted text in the box so it can be looked at.
+      await showModal(
+        'These initiative rolls were found in the pasted text but could not be read, so they were not added: ' +
+        skipped.join(', ') + '. Please add them manually above. The pasted text has been left in the box.',
+        [{ label: 'OK', value: 'ok', className: 'btn-primary' }]
+      );
+    } else {
+      textarea.value = '';
+    }
 
     if (addedCount > 0) {
       showToast(addedCount + (addedCount === 1 ? ' combatant added' : ' combatants added'));
@@ -3033,9 +3177,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('durMinutesUp').addEventListener('click', () => adjustDurationMinutes(10));
   document.getElementById('durMinutesDown').addEventListener('click', () => adjustDurationMinutes(-10));
 
-  // Time tracker: "Next day" (no confirmation) and "Reset" (with confirmation) buttons
+  // Time tracker: "Next day" and "Sleep" buttons (each asks for confirmation first)
   document.getElementById('nextDayBtn').addEventListener('click', resetTime);
-  document.getElementById('resetTimeAllBtn').addEventListener('click', resetTimeAll);
+  document.getElementById('sleepBtn').addEventListener('click', sleepTime);
 
   // Bottom control bar
   document.getElementById('swapBtn').addEventListener('click', swapSelected);

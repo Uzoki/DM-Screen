@@ -96,8 +96,8 @@
             <input type="text" id="currentTimeInput" class="time-text-input" value="8:00 AM" />
           </div>
 
-          <button id="nextDayBtn" class="btn-primary time-reset-btn" type="button">Next day</button>
-          <button id="resetTimeAllBtn" class="btn-danger time-reset-btn" type="button">Reset</button>
+          <button id="nextDayBtn" class="btn-danger time-reset-btn" type="button">Next day</button>
+          <button id="sleepBtn" class="btn-danger time-reset-btn" type="button">Sleep</button>
 
         </div>
 
@@ -106,114 +106,121 @@
 
     <div class="columns-wrap">
 
-      <div class="column column-initiative" id="paneInitiative">
-        <section class="group-panel">
-          <div class="section-header-row">
-            <h2>Initiative</h2>
-            <button class="pane-maximize-btn" data-column="paneInitiative" type="button" aria-label="Maximize pane">
-              <svg class="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-              <svg class="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4a1 1 0 0 1-1 1H4M15 3v4a1 1 0 0 0 1 1h4M9 21v-4a1 1 0 0 0-1-1H4M15 21v-4a1 1 0 0 1 1-1h4"/></svg>
-            </button>
-          </div>
+      <div class="column-group" id="paneGroup">
 
-          <div class="sub-panel">
-            <h3>Add a combatant</h3>
-            <form id="addForm" class="add-form">
-              <input type="text" id="nameInput" placeholder="Name" required />
-              <input type="number" id="iniInput" placeholder="Initiative" required />
-              <button type="submit" class="btn-primary">Add</button>
-            </form>
-          </div>
+        <div class="group-header-row">
+          <button class="pane-maximize-btn" data-column="paneGroup" type="button" aria-label="Maximize pane">
+            <svg class="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+            <svg class="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4a1 1 0 0 1-1 1H4M15 3v4a1 1 0 0 0 1 1h4M9 21v-4a1 1 0 0 0-1-1H4M15 21v-4a1 1 0 0 1 1-1h4"/></svg>
+          </button>
+        </div>
 
-          <div class="sub-panel">
-            <h3>Paste a List</h3>
-            <div class="dump-area">
-              <textarea id="dumpInput" rows="4"></textarea>
-              <div class="dump-controls">
-                <button id="parseBtn" class="btn-secondary" type="button">Parse &amp; add</button>
+        <div class="column-group-body">
+
+          <div class="column column-initiative" id="paneInitiative">
+            <section class="group-panel">
+              <div class="section-header-row">
+                <h2>Initiative</h2>
               </div>
-            </div>
+
+              <div class="sub-panel">
+                <h3>Add a combatant</h3>
+                <form id="addForm" class="add-form">
+                  <input type="text" id="nameInput" placeholder="Name" required />
+                  <input type="number" id="iniInput" placeholder="Initiative" required />
+                  <button type="submit" class="btn-primary">Add</button>
+                </form>
+              </div>
+
+              <div class="sub-panel">
+                <h3>Paste a List</h3>
+                <div class="dump-area">
+                  <textarea id="dumpInput" rows="4"></textarea>
+                  <div class="dump-controls">
+                    <button id="parseBtn" class="btn-secondary" type="button">Parse &amp; add</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sub-panel">
+                <h3>Turn order</h3>
+                <ol id="trackerList" class="tracker-list"></ol>
+              </div>
+
+              <div class="controls-panel">
+                <button id="swapBtn" class="btn-primary hidden" type="button">Swap</button>
+                <button id="undoBtn" class="btn-secondary" type="button">Undo</button>
+                <button id="copyBtn" class="btn-secondary">Copy list</button>
+                <button id="clearBtn" class="btn-danger">Clear list</button>
+              </div>
+            </section>
           </div>
 
-          <div class="sub-panel">
-            <h3>Turn order</h3>
-            <ol id="trackerList" class="tracker-list"></ol>
+          <div class="column column-dice" id="paneDice">
+            <section class="dice-panel">
+              <div class="section-header-row">
+                <h2>Dice Roller</h2>
+              </div>
+
+              <div class="dice-count-row">
+                <div class="dice-count-control">
+                  <button id="diceCountDown" class="round-btn" type="button" aria-label="Decrease dice count">−</button>
+                  <input type="number" id="diceCountInput" class="dice-count-input" value="1" min="1" />
+                  <button id="diceCountUp" class="round-btn" type="button" aria-label="Increase dice count">+</button>
+                </div>
+                <div class="modifier-control">
+                  <input type="number" id="modifierInput" class="modifier-input" placeholder="Modifier" />
+                </div>
+              </div>
+
+              <div class="die-buttons">
+                <button class="die-btn" data-sides="4" type="button">d4</button>
+                <button class="die-btn" data-sides="6" type="button">d6</button>
+                <button class="die-btn" data-sides="8" type="button">d8</button>
+                <button class="die-btn" data-sides="10" type="button">d10</button>
+                <button class="die-btn" data-sides="12" type="button">d12</button>
+                <button class="die-btn" data-sides="20" type="button">d20</button>
+                <button class="die-btn" data-sides="100" type="button">d100</button>
+              </div>
+
+              <div id="diceResult" class="dice-result"></div>
+
+              <div class="panel-footer">
+                <button id="diceClearBtn" class="btn-danger" type="button">Clear</button>
+              </div>
+            </section>
+
+            <section class="mob-panel">
+              <h2>Mob Attack Calculator</h2>
+
+              <div class="mob-inputs">
+                <input type="number" id="mobAttacksInput" placeholder="Attacks" min="1" />
+                <input type="number" id="mobBonusInput" placeholder="Atk bonus" />
+                <input type="number" id="mobACInput" placeholder="Target AC" />
+              </div>
+
+              <div class="mob-dmg-row">
+                <input type="text" id="mobDmgInput" class="mob-dmg-input" placeholder="Damage (optional), e.g. 1d8+3 force + 2d4 acid" />
+              </div>
+
+              <div class="mob-adv-row">
+                <label class="mob-check"><input type="checkbox" id="mobAdvCheck" /> Advantage</label>
+                <label class="mob-check"><input type="checkbox" id="mobDisCheck" /> Disadvantage</label>
+              </div>
+
+              <div id="mobAutoResult" class="mob-auto-result"></div>
+
+              <div class="panel-footer">
+                <button id="mobRollBtn" class="btn-primary" type="button">Roll attacks</button>
+                <button id="mobClearBtn" class="btn-danger" type="button">Clear</button>
+              </div>
+
+              <div id="mobRollResult" class="dice-result"></div>
+            </section>
           </div>
 
-          <div class="controls-panel">
-            <button id="swapBtn" class="btn-primary hidden" type="button">Swap</button>
-            <button id="undoBtn" class="btn-secondary" type="button">Undo</button>
-            <button id="copyBtn" class="btn-secondary">Copy list</button>
-            <button id="clearBtn" class="btn-danger">Clear list</button>
-          </div>
-        </section>
-      </div>
+        </div>
 
-      <div class="column column-dice" id="paneDice">
-        <section class="dice-panel">
-          <div class="section-header-row">
-            <h2>Dice Roller</h2>
-            <button class="pane-maximize-btn" data-column="paneDice" type="button" aria-label="Maximize pane">
-              <svg class="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-              <svg class="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4a1 1 0 0 1-1 1H4M15 3v4a1 1 0 0 0 1 1h4M9 21v-4a1 1 0 0 0-1-1H4M15 21v-4a1 1 0 0 1 1-1h4"/></svg>
-            </button>
-          </div>
-
-          <div class="dice-count-row">
-            <div class="dice-count-control">
-              <button id="diceCountDown" class="round-btn" type="button" aria-label="Decrease dice count">−</button>
-              <input type="number" id="diceCountInput" class="dice-count-input" value="1" min="1" />
-              <button id="diceCountUp" class="round-btn" type="button" aria-label="Increase dice count">+</button>
-            </div>
-            <div class="modifier-control">
-              <input type="number" id="modifierInput" class="modifier-input" placeholder="Modifier" />
-            </div>
-          </div>
-
-          <div class="die-buttons">
-            <button class="die-btn" data-sides="4" type="button">d4</button>
-            <button class="die-btn" data-sides="6" type="button">d6</button>
-            <button class="die-btn" data-sides="8" type="button">d8</button>
-            <button class="die-btn" data-sides="10" type="button">d10</button>
-            <button class="die-btn" data-sides="12" type="button">d12</button>
-            <button class="die-btn" data-sides="20" type="button">d20</button>
-            <button class="die-btn" data-sides="100" type="button">d100</button>
-          </div>
-
-          <div id="diceResult" class="dice-result"></div>
-
-          <div class="panel-footer">
-            <button id="diceClearBtn" class="btn-danger" type="button">Clear</button>
-          </div>
-        </section>
-
-        <section class="mob-panel">
-          <h2>Mob Attack Calculator</h2>
-
-          <div class="mob-inputs">
-            <input type="number" id="mobAttacksInput" placeholder="Attacks" min="1" />
-            <input type="number" id="mobBonusInput" placeholder="Atk bonus" />
-            <input type="number" id="mobACInput" placeholder="Target AC" />
-          </div>
-
-          <div class="mob-dmg-row">
-            <input type="text" id="mobDmgInput" class="mob-dmg-input" placeholder="Damage (optional), e.g. 1d8+3 force + 2d4 acid" />
-          </div>
-
-          <div class="mob-adv-row">
-            <label class="mob-check"><input type="checkbox" id="mobAdvCheck" /> Advantage</label>
-            <label class="mob-check"><input type="checkbox" id="mobDisCheck" /> Disadvantage</label>
-          </div>
-
-          <div id="mobAutoResult" class="mob-auto-result"></div>
-
-          <div class="panel-footer">
-            <button id="mobRollBtn" class="btn-primary" type="button">Roll attacks</button>
-            <button id="mobClearBtn" class="btn-danger" type="button">Clear</button>
-          </div>
-
-          <div id="mobRollResult" class="dice-result"></div>
-        </section>
       </div>
 
       <div class="column column-lookup" id="paneLookup">
