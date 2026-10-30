@@ -1709,6 +1709,64 @@ details.condition-dropdown[open] summary::before {
     background: transparent;
 }
 
+/* ===== MONSTER STAT BLOCKS (2024 layout) =====
+   Used by every entry in the Monsters dropdown (see monsters-data.js):
+   gold rules above and below the block, small gold-ruled section headings
+   (Traits, Actions, ...), and a compact ability table with Score / Mod /
+   Save for all six abilities. */
+
+.stat-block {
+    border-top: 3px solid var(--gold);
+    border-bottom: 3px solid var(--gold);
+    padding: 6px 0 4px;
+    margin-top: 6px;
+}
+
+.stat-block p {
+    margin: 3px 0;
+}
+
+.stat-block h4 {
+    margin: 12px 0 4px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--gold);
+    font-size: 0.84rem;
+}
+
+.stat-block ul {
+    margin: 2px 0 6px;
+}
+
+.stat-abilities {
+    margin: 8px 0;
+}
+
+.stat-abilities th,
+.stat-abilities td {
+    padding: 3px 3px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+}
+
+.stat-abilities thead th {
+    font-family: var(--font-body);
+    font-size: 0.58rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    background: transparent;
+}
+
+.stat-abilities tbody th {
+    text-align: left;
+}
+
+.stat-source {
+    margin-top: 8px !important;
+    color: var(--text-muted);
+}
+
 /* ===== SCROLL NAV (up / down) BUTTON =====
    A single fixed, circular control bottom-center. It can show as:
      - nothing at all (the whole page already fits on screen)

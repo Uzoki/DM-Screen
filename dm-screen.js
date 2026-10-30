@@ -1547,7 +1547,7 @@ async function clearMobCalculator() {
 // too numerous) to hand-write in index.html, so their content lives
 // as plain data (see lore-data.js / spells-data.js / conditions-data.js
 // / rules-glossary-data.js / classes-data.js / feats-data.js /
-// rules-data.js / items-data.js / magic-items-data.js) in the shape
+// rules-data.js / items-data.js / magic-items-data.js / monsters-data.js) in the shape
 // { intro: "<p>...</p>", entries: [ { id, title, html, children? },
 // ... ] }, where "children" (if present) is an array of more entries
 // in the same shape, nested as deep as needed. This builds the actual
@@ -1672,6 +1672,7 @@ function renderDataDrivenReferenceSections() {
     const itemsList = itemsContainer ? itemsContainer.querySelector('.condition-list') : null;
     if (itemsList) itemsList.insertAdjacentHTML('beforeend', renderDataEntryHtml(MAGIC_ITEMS_DATA));
   }
+  if (typeof MONSTERS_DATA !== 'undefined') renderDataSection(MONSTERS_DATA, 'monstersContainer');
   applyDefaultOpenState();
 }
 
