@@ -1558,7 +1558,25 @@ async function clearMobCalculator() {
 
 // Turns one data entry (and any nested children) into its
 // <details class="condition-dropdown"> HTML string.
+// An entry marked "lazy": true in a data file (every monster) is built as an
+// empty dropdown. Its html is kept here and only turned into page elements
+// the first time the dropdown is opened (see fillLazyEntry below), so the
+// thousands of stat blocks don't slow down the page or the search.
+const lazyEntryHtml = new Map();
+const lazyEntryText = new Map();
+const LAZY_AUTO_OPEN_LIMIT = 12; // a search opens matching lazy entries only when there are this few
+let lastHighlight = null;        // the search terms most recently highlighted, so a stat block opened later is highlighted too
+
 function renderDataEntryHtml(entry) {
+  if (entry.lazy) {
+    lazyEntryHtml.set(entry.id, entry.html || '');
+    return (
+      '<details class="condition-dropdown" id="' + entry.id + '" data-lazy="1">' +
+      '<summary>' + entry.title + '</summary>' +
+      '<div class="condition-body"></div>' +
+      '</details>'
+    );
+  }
   const hasChildren = Array.isArray(entry.children) && entry.children.length > 0;
   const bodyHtml = entry.html || '';
   const childrenHtml = hasChildren
@@ -1570,6 +1588,49 @@ function renderDataEntryHtml(entry) {
     '<div class="condition-body">' + bodyHtml + childrenHtml + '</div>' +
     '</details>'
   );
+}
+
+// Builds the real contents of a lazy dropdown the first time it is needed.
+function fillLazyEntry(el, skipHighlight) {
+  if (!el || !el.dataset || el.dataset.lazy !== '1') return;
+  el.dataset.lazy = '2';
+  const body = el.querySelector(':scope > .condition-body');
+  if (!body) return;
+  body.innerHTML = lazyEntryHtml.get(el.id) || '';
+  addSearchBarTo(el);
+  if (!skipHighlight && lastHighlight) {
+    highlightMatchesWithin(el, lastHighlight.terms, lastHighlight.wholeWord);
+  }
+}
+
+// The searchable text of a lazy dropdown (its title plus the text of its
+// stat block), worked out from the stored html so nothing has to be built.
+function lazyOwnText(el) {
+  let t = lazyEntryText.get(el.id);
+  if (t === undefined) {
+    const summary = el.querySelector(':scope > summary');
+    const plain = (lazyEntryHtml.get(el.id) || '')
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, '\u00a0')
+      .replace(/&mdash;/g, '\u2014')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&');
+    t = ((summary ? summary.textContent : '') + plain).toLowerCase();
+    lazyEntryText.set(el.id, t);
+  }
+  return t;
+}
+
+// A search that matches only a handful of lazy dropdowns opens them; a search
+// that matches hundreds leaves them closed (their names are listed).
+function openFewLazyMatches(list) {
+  if (list.length === 0 || list.length > LAZY_AUTO_OPEN_LIMIT) return;
+  list.forEach((el) => {
+    el.open = true;
+    fillLazyEntry(el, true);
+  });
 }
 
 // Renders a whole data object (intro + top-level entries) into the given
@@ -1702,6 +1763,8 @@ function openAndFlashTarget(target) {
     el = el.parentElement;
   }
 
+  fillLazyEntry(target);
+
   // Remember this newly opened state so a page refresh keeps it —
   // but only when there's no active search filter, since a
   // search-driven reveal shouldn't overwrite the saved base layout.
@@ -1828,6 +1891,7 @@ function loadReferenceState() {
         el.open = state[el.id];
       }
     });
+    document.querySelectorAll('details[data-lazy="1"][open]').forEach((el) => fillLazyEntry(el, true));
   } catch (err) {
     console.warn('Could not load saved reference pane state:', err);
   }
@@ -1900,6 +1964,7 @@ function parseReferenceSearchTerms(query) {
 // the search terms happen to appear somewhere in its enormous combined
 // nested text.
 function collectOwnReferenceText(el) {
+  if (el.dataset && el.dataset.lazy) return lazyOwnText(el);
   let text = '';
   el.childNodes.forEach((child) => {
     if (child.nodeType === Node.TEXT_NODE) {
@@ -1952,20 +2017,26 @@ function clearReferenceHighlights() {
 // currently-visible (non search-hidden) dropdowns is touched, and text
 // belonging to an injected search box itself is skipped.
 function highlightMatchesWithin(rootEl, terms, wholeWord) {
+  lastHighlight = terms.length > 0 ? { terms: terms, wholeWord: wholeWord } : null;
   if (terms.length === 0) return;
+  if (rootEl.closest && rootEl.closest('.search-hidden')) return;
 
   const escaped = terms.map((term) => escapeRegex(term));
   const pattern = wholeWord
     ? new RegExp('\\b(' + escaped.join('|') + ')\\b', 'gi')
     : new RegExp('(' + escaped.join('|') + ')', 'gi');
 
-  const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_TEXT, {
+  // Hidden dropdowns and injected search boxes are skipped as whole branches
+  // (rather than checking every text node inside them one by one).
+  const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
     acceptNode: (node) => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        if (node.classList.contains('search-hidden') || node.classList.contains('dropdown-search-row')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_SKIP;
+      }
       if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-      const parentEl = node.parentElement;
-      if (!parentEl) return NodeFilter.FILTER_REJECT;
-      if (parentEl.closest('.search-hidden')) return NodeFilter.FILTER_REJECT;
-      if (parentEl.closest('.dropdown-search-row')) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     }
   });
@@ -2028,6 +2099,7 @@ function performScopedSearch(scopeEl, rawQuery, wholeWord) {
   clearHighlightsWithin(scopeEl);
 
   if (terms.length === 0) {
+    lastHighlight = null;
     allDetails.forEach((el) => el.classList.remove('search-hidden'));
     updateScrollNav();
     return;
@@ -2039,14 +2111,19 @@ function performScopedSearch(scopeEl, rawQuery, wholeWord) {
     ownMatches.set(el, terms.every((term) => textContainsTerm(text, term, wholeWord)));
   });
 
+  const matchedLazy = [];
   allDetails.forEach((el) => {
     let show = ownMatches.get(el);
     if (!show) {
       show = Array.from(el.querySelectorAll('details')).some((child) => ownMatches.get(child));
     }
     el.classList.toggle('search-hidden', !show);
-    if (show) el.open = true;
+    if (show) {
+      if (el.dataset.lazy) matchedLazy.push(el);
+      else el.open = true;
+    }
   });
+  openFewLazyMatches(matchedLazy);
 
   highlightMatchesWithin(scopeEl, terms, wholeWord);
   updateScrollNav();
@@ -2064,6 +2141,7 @@ function performReferenceSearch(rawQuery) {
 
   if (terms.length === 0) {
     referenceSearchActive = false;
+    lastHighlight = null;
     allDetails.forEach((el) => el.classList.remove('search-hidden'));
     loadReferenceState();
     updateScrollNav();
@@ -2078,6 +2156,7 @@ function performReferenceSearch(rawQuery) {
     ownMatches.set(el, terms.every((term) => textContainsTerm(text, term, wholeWord)));
   });
 
+  const matchedLazy = [];
   allDetails.forEach((el) => {
     let show = ownMatches.get(el);
     if (!show) {
@@ -2085,9 +2164,11 @@ function performReferenceSearch(rawQuery) {
     }
     el.classList.toggle('search-hidden', !show);
     if (show) {
-      el.open = true;
+      if (el.dataset.lazy) matchedLazy.push(el);
+      else el.open = true;
     }
   });
+  openFewLazyMatches(matchedLazy);
 
   highlightReferenceMatches(terms, wholeWord);
   updateScrollNav();
@@ -2104,51 +2185,54 @@ function performReferenceSearch(rawQuery) {
 // have rendered, so a brand-new dropdown added later (by hand or via a
 // new data file) automatically gets one too — nothing here needs to
 // know what's inside any of them.
+function addSearchBarTo(detailsEl) {
+  const summaryEl = detailsEl.querySelector(':scope > summary');
+  const bodyEl = detailsEl.querySelector(':scope > .dropdown-body, :scope > .condition-body');
+  if (!summaryEl || !bodyEl) return;
+  if (bodyEl.querySelector(':scope > .dropdown-search-row')) return; // already has one
+
+  const title = summaryEl.textContent.trim();
+
+  const row = document.createElement('div');
+  row.className = 'dropdown-search-row';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'dropdown-search-input';
+  input.placeholder = 'Search within "' + title + '"';
+
+  const select = document.createElement('select');
+  select.className = 'dropdown-search-mode';
+  const optPartial = document.createElement('option');
+  optPartial.value = 'partial';
+  optPartial.textContent = 'Partial word';
+  optPartial.selected = true;
+  const optWhole = document.createElement('option');
+  optWhole.value = 'whole';
+  optWhole.textContent = 'Whole word';
+  select.appendChild(optPartial);
+  select.appendChild(optWhole);
+
+  row.appendChild(input);
+  row.appendChild(select);
+  bodyEl.insertBefore(row, bodyEl.firstChild);
+
+  const runSearch = () => {
+    performScopedSearch(detailsEl, input.value, getSearchModeFor(select) === 'whole');
+  };
+
+  input.addEventListener('input', runSearch);
+  select.addEventListener('change', runSearch);
+
+  // Typing/clicking inside the search row shouldn't be treated as a
+  // click on the <summary> that closes the dropdown.
+  row.addEventListener('click', (e) => e.stopPropagation());
+}
+
 function initDropdownSearchBars() {
-  const allDetails = document.querySelectorAll('.lookup-panel details');
-
-  allDetails.forEach((detailsEl) => {
-    const summaryEl = detailsEl.querySelector(':scope > summary');
-    const bodyEl = detailsEl.querySelector(':scope > .dropdown-body, :scope > .condition-body');
-    if (!summaryEl || !bodyEl) return;
-    if (bodyEl.querySelector(':scope > .dropdown-search-row')) return; // already has one
-
-    const title = summaryEl.textContent.trim();
-
-    const row = document.createElement('div');
-    row.className = 'dropdown-search-row';
-
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'dropdown-search-input';
-    input.placeholder = 'Search within "' + title + '"';
-
-    const select = document.createElement('select');
-    select.className = 'dropdown-search-mode';
-    const optPartial = document.createElement('option');
-    optPartial.value = 'partial';
-    optPartial.textContent = 'Partial word';
-    optPartial.selected = true;
-    const optWhole = document.createElement('option');
-    optWhole.value = 'whole';
-    optWhole.textContent = 'Whole word';
-    select.appendChild(optPartial);
-    select.appendChild(optWhole);
-
-    row.appendChild(input);
-    row.appendChild(select);
-    bodyEl.insertBefore(row, bodyEl.firstChild);
-
-    const runSearch = () => {
-      performScopedSearch(detailsEl, input.value, getSearchModeFor(select) === 'whole');
-    };
-
-    input.addEventListener('input', runSearch);
-    select.addEventListener('change', runSearch);
-
-    // Typing/clicking inside the search row shouldn't be treated as a
-    // click on the <summary> that closes the dropdown.
-    row.addEventListener('click', (e) => e.stopPropagation());
+  // A lazy dropdown gets its search box when it is filled (see fillLazyEntry).
+  document.querySelectorAll('.lookup-panel details').forEach((detailsEl) => {
+    if (!detailsEl.dataset.lazy) addSearchBarTo(detailsEl);
   });
 }
 
@@ -2995,6 +3079,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadReferenceState();
   getAllReferenceDetails().forEach((el) => {
     el.addEventListener('toggle', () => {
+      if (el.open) fillLazyEntry(el);
       if (!referenceSearchActive) saveReferenceState();
       updateScrollNav();
     });
