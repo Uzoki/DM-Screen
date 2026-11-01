@@ -409,12 +409,12 @@ function commitIniEdit(input) {
 // ---- TOAST (the little confirmation message at the bottom) ----
 
 let toastTimeout;
-function showToast(message) {
+function showToast(message, duration) {
   const toast = document.getElementById('toast');
   toast.textContent = message;
   toast.classList.remove('hidden');
   clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => toast.classList.add('hidden'), 2400);
+  toastTimeout = setTimeout(() => toast.classList.add('hidden'), duration || 2400);
 }
 
 // ---- MODAL (pop-up questions) ----
@@ -1972,7 +1972,8 @@ function collectOwnReferenceText(el) {
     } else if (
       child.nodeType === Node.ELEMENT_NODE &&
       child.tagName !== 'DETAILS' &&
-      !child.classList.contains('dropdown-search-row')
+      !child.classList.contains('dropdown-search-row') &&
+      !child.classList.contains('add-to-combat-row')
     ) {
       text += collectOwnReferenceText(child);
     }
@@ -2031,7 +2032,11 @@ function highlightMatchesWithin(rootEl, terms, wholeWord) {
   const walker = document.createTreeWalker(rootEl, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
     acceptNode: (node) => {
       if (node.nodeType === Node.ELEMENT_NODE) {
-        if (node.classList.contains('search-hidden') || node.classList.contains('dropdown-search-row')) {
+        if (
+          node.classList.contains('search-hidden') ||
+          node.classList.contains('dropdown-search-row') ||
+          node.classList.contains('add-to-combat-row')
+        ) {
           return NodeFilter.FILTER_REJECT;
         }
         return NodeFilter.FILTER_SKIP;
@@ -2217,6 +2222,9 @@ function addSearchBarTo(detailsEl) {
   row.appendChild(select);
   bodyEl.insertBefore(row, bodyEl.firstChild);
 
+  // Monster stat blocks also get an "Add to combat" row right under the search bar.
+  addCombatRowTo(detailsEl, bodyEl, row);
+
   const runSearch = () => {
     performScopedSearch(detailsEl, input.value, getSearchModeFor(select) === 'whole');
   };
@@ -2234,6 +2242,173 @@ function initDropdownSearchBars() {
   document.querySelectorAll('.lookup-panel details').forEach((detailsEl) => {
     if (!detailsEl.dataset.lazy) addSearchBarTo(detailsEl);
   });
+}
+
+// ---- ADD A MONSTER TO COMBAT (button under each stat block's search bar) ----
+// Every monster dropdown (any <details> whose id starts with "monster-")
+// automatically gets a yellow "Add to combat" button, plus "Initiative
+// advantage" and "Initiative disadvantage" checkboxes, placed directly
+// under its search bar (see addSearchBarTo above, which calls
+// addCombatRowTo). Pressing the button rolls the monster's initiative
+// (d20 + the Initiative modifier printed on its stat block, or with
+// advantage/disadvantage if one of the checkboxes is ticked) and puts the
+// monster into the turn order. At most one of the two checkboxes can be
+// ticked at a time.
+
+// Turns text like "+2", "-1", "−1" (real minus sign), "5" into a number.
+// Returns null if there is no number to read.
+function parseSignedNumber(text) {
+  const match = /([+\-\u2212\u2013])?\s*(\d+)/.exec(String(text));
+  if (!match) return null;
+  const value = parseInt(match[2], 10);
+  return match[1] === '-' || match[1] === '\u2212' || match[1] === '\u2013' ? -value : value;
+}
+
+// Reads a monster's initiative modifier from its stat block. First choice
+// is the "Initiative +2 (12)" line; if a stat block has no such line, the
+// Dexterity modifier from its ability table is used instead; if neither is
+// found, the modifier is 0.
+function readInitiativeModifier(statBlockEl) {
+  if (!statBlockEl) return 0;
+
+  const labels = statBlockEl.querySelectorAll('p > strong');
+  for (const label of labels) {
+    if (label.textContent.trim() !== 'Initiative') continue;
+    const lineMatch = /Initiative\s*([+\-\u2212\u2013]?\s*\d+)/.exec(label.parentElement.textContent);
+    if (lineMatch) {
+      const value = parseSignedNumber(lineMatch[1]);
+      if (value !== null) return value;
+    }
+  }
+
+  const headers = statBlockEl.querySelectorAll('.stat-abilities tbody th');
+  for (const header of headers) {
+    if (header.textContent.trim() !== 'Dex') continue;
+    const scoreCell = header.nextElementSibling;
+    const modCell = scoreCell ? scoreCell.nextElementSibling : null;
+    const value = modCell ? parseSignedNumber(modCell.textContent) : null;
+    if (value !== null) return value;
+  }
+
+  return 0;
+}
+
+// Rolls the d20 for an initiative roll. mode is 'normal', 'advantage', or
+// 'disadvantage'. Returns { die, rolls }: the die that counts, and every
+// die that was rolled (two for advantage/disadvantage, one otherwise).
+function rollInitiativeD20(mode) {
+  const first = rollDie(20);
+  if (mode !== 'advantage' && mode !== 'disadvantage') {
+    return { die: first, rolls: [first] };
+  }
+  const second = rollDie(20);
+  const die = mode === 'advantage' ? Math.max(first, second) : Math.min(first, second);
+  return { die: die, rolls: [first, second] };
+}
+
+// Works out the name for a monster being added to the turn order. The first
+// copy keeps its plain name. When a second copy is added, the first one is
+// renamed "<name> 1" and the new one becomes "<name> 2", and so on, so
+// several of the same monster can be in the list at once.
+function claimCombatantName(baseName) {
+  const pattern = new RegExp('^' + escapeRegex(baseName) + '(?: (\\d+))?$', 'i');
+  const matches = combatants.filter((c) => pattern.test(c.name));
+  if (matches.length === 0) return baseName;
+
+  const usedNumbers = new Set();
+  const unnumbered = [];
+  matches.forEach((c) => {
+    const found = pattern.exec(c.name);
+    if (found[1]) usedNumbers.add(parseInt(found[1], 10));
+    else unnumbered.push(c);
+  });
+
+  const takeLowestFreeNumber = () => {
+    let n = 1;
+    while (usedNumbers.has(n)) n += 1;
+    usedNumbers.add(n);
+    return n;
+  };
+
+  unnumbered.forEach((c) => {
+    c.name = c.name + ' ' + takeLowestFreeNumber();
+  });
+  return baseName + ' ' + takeLowestFreeNumber();
+}
+
+// Rolls initiative for one monster and adds it to the turn order.
+function addMonsterToCombat(detailsEl, mode) {
+  const summaryEl = detailsEl.querySelector(':scope > summary');
+  const statBlockEl = detailsEl.querySelector('.stat-block');
+  const baseName = (summaryEl ? summaryEl.textContent : detailsEl.id).trim();
+
+  const modifier = readInitiativeModifier(statBlockEl);
+  const roll = rollInitiativeD20(mode);
+  const total = roll.die + modifier;
+
+  pushUndoSnapshot();
+  const name = claimCombatantName(baseName);
+  combatants.push(makeCombatant(name, total));
+  render();
+
+  let rollText;
+  if (mode === 'advantage') rollText = 'advantage: ' + roll.rolls.join(', ') + ' \u2192 ' + roll.die;
+  else if (mode === 'disadvantage') rollText = 'disadvantage: ' + roll.rolls.join(', ') + ' \u2192 ' + roll.die;
+  else rollText = 'd20: ' + roll.die;
+  const modText = modifier === 0 ? '' : modifier > 0 ? ' + ' + modifier : ' - ' + Math.abs(modifier);
+
+  showToast(name + ' added to combat \u2014 initiative ' + total + ' (' + rollText + modText + ')', 4000);
+}
+
+// Builds the "Add to combat" row and puts it directly after the search bar
+// (afterEl) in a monster dropdown's body. Does nothing for any dropdown
+// that isn't an individual monster, and never adds a second row.
+function addCombatRowTo(detailsEl, bodyEl, afterEl) {
+  if (!detailsEl.id || detailsEl.id.indexOf('monster-') !== 0) return;
+  if (bodyEl.querySelector(':scope > .add-to-combat-row')) return;
+
+  const row = document.createElement('div');
+  row.className = 'add-to-combat-row';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn-primary add-to-combat-btn';
+  button.textContent = 'Add to combat';
+
+  const advLabel = document.createElement('label');
+  advLabel.className = 'mob-check';
+  const advInput = document.createElement('input');
+  advInput.type = 'checkbox';
+  advLabel.appendChild(advInput);
+  advLabel.appendChild(document.createTextNode(' Initiative advantage'));
+
+  const disLabel = document.createElement('label');
+  disLabel.className = 'mob-check';
+  const disInput = document.createElement('input');
+  disInput.type = 'checkbox';
+  disLabel.appendChild(disInput);
+  disLabel.appendChild(document.createTextNode(' Initiative disadvantage'));
+
+  // Only one of the two checkboxes can be ticked at a time.
+  advInput.addEventListener('change', () => {
+    if (advInput.checked) disInput.checked = false;
+  });
+  disInput.addEventListener('change', () => {
+    if (disInput.checked) advInput.checked = false;
+  });
+
+  button.addEventListener('click', () => {
+    const mode = advInput.checked ? 'advantage' : disInput.checked ? 'disadvantage' : 'normal';
+    addMonsterToCombat(detailsEl, mode);
+  });
+
+  // Clicking inside the row shouldn't count as a click on anything beneath it.
+  row.addEventListener('click', (e) => e.stopPropagation());
+
+  row.appendChild(button);
+  row.appendChild(advLabel);
+  row.appendChild(disLabel);
+  bodyEl.insertBefore(row, afterEl.nextSibling);
 }
 
 // ---- NPC REACTIONS ----

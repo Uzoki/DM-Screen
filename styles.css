@@ -1311,6 +1311,26 @@ input.row-ini {
     padding: 0 1px;
 }
 
+/* ===== "ADD TO COMBAT" ROW =====
+   Injected by JS (see addCombatRowTo in dm-screen.js) under the search bar
+   of every monster stat block: a yellow button plus the Initiative
+   advantage / disadvantage checkboxes. The checkbox labels reuse the
+   .mob-check look from the Mob Attack Calculator. */
+
+.add-to-combat-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-bottom: 8px;
+}
+
+.add-to-combat-btn {
+    padding: 5px 12px;
+    font-size: 0.74rem;
+    white-space: nowrap;
+}
+
 .dropdown-group {
     display: flex;
     flex-direction: column;
