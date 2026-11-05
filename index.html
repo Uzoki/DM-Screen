@@ -146,6 +146,12 @@
 
               <div class="sub-panel">
                 <h3>Turn order</h3>
+                <div id="trackerHead" class="tracker-head hidden" aria-hidden="true">
+                  <span>Init</span>
+                  <span>Name</span>
+                  <span>AC</span>
+                  <span>HP</span>
+                </div>
                 <ol id="trackerList" class="tracker-list"></ol>
               </div>
 
@@ -222,6 +228,14 @@
           </div>
 
         </div>
+
+        <section id="combatStatBlockPanel" class="statblock-panel hidden">
+          <div class="section-header-row">
+            <h2>Stat Block</h2>
+          </div>
+          <div id="combatStatBlockBody" class="dropdown-body combat-statblock-body"></div>
+          <div id="combatReferencePopups" class="combat-ref-popups"></div>
+        </section>
 
       </div>
 
@@ -937,6 +951,8 @@
 
     </div>
   </div>
+
+  <div id="rollDock" class="roll-dock" aria-live="polite"></div>
 
   <p id="toast" class="toast hidden"></p>
 

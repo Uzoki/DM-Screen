@@ -14,6 +14,7 @@ let combatants = [];        // list of { id, name, initiative, isHidden }
 let round = 1;               // current round number, controlled by the +/- buttons
 let idCounter = 0;           // used to give each combatant a unique id
 let selectedIds = new Set(); // ids of the combatant(s) currently highlighted for swapping
+let playerProfiles = {};    // remembered AC/HP of manually added combatants, by lowercase name: { gronja: { ac: 17, hp: 45 } }
 let undoStack = [];          // snapshots of "combatants" taken right before each change
 
 // Time-tracking state: when the day started, and how long the party
@@ -89,7 +90,10 @@ function save() {
     dis: disEl ? disEl.checked : false
   };
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ combatants, round, mob, time: timeState, date: dateState }));
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ combatants, round, mob, time: timeState, date: dateState, players: playerProfiles })
+  );
 }
 
 function load() {
@@ -100,6 +104,7 @@ function load() {
       combatants = data.combatants || [];
       round = typeof data.round === 'number' ? data.round : 1;
       savedMobState = data.mob || null;
+      playerProfiles = data.players && typeof data.players === 'object' ? data.players : {};
       if (data.time) {
         timeState = {
           startTime: typeof data.time.startTime === 'string' ? data.time.startTime : '8:00 AM',
@@ -122,9 +127,31 @@ function load() {
 
 // ---- HELPERS ----
 
-function makeCombatant(name, initiative) {
+// "extra" is only given for monsters added from a stat block:
+// { statBlockId, ac, hp }. Anyone else (a player) gets whatever AC and HP
+// were remembered for that name.
+function makeCombatant(name, initiative, extra) {
   idCounter += 1;
-  return { id: 'c-' + Date.now() + '-' + idCounter, name: name, initiative: initiative, isHidden: false };
+  const combatant = {
+    id: 'c-' + Date.now() + '-' + idCounter,
+    name: name,
+    initiative: initiative,
+    isHidden: false,
+    ac: null,
+    hp: null
+  };
+  if (extra && extra.statBlockId) {
+    combatant.statBlockId = extra.statBlockId;
+    combatant.ac = typeof extra.ac === 'number' ? extra.ac : null;
+    combatant.hp = typeof extra.hp === 'number' ? extra.hp : null;
+  } else {
+    const profile = playerProfiles[String(name).trim().toLowerCase()];
+    if (profile) {
+      if (typeof profile.ac === 'number') combatant.ac = profile.ac;
+      if (typeof profile.hp === 'number') combatant.hp = profile.hp;
+    }
+  }
+  return combatant;
 }
 
 // Returns the list sorted highest initiative first. When two combatants
@@ -166,6 +193,8 @@ function render() {
     li.innerHTML = `
       <input class="row-ini" type="number" value="${escapeHtml(c.initiative)}" data-id="${c.id}" />
       <div class="name-cell"><input class="row-name" type="text" value="${escapeHtml(c.name)}" data-id="${c.id}" /></div>
+      <input class="row-stat row-ac" type="number" value="${statFieldValue(c.ac)}" data-id="${c.id}" data-field="ac" placeholder="AC" aria-label="AC" />
+      <input class="row-stat row-hp" type="number" value="${statFieldValue(c.hp)}" data-id="${c.id}" data-field="hp" placeholder="HP" aria-label="HP" />
       <div class="tie-arrows">
         ${showUp ? `<button class="tie-btn tie-up" data-id="${c.id}" aria-label="Move up">▲</button>` : ''}
         ${showDown ? `<button class="tie-btn tie-down" data-id="${c.id}" aria-label="Move down">▼</button>` : ''}
@@ -179,6 +208,10 @@ function render() {
   });
 
   document.getElementById('swapBtn').classList.toggle('hidden', selectedIds.size !== 2);
+
+  const trackerHead = document.getElementById('trackerHead');
+  if (trackerHead) trackerHead.classList.toggle('hidden', sorted.length === 0);
+  renderCombatStatBlocks();
 
   save();
   updateScrollNav();
@@ -365,7 +398,11 @@ async function commitNameEdit(input) {
 
   const originalName = combatant.name;
   const newName = input.value.trim();
-  if (!newName || newName === originalName) {
+  if (newName === originalName) {
+    input.value = originalName; // nothing changed: leave the list alone so Tab keeps working
+    return;
+  }
+  if (!newName) {
     render();
     return;
   }
@@ -399,6 +436,10 @@ function commitIniEdit(input) {
   const combatant = combatants.find((c) => c.id === input.dataset.id);
   if (!combatant) return;
   const newIni = parseFloat(input.value);
+  if (!isNaN(newIni) && newIni === combatant.initiative) {
+    input.value = newIni; // nothing changed: leave the list alone so Tab keeps working
+    return;
+  }
   if (!isNaN(newIni) && newIni !== combatant.initiative) {
     pushUndoSnapshot();
     combatant.initiative = newIni;
@@ -1597,6 +1638,7 @@ function fillLazyEntry(el, skipHighlight) {
   const body = el.querySelector(':scope > .condition-body');
   if (!body) return;
   body.innerHTML = lazyEntryHtml.get(el.id) || '';
+  enrichStatBlocks(body);
   addSearchBarTo(el);
   if (!skipHighlight && lastHighlight) {
     highlightMatchesWithin(el, lastHighlight.terms, lastHighlight.wholeWord);
@@ -1895,6 +1937,30 @@ function loadReferenceState() {
   } catch (err) {
     console.warn('Could not load saved reference pane state:', err);
   }
+}
+
+// ---- REFERENCE PANE: WORK TO DO AFTER DROPDOWNS OPEN OR CLOSE ----
+// A search (or clearing one) can open or close thousands of dropdowns in a
+// single moment, and the browser then fires one "toggle" event for each of
+// them. Saving the whole pane's state once per event used to make the page
+// work through that pile of events for many seconds, and a stat block you
+// opened in the meantime stayed empty until the pile was gone. Now the
+// events themselves do almost nothing (see the single listener in the
+// DOMContentLoaded block at the bottom of this file); the saving and the
+// scroll-button update are done ONCE, a moment after the burst has ended.
+let referenceHousekeepingTimer = null;
+
+function runReferenceHousekeeping() {
+  referenceHousekeepingTimer = null;
+  // Safety net: any monster dropdown that is open must have its stat block.
+  document.querySelectorAll('.lookup-panel details[data-lazy="1"][open]').forEach((el) => fillLazyEntry(el));
+  if (!referenceSearchActive) saveReferenceState();
+  updateScrollNav();
+}
+
+function scheduleReferenceHousekeeping() {
+  if (referenceHousekeepingTimer !== null) clearTimeout(referenceHousekeepingTimer);
+  referenceHousekeepingTimer = setTimeout(runReferenceHousekeeping, 120);
 }
 
 function applyReferenceDefaults() {
@@ -2348,7 +2414,13 @@ function addMonsterToCombat(detailsEl, mode) {
 
   pushUndoSnapshot();
   const name = claimCombatantName(baseName);
-  combatants.push(makeCombatant(name, total));
+  combatants.push(
+    makeCombatant(name, total, {
+      statBlockId: detailsEl.id,
+      ac: readStatBlockNumber(statBlockEl, 'AC'),
+      hp: readStatBlockNumber(statBlockEl, 'HP')
+    })
+  );
   render();
 
   let rollText;
@@ -2409,6 +2481,447 @@ function addCombatRowTo(detailsEl, bodyEl, afterEl) {
   row.appendChild(advLabel);
   row.appendChild(disLabel);
   bodyEl.insertBefore(row, afterEl.nextSibling);
+}
+
+// ---- STAT BLOCK PANEL (in the Combat pane, under the turn order and dice rollers) ----
+// Every combatant that was added from a monster's stat block remembers which
+// stat block that was (its "statBlockId", the monster's dropdown id). That
+// link is by id, not by name, so renaming the combatant never breaks it.
+// Whenever one or more combatants are selected in the turn order, the stat
+// blocks they are linked to are shown in the panel under the turn order.
+
+let combatStatBlockKey = ''; // which stat blocks are currently shown, so nothing is rebuilt needlessly
+
+function getMonsterTitle(id) {
+  const el = document.getElementById(id);
+  const summaryEl = el ? el.querySelector(':scope > summary') : null;
+  return summaryEl ? summaryEl.textContent.trim() : id;
+}
+
+function renderCombatStatBlocks() {
+  const panel = document.getElementById('combatStatBlockPanel');
+  const body = document.getElementById('combatStatBlockBody');
+  if (!panel || !body) return;
+
+  const ids = [];
+  selectedIds.forEach((combatantId) => {
+    const c = combatants.find((x) => x.id === combatantId);
+    if (c && c.statBlockId && lazyEntryHtml.has(c.statBlockId) && ids.indexOf(c.statBlockId) === -1) {
+      ids.push(c.statBlockId);
+    }
+  });
+
+  const key = ids.join('|');
+  if (key === combatStatBlockKey) return;
+  combatStatBlockKey = key;
+
+  if (ids.length === 0) {
+    panel.classList.add('hidden');
+    body.innerHTML = '';
+    clearReferencePopups();
+    return;
+  }
+
+  body.innerHTML = ids
+    .map((id) => '<h4>' + escapeHtml(getMonsterTitle(id)) + '</h4>' + lazyEntryHtml.get(id))
+    .join('');
+  enrichStatBlocks(body);
+  panel.classList.remove('hidden');
+}
+
+// ---- AC / HP FIELDS IN THE TURN ORDER ----
+
+// What to show in an AC / HP field: the number, or nothing if there isn't one.
+function statFieldValue(value) {
+  return typeof value === 'number' && !isNaN(value) ? value : '';
+}
+
+// Reads the AC or HP number printed on a stat block ("AC 19 (...)",
+// "HP 212 (25d8 + 100)"). label is 'AC' or 'HP'. Returns null if not found.
+function readStatBlockNumber(statBlockEl, label) {
+  if (!statBlockEl) return null;
+  const labels = statBlockEl.querySelectorAll('p > strong');
+  for (const el of labels) {
+    if (el.textContent.trim() !== label) continue;
+    const match = new RegExp('\\b' + label + '\\s*([\\d,]+)').exec(el.parentElement.textContent);
+    if (match) {
+      const value = parseInt(match[1].replace(/,/g, ''), 10);
+      if (!isNaN(value)) return value;
+    }
+  }
+  return null;
+}
+
+// Players (combatants that did NOT come from a stat block) get their AC and
+// HP remembered by name, so the next time that name is added the fields are
+// already filled in. Monsters are never remembered.
+function rememberPlayerStat(combatant, field) {
+  if (combatant.statBlockId) return;
+  const key = String(combatant.name).trim().toLowerCase();
+  if (!key) return;
+  const profile = playerProfiles[key] || {};
+  if (typeof combatant[field] === 'number') profile[field] = combatant[field];
+  else delete profile[field];
+  if (Object.keys(profile).length === 0) delete playerProfiles[key];
+  else playerProfiles[key] = profile;
+}
+
+// Called when you click away from (or press Enter in) an AC or HP field.
+// The list is deliberately NOT rebuilt here (AC/HP never change the order),
+// so pressing Tab to jump from one field to the next keeps working.
+function commitStatEdit(input) {
+  const combatant = combatants.find((c) => c.id === input.dataset.id);
+  if (!combatant) return;
+  const field = input.dataset.field === 'hp' ? 'hp' : 'ac';
+
+  const raw = input.value.trim();
+  const parsed = raw === '' ? null : parseFloat(raw);
+  const value = parsed === null || isNaN(parsed) ? null : parsed;
+  input.value = value === null ? '' : value;
+
+  const current = typeof combatant[field] === 'number' ? combatant[field] : null;
+  if (value === current) return;
+
+  pushUndoSnapshot();
+  combatant[field] = value;
+  rememberPlayerStat(combatant, field);
+  save();
+}
+
+// ---- CLICKABLE TEXT IN STAT BLOCKS ----
+// Done the same way Improved Initiative does it. Inside every stat block (in
+// the Reference pane and in the Combat pane) the text is scanned and:
+//   - dice expressions ("2d6 + 2") and loose modifiers ("+7", "-1") become
+//     rollable. A loose modifier rolls a d20 plus that modifier.
+//   - the name of every spell on this site, and the name of every condition,
+//     becomes a link to its entry in the Reference pane.
+// There are no exceptions or context rules: every match is clickable (matching
+// ignores capitalization and whole words only, like Improved Initiative).
+// This runs automatically on every stat block the moment it is built, so any
+// stat block added in the future gets it too.
+
+const STAT_DICE_SOURCE = '(\\d*d\\d+(?:\\s*[+\\-\\u2212]\\s*\\d+)?|[+\\-\\u2212]\\s*\\d+)';
+let statRefIndex = null;
+
+// Builds (once) the list of spell and condition names found in the Reference
+// pane, and one regular expression that finds any of them.
+function getStatRefIndex() {
+  if (statRefIndex) return statRefIndex;
+
+  const targets = new Map(); // lowercase name -> id of its Reference entry
+  const addName = (name, id) => {
+    const key = String(name).replace(/\u2019/g, "'").trim().toLowerCase();
+    if (key.length > 2 && !targets.has(key)) targets.set(key, id);
+  };
+
+  document.querySelectorAll('details[id^="spell-"]').forEach((el) => {
+    if (el.id.indexOf('spell-school-') === 0) return;
+    const summaryEl = el.querySelector(':scope > summary');
+    if (!summaryEl) return;
+    const title = summaryEl.textContent.trim();
+    addName(title, el.id);
+    // "Blindness / Deafness": also match "Blindness/Deafness" and each half.
+    if (title.indexOf(' / ') !== -1) {
+      addName(title.replace(/\s*\/\s*/g, '/'), el.id);
+      title.split(' / ').forEach((part) => addName(part, el.id));
+    }
+  });
+
+  document.querySelectorAll('details[id^="condition-"]').forEach((el) => {
+    const summaryEl = el.querySelector(':scope > summary');
+    if (summaryEl) addName(summaryEl.textContent.trim(), el.id);
+  });
+
+  const names = Array.from(targets.keys()).sort((a, b) => b.length - a.length);
+  const regexSource = names.length > 0 ? '\\b(' + names.map(escapeRegex).join('|') + ')\\b' : null;
+  statRefIndex = { targets: targets, regexSource: regexSource };
+  return statRefIndex;
+}
+
+// Turns "2d6 + 2", "d20", "+7", "- 1" into { count, sides, modifier }.
+// A loose modifier means a d20 roll.
+function parseRollExpression(raw) {
+  const text = String(raw).replace(/\u2212/g, '-').trim();
+  const dice = /^(\d*)d(\d+)\s*([+\-]\s*\d+)?$/i.exec(text);
+  if (dice) {
+    return {
+      count: dice[1] === '' ? 1 : parseInt(dice[1], 10),
+      sides: Math.max(1, parseInt(dice[2], 10)),
+      modifier: dice[3] ? parseInt(dice[3].replace(/\s+/g, ''), 10) : 0
+    };
+  }
+  const loose = /^([+\-])\s*(\d+)$/.exec(text);
+  if (loose) return { count: 1, sides: 20, modifier: parseInt(loose[1] + loose[2], 10) };
+  return null;
+}
+
+function rollParsedExpression(parsed) {
+  const count = Math.min(Math.max(parsed.count, 0), 200);
+  const rolls = [];
+  for (let i = 0; i < count; i++) rolls.push(rollDie(parsed.sides));
+  const total = rolls.reduce((sum, r) => sum + r, 0) + parsed.modifier;
+  return { rolls: rolls, total: total };
+}
+
+function formatRollModifier(modifier) {
+  if (modifier === 0) return '';
+  return ' ' + (modifier > 0 ? '+' : '-') + ' ' + Math.abs(modifier);
+}
+
+// Finds the dice, spell names and condition names inside one piece of text
+// and wraps each in a clickable <span class="stat-click ...">.
+function enrichTextNode(node, refIndex) {
+  const text = node.nodeValue;
+  const norm = text.replace(/\u2019/g, "'"); // same length as text, so positions line up
+  const found = [];
+  let m;
+
+  const diceRe = new RegExp(STAT_DICE_SOURCE, 'gi');
+  while ((m = diceRe.exec(norm)) !== null) {
+    const first = m[0].charAt(0);
+    const startsWithDie = /[0-9dD]/.test(first);
+    const prev = m.index > 0 ? norm.charAt(m.index - 1) : '';
+    const next = norm.charAt(m.index + m[0].length);
+    if (startsWithDie && (/[A-Za-z0-9]/.test(prev) || /[A-Za-z]/.test(next))) continue; // part of a longer word
+    found.push({ start: m.index, end: m.index + m[0].length, kind: 'roll', value: m[0] });
+  }
+
+  if (refIndex.regexSource) {
+    const refRe = new RegExp(refIndex.regexSource, 'gi');
+    while ((m = refRe.exec(norm)) !== null) {
+      const id = refIndex.targets.get(m[0].toLowerCase());
+      if (id) found.push({ start: m.index, end: m.index + m[0].length, kind: 'ref', value: id });
+    }
+  }
+  if (found.length === 0) return;
+
+  // When two matches overlap, the earlier one wins (a dice roll wins a tie).
+  found.sort((a, b) => a.start - b.start || (a.kind === 'roll' ? -1 : 1) - (b.kind === 'roll' ? -1 : 1) || b.end - a.end);
+  const accepted = [];
+  let lastEnd = 0;
+  found.forEach((f) => {
+    if (f.start >= lastEnd) {
+      accepted.push(f);
+      lastEnd = f.end;
+    }
+  });
+
+  const frag = document.createDocumentFragment();
+  let pos = 0;
+  accepted.forEach((f) => {
+    if (f.start > pos) frag.appendChild(document.createTextNode(text.slice(pos, f.start)));
+    const span = document.createElement('span');
+    span.tabIndex = 0;
+    if (f.kind === 'roll') {
+      span.className = 'stat-click stat-roll';
+      span.dataset.roll = f.value.replace(/\s+/g, ' ').trim();
+      span.setAttribute('role', 'button');
+    } else {
+      span.className = 'stat-click stat-ref';
+      span.dataset.ref = f.value;
+      span.setAttribute('role', 'link');
+    }
+    span.textContent = text.slice(f.start, f.end);
+    frag.appendChild(span);
+    pos = f.end;
+  });
+  if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
+  node.parentNode.replaceChild(frag, node);
+}
+
+function enrichStatBlock(block) {
+  if (block.dataset.enriched === '1') return;
+  block.dataset.enriched = '1';
+  const refIndex = getStatRefIndex();
+
+  const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => {
+      if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      const parent = node.parentElement;
+      if (parent && parent.closest('.stat-click, a, button, input, textarea, script, style, .stat-source')) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const nodes = [];
+  let node;
+  while ((node = walker.nextNode())) nodes.push(node);
+  nodes.forEach((n) => enrichTextNode(n, refIndex));
+}
+
+// Makes every stat block inside rootEl (or rootEl itself) clickable.
+function enrichStatBlocks(rootEl) {
+  if (!rootEl) return;
+  if (rootEl.matches && rootEl.matches('.stat-block')) enrichStatBlock(rootEl);
+  rootEl.querySelectorAll('.stat-block').forEach(enrichStatBlock);
+}
+
+// ---- DICE ROLL POP-UPS ----
+// Clicking a rollable value rolls it and shows a small square (a "card")
+// floating over the lower-left corner of the Combat pane, with the total,
+// the individual dice, and a Reroll button. If the Combat pane is hidden (or
+// scrolled out of reach) the result is shown as a message instead.
+
+function updateRollCard(card, parsed, result) {
+  card.querySelector('.roll-card-total').textContent = result.total;
+  card.querySelector('.roll-card-expr').textContent =
+    'Rolled ' + parsed.count + 'd' + parsed.sides + formatRollModifier(parsed.modifier);
+  const rollsEl = card.querySelector('.roll-card-rolls');
+  rollsEl.innerHTML = '';
+  result.rolls.forEach((value) => {
+    const chip = document.createElement('span');
+    chip.className = 'roll-chip';
+    if (value === parsed.sides) chip.classList.add('roll-chip-max');
+    if (value === 1) chip.classList.add('roll-chip-min');
+    chip.textContent = value;
+    rollsEl.appendChild(chip);
+  });
+  const calc = document.createElement('span');
+  calc.textContent = (formatRollModifier(parsed.modifier).trim() + ' = ' + result.total).trim();
+  rollsEl.appendChild(calc);
+}
+
+// Lines the roll cards up with the left edge of the Combat pane. Returns
+// false if the Combat pane isn't on screen.
+function syncRollDock() {
+  const dock = document.getElementById('rollDock');
+  const pane = document.getElementById('paneGroup');
+  if (!dock || !pane) return false;
+  const hidden = pane.classList.contains('column-collapsed') || pane.getBoundingClientRect().width < 100;
+  dock.classList.toggle('hidden', hidden);
+  if (hidden) return false;
+  dock.style.left = Math.max(8, pane.getBoundingClientRect().left + 8) + 'px';
+  return true;
+}
+
+function rollFromStatBlock(expression) {
+  const parsed = parseRollExpression(expression);
+  if (!parsed) {
+    showToast('Could not read "' + expression + '" as a roll');
+    return;
+  }
+  const result = rollParsedExpression(parsed);
+
+  const dock = document.getElementById('rollDock');
+  if (!dock || !syncRollDock()) {
+    showToast(
+      'Rolled ' + parsed.count + 'd' + parsed.sides + formatRollModifier(parsed.modifier) +
+        ': [' + result.rolls.join(', ') + ']' + formatRollModifier(parsed.modifier) + ' = ' + result.total,
+      5000
+    );
+    return;
+  }
+
+  const card = document.createElement('div');
+  card.className = 'roll-card';
+  card.innerHTML =
+    '<button type="button" class="roll-card-close" aria-label="Close">\u00d7</button>' +
+    '<div class="roll-card-total"></div>' +
+    '<div class="roll-card-expr"></div>' +
+    '<div class="roll-card-rolls"></div>' +
+    '<button type="button" class="btn-secondary roll-card-reroll">Reroll</button>';
+  updateRollCard(card, parsed, result);
+
+  card.querySelector('.roll-card-close').addEventListener('click', () => card.remove());
+  card.querySelector('.roll-card-reroll').addEventListener('click', () => {
+    updateRollCard(card, parsed, rollParsedExpression(parsed));
+  });
+
+  dock.appendChild(card);
+  while (dock.children.length > 4) dock.removeChild(dock.firstChild);
+}
+
+// ---- REFERENCE POP-UPS IN THE COMBAT PANE ----
+// When the Reference pane is hidden (the Combat pane is maximized), clicking a
+// spell or condition in the Combat pane's stat block shows that Reference
+// entry in a box under the stat block instead of jumping to the Reference pane.
+
+function isReferencePaneCollapsed() {
+  const pane = document.getElementById('paneLookup');
+  return !pane || pane.classList.contains('column-collapsed');
+}
+
+function clearReferencePopups() {
+  const container = document.getElementById('combatReferencePopups');
+  if (container) container.innerHTML = '';
+}
+
+function showReferencePopup(targetId) {
+  const target = document.getElementById(targetId);
+  const container = document.getElementById('combatReferencePopups');
+  if (!target || !container) {
+    showToast('That entry could not be found');
+    return;
+  }
+  fillLazyEntry(target, true);
+
+  const summaryEl = target.querySelector(':scope > summary');
+  const bodyEl = target.querySelector(':scope > .condition-body, :scope > .dropdown-body');
+
+  Array.from(container.children).forEach((existing) => {
+    if (existing.dataset.target === targetId) container.removeChild(existing);
+  });
+
+  const card = document.createElement('div');
+  card.className = 'combat-ref-card';
+  card.dataset.target = targetId;
+
+  const head = document.createElement('div');
+  head.className = 'combat-ref-head';
+  const title = document.createElement('h4');
+  title.className = 'combat-ref-title';
+  title.textContent = summaryEl ? summaryEl.textContent.trim() : targetId;
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'combat-ref-close';
+  closeBtn.setAttribute('aria-label', 'Close');
+  closeBtn.textContent = '\u00d7';
+  closeBtn.addEventListener('click', () => card.remove());
+  head.appendChild(title);
+  head.appendChild(closeBtn);
+  card.appendChild(head);
+
+  // Copy the entry's own content (not its search bars or nested entries).
+  const content = document.createElement('div');
+  content.className = 'dropdown-body combat-ref-body';
+  if (bodyEl) {
+    Array.from(bodyEl.children).forEach((child) => {
+      if (
+        child.tagName === 'DETAILS' ||
+        child.classList.contains('dropdown-search-row') ||
+        child.classList.contains('add-to-combat-row') ||
+        child.classList.contains('condition-list')
+      ) {
+        return;
+      }
+      content.appendChild(child.cloneNode(true));
+    });
+  }
+  card.appendChild(content);
+
+  container.appendChild(card);
+  while (container.children.length > 6) container.removeChild(container.firstChild);
+  card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// A click on a spell or condition name inside a stat block.
+function openStatReference(targetId, sourceEl) {
+  if (!document.getElementById(targetId)) {
+    showToast('That entry could not be found');
+    return;
+  }
+  if (sourceEl.closest('#paneGroup') && isReferencePaneCollapsed()) {
+    showReferencePopup(targetId);
+    return;
+  }
+  const sourceDetails = sourceEl.closest('details');
+  openReference(targetId, sourceDetails ? sourceDetails.id : null);
+}
+
+function handleStatClick(el) {
+  if (el.dataset.roll) rollFromStatBlock(el.dataset.roll);
+  else if (el.dataset.ref) openStatReference(el.dataset.ref, el);
 }
 
 // ---- NPC REACTIONS ----
@@ -3133,6 +3646,7 @@ function updatePaneMaximizeButtons() {
     btn.classList.toggle('is-maximized', isMax);
     btn.setAttribute('aria-label', (isMax ? 'Minimize' : 'Maximize') + ' pane');
   });
+  syncRollDock(); // hide the dice roll cards while the Combat pane is hidden
 }
 
 // ---- SCROLL NAV (combined up / down button) ----
@@ -3183,6 +3697,7 @@ function updateScrollNav() {
 document.addEventListener('DOMContentLoaded', () => {
   renderDataDrivenReferenceSections();
   initDropdownSearchBars();
+  enrichStatBlocks(document.querySelector('.lookup-panel'));
 
   // The header is pinned (position: sticky) to the top of the viewport;
   // its height varies with screen width and with its own content (it
@@ -3252,12 +3767,42 @@ document.addEventListener('DOMContentLoaded', () => {
   // browser session (if any), then start tracking further changes so
   // they're remembered across a page refresh.
   loadReferenceState();
-  getAllReferenceDetails().forEach((el) => {
-    el.addEventListener('toggle', () => {
-      if (el.open) fillLazyEntry(el);
-      if (!referenceSearchActive) saveReferenceState();
-      updateScrollNav();
-    });
+
+  // One listener for the whole Reference pane (instead of one per dropdown).
+  // "toggle" events don't bubble, so this listens in the capture phase.
+  // Opening a dropdown fills in a monster's stat block immediately; the
+  // slower work (saving which dropdowns are open, updating the scroll
+  // button) is postponed until things have settled.
+  const referencePanelEl = document.querySelector('.lookup-panel');
+  if (referencePanelEl) {
+    referencePanelEl.addEventListener(
+      'toggle',
+      (e) => {
+        const el = e.target;
+        if (!el || el.tagName !== 'DETAILS') return;
+        if (el.open) fillLazyEntry(el);
+        scheduleReferenceHousekeeping();
+      },
+      true
+    );
+
+    // Clicking a monster's title fills in its stat block at the moment of the
+    // click, before the dropdown opens, so it can never open empty.
+    referencePanelEl.addEventListener(
+      'click',
+      (e) => {
+        const summary = e.target && e.target.closest ? e.target.closest('summary') : null;
+        const details = summary ? summary.parentElement : null;
+        if (details && details.dataset && details.dataset.lazy === '1') fillLazyEntry(details);
+      },
+      true
+    );
+  }
+  window.addEventListener('pagehide', () => {
+    if (referenceHousekeepingTimer !== null) {
+      clearTimeout(referenceHousekeepingTimer);
+      runReferenceHousekeeping();
+    }
   });
 
   // Reference pane: main search box filters the whole pane live
@@ -3391,11 +3936,17 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('trackerList').addEventListener('focusout', (e) => {
     if (e.target.classList.contains('row-name')) commitNameEdit(e.target);
     else if (e.target.classList.contains('row-ini')) commitIniEdit(e.target);
+    else if (e.target.classList.contains('row-stat')) commitStatEdit(e.target);
   });
 
   // Pressing Enter in a name/initiative field also saves it
   document.getElementById('trackerList').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.target.classList.contains('row-name') || e.target.classList.contains('row-ini'))) {
+    if (
+      e.key === 'Enter' &&
+      (e.target.classList.contains('row-name') ||
+        e.target.classList.contains('row-ini') ||
+        e.target.classList.contains('row-stat'))
+    ) {
       e.target.blur();
     }
   });
@@ -3500,9 +4051,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const ref = e.target.closest('.gloss-ref');
     if (!ref) return;
     e.preventDefault();
+    if (ref.closest('#paneGroup') && isReferencePaneCollapsed()) {
+      showReferencePopup(ref.dataset.ref);
+      return;
+    }
     const sourceDetails = ref.closest('details');
     openReference(ref.dataset.ref, sourceDetails ? sourceDetails.id : null);
   });
+
+  // Clickable text inside stat blocks (dice rolls, spells, conditions).
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest ? e.target.closest('.stat-click') : null;
+    if (!el) return;
+    e.preventDefault();
+    handleStatClick(el);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const el = e.target.closest ? e.target.closest('.stat-click') : null;
+    if (!el) return;
+    e.preventDefault();
+    handleStatClick(el);
+  });
+  window.addEventListener('resize', syncRollDock);
 
   // Reference pane: Reset button
   document.getElementById('resetReferenceBtn').addEventListener('click', resetReferencePane);

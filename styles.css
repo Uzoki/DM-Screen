@@ -21,16 +21,22 @@ html {
                         the Combat pane, and between boxes in a column
        --section-pad-*  space between a box's edge and its contents
        --page-pad-*     space between the page edges and everything else
-       --left-col-min   the width each of the two columns in the Combat
-                        pane needs to look comfortable (see the layout
-                        notes further down) */
+       --initiative-col-min  the width the Initiative column (the turn
+                        order, with its AC and HP fields) needs to look
+                        comfortable
+       --dice-col-min   the same for the Dice Roller / Mob Attack column
+                        (see the layout notes further down)
+       --tracker-cols   the column widths of one turn-order row:
+                        initiative, name, AC, HP, tie arrows, eye, remove */
     --gap: 8px;
     --section-pad-y: 10px;
     --section-pad-x: 12px;
     --page-pad-x: 8px;
     --page-pad-top: 12px;
     --page-pad-bottom: 20px;
-    --left-col-min: 345px;
+    --initiative-col-min: 440px;
+    --dice-col-min: 320px;
+    --tracker-cols: 40px 1fr 38px 48px 24px 22px 24px;
     --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
     --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
@@ -409,11 +415,11 @@ body {
 }
 
 .column-initiative {
-    flex: 1 1 260px;
+    flex: 1 1 var(--initiative-col-min);
 }
 
 .column-dice {
-    flex: 1 1 260px;
+    flex: 1 1 var(--dice-col-min);
 }
 
 .column-lookup {
@@ -446,12 +452,13 @@ body {
     }
 
     /* The left pane may grow beyond half when its two columns would
-       otherwise be cramped: it needs room for two columns of
-       --left-col-min each (plus the gap between them and the box's own
-       padding and border), but never more than 60% of the row. The
-       Reference pane simply gets what is left. */
+       otherwise be cramped: it needs room for the Initiative column
+       (--initiative-col-min) plus the Dice column (--dice-col-min) (plus
+       the gap between them and the box's own padding and border), but
+       never more than 66% of the row. The Reference pane simply gets
+       what is left. */
     .column-group {
-        min-width: min(60%, calc(2 * var(--left-col-min) + 3 * var(--gap) + 2px));
+        min-width: min(66%, calc(var(--initiative-col-min) + var(--dice-col-min) + 3 * var(--gap) + 2px));
     }
 
     .column-group-body {
@@ -719,7 +726,7 @@ button {
 
 .tracker-row {
     display: grid;
-    grid-template-columns: 40px 1fr 24px 22px 24px;
+    grid-template-columns: var(--tracker-cols);
     align-items: center;
     gap: 6px;
     background: var(--surface-2);
@@ -1331,6 +1338,228 @@ input.row-ini {
     white-space: nowrap;
 }
 
+/* ===== TURN ORDER: COLUMN HEADINGS + AC / HP FIELDS ===== */
+
+.tracker-head {
+    display: grid;
+    grid-template-columns: var(--tracker-cols);
+    gap: 6px;
+    padding: 0 10px 4px 12px;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.tracker-head span:nth-child(2) {
+    text-align: left;
+    padding-left: 9px;
+}
+
+.tracker-row input.row-stat {
+    width: 100%;
+    min-width: 0;
+    padding: 6px 2px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.8rem;
+    -moz-appearance: textfield;
+}
+
+.tracker-row input.row-stat::-webkit-outer-spin-button,
+.tracker-row input.row-stat::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.tracker-row input.row-stat::placeholder {
+    color: var(--text-muted);
+    font-weight: 500;
+    opacity: 0.55;
+}
+
+/* ===== STAT BLOCK PANEL (under the turn order and dice rollers) ===== */
+
+.dropdown-body.combat-statblock-body,
+.dropdown-body.combat-ref-body {
+    padding: 0;
+    border-top: none;
+}
+
+.combat-statblock-body > h4:not(:first-child) {
+    margin-top: 18px;
+}
+
+/* ===== CLICKABLE TEXT INSIDE STAT BLOCKS (rolls, spells, conditions) ===== */
+
+.stat-click {
+    color: #6fa8dc;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.stat-click:hover {
+    color: #8fc0f0;
+    text-decoration: underline;
+}
+
+.stat-click:focus-visible {
+    outline: 2px solid var(--gold-bright);
+    outline-offset: 1px;
+    border-radius: 2px;
+}
+
+/* ===== DICE ROLL POP-UPS (small squares floating over the Combat pane) ===== */
+
+.roll-dock {
+    position: fixed;
+    bottom: 14px;
+    left: 8px;
+    z-index: 44;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: calc(100vw - 16px);
+    pointer-events: none;
+}
+
+.roll-dock.hidden {
+    display: none;
+}
+
+.roll-card {
+    pointer-events: auto;
+    position: relative;
+    width: 150px;
+    padding: 10px 10px 8px;
+    background: var(--surface);
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+    text-align: center;
+}
+
+.roll-card-close {
+    position: absolute;
+    top: 3px;
+    right: 5px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.roll-card-close:hover {
+    color: var(--danger);
+}
+
+.roll-card-total {
+    font-family: var(--font-mono);
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--gold-bright);
+    line-height: 1.1;
+}
+
+.roll-card-expr {
+    margin-top: 2px;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+}
+
+.roll-card-rolls {
+    margin-top: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+}
+
+.roll-chip {
+    min-width: 1.4em;
+    padding: 1px 4px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface-2);
+}
+
+.roll-chip.roll-chip-max {
+    color: #39e75f;
+    border-color: #39e75f;
+    font-weight: 700;
+}
+
+.roll-chip.roll-chip-min {
+    color: #ff4136;
+    border-color: #ff4136;
+    font-weight: 700;
+}
+
+.roll-card-reroll {
+    width: 100%;
+    margin-top: 7px;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+}
+
+/* ===== REFERENCE POP-UPS (shown under the stat block when the Reference pane is hidden) ===== */
+
+.combat-ref-popups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap);
+    margin-top: var(--gap);
+}
+
+.combat-ref-popups:empty {
+    display: none;
+}
+
+.combat-ref-card {
+    flex: 1 1 300px;
+    min-width: 0;
+    padding: 8px 10px 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+}
+
+.combat-ref-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.combat-ref-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    color: var(--gold-bright);
+}
+
+.combat-ref-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.combat-ref-close:hover {
+    color: var(--danger);
+}
+
 .dropdown-group {
     display: flex;
     flex-direction: column;
@@ -1870,8 +2099,12 @@ details.condition-dropdown[open] summary::before {
         font-size: 1.05rem;
     }
 
-    .tracker-row {
-        grid-template-columns: 34px 1fr 22px 20px 20px;
+    :root {
+        --tracker-cols: 34px 1fr 34px 44px 22px 20px 20px;
+    }
+
+    .tracker-row,
+    .tracker-head {
         gap: 4px;
     }
 
