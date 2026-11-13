@@ -327,11 +327,41 @@ function toggleSelect(id) {
     selectedIds.delete(id);
   } else {
     if (selectedIds.size >= 2) {
-      showToast('Only two can be selected — tap one to deselect it first');
-      return;
+      // Two are already selected: the one that was selected first is dropped.
+      selectedIds.delete(selectedIds.values().next().value);
     }
     selectedIds.add(id);
   }
+  render();
+}
+
+// "Next combatant" button: selects the next combatant in the turn order.
+// Nothing selected -> the combatant at the top of the list. One selected ->
+// the one below it. Two selected -> the lower of the two counts as the
+// current combatant, and both are unselected. Pressing it while the combatant
+// at the very bottom is the current one goes back to the top of the list and
+// adds one to the round counter.
+function selectNextCombatant() {
+  const sorted = sortedCombatants();
+  if (sorted.length === 0) {
+    showToast('There are no combatants yet');
+    return;
+  }
+
+  let currentIndex = -1;
+  sorted.forEach((c, i) => {
+    if (selectedIds.has(c.id)) currentIndex = i; // the lowest selected one
+  });
+
+  let nextIndex = currentIndex + 1;
+  let wrapped = false;
+  if (nextIndex >= sorted.length) {
+    nextIndex = 0;
+    wrapped = currentIndex !== -1;
+  }
+
+  selectedIds = new Set([sorted[nextIndex].id]);
+  if (wrapped) incrementRound();
   render();
 }
 
@@ -1828,7 +1858,11 @@ function openReference(targetId, sourceId) {
   const target = document.getElementById(targetId);
   if (!target) return;
 
-  referenceBackStack.push({ scrollY: window.scrollY, targetId: sourceId || null });
+  // A link clicked outside the Reference pane (for example in the Combat
+  // pane's stat block) has no source dropdown to return to, so remember
+  // which part of the Reference pane was on screen instead.
+  const anchor = sourceId ? null : captureReferenceLocation();
+  referenceBackStack.push({ scrollY: getReferenceScrollTop(), targetId: sourceId || null, anchor: anchor });
   updateBackButtonVisibility();
 
   openAndFlashTarget(target);
@@ -1869,7 +1903,7 @@ function goBackReference() {
   if (target) {
     openAndFlashTarget(target);
   } else {
-    window.scrollTo({ top: entry.scrollY, behavior: 'smooth' });
+    if (!restoreReferenceLocation(entry.anchor)) scrollReferenceTo(entry.scrollY);
   }
 }
 
@@ -2523,7 +2557,7 @@ function renderCombatStatBlocks() {
   }
 
   body.innerHTML = ids
-    .map((id) => '<h4>' + escapeHtml(getMonsterTitle(id)) + '</h4>' + lazyEntryHtml.get(id))
+    .map((id) => '<h4 data-statblock-id="' + escapeHtml(id) + '">' + escapeHtml(getMonsterTitle(id)) + '</h4>' + lazyEntryHtml.get(id))
     .join('');
   enrichStatBlocks(body);
   panel.classList.remove('hidden');
@@ -2795,18 +2829,112 @@ function syncRollDock() {
   return true;
 }
 
-function rollFromStatBlock(expression) {
+const ABILITY_NAMES = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
+
+// Who made a roll: the creature whose stat block it is in. In the Combat pane,
+// if exactly one of the selected combatants is linked to that stat block, that
+// combatant's own name is used (for example "Goblin 2").
+function getRollOwnerName(el) {
+  const monster = el.closest('details[id^="monster-"]');
+  if (monster) return getMonsterTitle(monster.id);
+  const block = el.closest('.stat-block');
+  const head = block ? block.previousElementSibling : null;
+  if (head && head.tagName === 'H4') {
+    const statBlockId = head.dataset.statblockId;
+    const linked = combatants.filter((c) => selectedIds.has(c.id) && c.statBlockId === statBlockId);
+    return linked.length === 1 ? linked[0].name : head.textContent.trim();
+  }
+  return '';
+}
+
+// What the roll was, worked out from where it sits in the stat block:
+// "Dexterity save", "Arcana check", "Initiative", "Scimitar attack",
+// "Scimitar damage", ...
+function getRollDescription(el, expression) {
+  const cell = el.closest('td');
+  if (cell && cell.closest('.stat-abilities')) {
+    let abilityCell = null;
+    for (let n = cell.previousElementSibling; n; n = n.previousElementSibling) {
+      if (n.tagName === 'TH') {
+        abilityCell = n;
+        break;
+      }
+    }
+    const headRow = cell.closest('table').querySelector('thead tr');
+    const index = Array.prototype.indexOf.call(cell.parentElement.children, cell);
+    const headCell = headRow ? headRow.children[index] : null;
+    const kind = headCell ? headCell.textContent.trim().toLowerCase() : '';
+    const abbreviation = abilityCell ? abilityCell.textContent.trim().toLowerCase() : '';
+    const name = ABILITY_NAMES[abbreviation] || (abilityCell ? abilityCell.textContent.trim() : 'Ability');
+    return name + (kind === 'save' ? ' save' : kind === 'mod' ? ' check' : '');
+  }
+
+  const block = el.closest('p, li');
+  if (!block) return '';
+
+  // The closest bold label in front of the roll: "Initiative", "Skills",
+  // "Scimitar", and so on.
+  let strong = null;
+  block.querySelectorAll('strong').forEach((s) => {
+    if (s.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) strong = s;
+  });
+  const label = strong
+    ? strong.textContent.trim().replace(/[.:]+$/, '').replace(/\s*\([^)]*\)\s*$/, '').trim()
+    : '';
+  const lower = label.toLowerCase();
+
+  const range = document.createRange();
+  range.selectNodeContents(block);
+  range.setEndBefore(el);
+  const before = range.toString();
+  range.selectNodeContents(block);
+  range.setStartAfter(el);
+  const after = range.toString().slice(0, 90);
+
+  if (lower === 'initiative') return 'Initiative';
+  if (lower === 'skills') {
+    const skill = before.split(/[,;]/).pop().replace(/^\s*Skills\s*/i, '').trim();
+    return skill ? skill + ' check' : 'Skill check';
+  }
+  if (lower === 'saves' || lower === 'saving throws' || lower === 'saving throw') {
+    const ability = before.split(/[,;]/).pop().replace(/^\s*(Saves|Saving Throws?)\s*/i, '').trim().toLowerCase();
+    return (ABILITY_NAMES[ability.slice(0, 3)] || ability || 'Saving') + ' save';
+  }
+  if (lower === 'hp') return 'Hit points';
+  if (lower === 'ac') return 'Armor class';
+  if (lower === 'cr') return /PB\s*$/i.test(before) ? 'Proficiency bonus' : 'Challenge rating';
+  if (!label) return '';
+  if (/^\s*to hit/i.test(after)) return label + ' attack';
+  if (/d\d/i.test(expression) && /^[^.]{0,70}\bdamage\b/i.test(after)) return label + ' damage';
+  return label;
+}
+
+function describeRollSource(el) {
+  return { who: getRollOwnerName(el), what: getRollDescription(el, el.dataset.roll || '') };
+}
+
+// The "close all" cross is only shown while two or more roll cards are open.
+function updateRollDock() {
+  const cardsEl = document.getElementById('rollCards');
+  const clearBtn = document.getElementById('rollDockClearAll');
+  if (cardsEl && clearBtn) clearBtn.classList.toggle('hidden', cardsEl.children.length < 2);
+}
+
+function rollFromStatBlock(expression, sourceEl) {
   const parsed = parseRollExpression(expression);
   if (!parsed) {
     showToast('Could not read "' + expression + '" as a roll');
     return;
   }
   const result = rollParsedExpression(parsed);
+  const source = sourceEl ? describeRollSource(sourceEl) : { who: '', what: '' };
 
-  const dock = document.getElementById('rollDock');
-  if (!dock || !syncRollDock()) {
+  const cardsEl = document.getElementById('rollCards');
+  if (!cardsEl || !syncRollDock()) {
+    const who = [source.who, source.what].filter(Boolean).join(' \u00b7 ');
     showToast(
-      'Rolled ' + parsed.count + 'd' + parsed.sides + formatRollModifier(parsed.modifier) +
+      (who ? who + ': ' : '') +
+        'Rolled ' + parsed.count + 'd' + parsed.sides + formatRollModifier(parsed.modifier) +
         ': [' + result.rolls.join(', ') + ']' + formatRollModifier(parsed.modifier) + ' = ' + result.total,
       5000
     );
@@ -2817,19 +2945,30 @@ function rollFromStatBlock(expression) {
   card.className = 'roll-card';
   card.innerHTML =
     '<button type="button" class="roll-card-close" aria-label="Close">\u00d7</button>' +
+    '<div class="roll-card-who"></div>' +
+    '<div class="roll-card-what"></div>' +
     '<div class="roll-card-total"></div>' +
     '<div class="roll-card-expr"></div>' +
     '<div class="roll-card-rolls"></div>' +
     '<button type="button" class="btn-secondary roll-card-reroll">Reroll</button>';
+  const whoEl = card.querySelector('.roll-card-who');
+  const whatEl = card.querySelector('.roll-card-what');
+  whoEl.textContent = source.who;
+  whatEl.textContent = source.what;
+  card.title = [source.who, source.what].filter(Boolean).join(' \u00b7 ');
   updateRollCard(card, parsed, result);
 
-  card.querySelector('.roll-card-close').addEventListener('click', () => card.remove());
+  card.querySelector('.roll-card-close').addEventListener('click', () => {
+    card.remove();
+    updateRollDock();
+  });
   card.querySelector('.roll-card-reroll').addEventListener('click', () => {
     updateRollCard(card, parsed, rollParsedExpression(parsed));
   });
 
-  dock.appendChild(card);
-  while (dock.children.length > 4) dock.removeChild(dock.firstChild);
+  cardsEl.appendChild(card);
+  while (cardsEl.children.length > 4) cardsEl.removeChild(cardsEl.firstChild);
+  updateRollDock();
 }
 
 // ---- REFERENCE POP-UPS IN THE COMBAT PANE ----
@@ -2920,7 +3059,7 @@ function openStatReference(targetId, sourceEl) {
 }
 
 function handleStatClick(el) {
-  if (el.dataset.roll) rollFromStatBlock(el.dataset.roll);
+  if (el.dataset.roll) rollFromStatBlock(el.dataset.roll, el);
   else if (el.dataset.ref) openStatReference(el.dataset.ref, el);
 }
 
@@ -3521,30 +3660,78 @@ function stickyExtraBottomGap(pane) {
   return gap > 0 ? gap : 0;
 }
 
+// Nothing is "sticky" any more. On a wide screen each of the two panes is its
+// own scrolling area (see styles.css), and on a narrow screen the page scrolls
+// normally, so this only removes any "top" value that an older version set.
 function updateStickyColumns() {
-  const panes = document.querySelectorAll('.column-group, .column');
-  const sideBySide = window.matchMedia(STICKY_LAYOUT_QUERY).matches;
-
-  if (!sideBySide) {
-    // Stacked (narrow) layout: nothing sticks, so remove any value set earlier.
-    panes.forEach((pane) => {
-      pane.style.top = '';
-    });
-    return;
-  }
-
-  const headerEl = document.querySelector('.app-header');
-  const headerH = headerEl ? headerEl.offsetHeight : 0;
-  const topGap = readCssPixels(window.getComputedStyle(document.documentElement).getPropertyValue('--gap'), 8);
-  const bottomGap = readCssPixels(window.getComputedStyle(document.body).paddingBottom, 20);
-  const topOffset = headerH + topGap;
-  const viewportH = document.documentElement.clientHeight;
-
-  panes.forEach((pane) => {
-    const paneH = pane.getBoundingClientRect().height;
-    const top = Math.min(topOffset, viewportH - paneH - bottomGap - stickyExtraBottomGap(pane));
-    pane.style.top = top + 'px';
+  document.querySelectorAll('.column-group, .column').forEach((pane) => {
+    pane.style.top = '';
   });
+}
+
+// ---- SCROLLING: WHICH THING SCROLLS ----
+// Wide screen (side by side): the Combat pane and the Reference pane each
+// scroll on their own. Narrow screen (stacked): the whole page scrolls.
+
+function isPaneScrollLayout() {
+  return window.matchMedia(STICKY_LAYOUT_QUERY).matches;
+}
+
+// The panes that can currently scroll on their own (none when stacked, and a
+// pane that is hidden because the other one is maximized doesn't count).
+function getPaneScrollers() {
+  if (!isPaneScrollLayout()) return [];
+  return ['paneGroup', 'paneLookup']
+    .map((id) => document.getElementById(id))
+    .filter((el) => el && !el.classList.contains('column-collapsed'));
+}
+
+function getReferenceScrollTop() {
+  const pane = document.getElementById('paneLookup');
+  return isPaneScrollLayout() && pane ? pane.scrollTop : window.scrollY;
+}
+
+function scrollReferenceTo(top) {
+  const pane = document.getElementById('paneLookup');
+  if (isPaneScrollLayout() && pane) pane.scrollTo({ top: top, behavior: 'smooth' });
+  else window.scrollTo({ top: top, behavior: 'smooth' });
+}
+
+// Moves the Reference pane's contents up or down right away (no animation).
+function nudgeReferenceScroll(delta) {
+  const pane = document.getElementById('paneLookup');
+  if (isPaneScrollLayout() && pane) pane.scrollTop += delta;
+  else window.scrollBy(0, delta);
+}
+
+// Remembers which part of the Reference pane is on screen: the element just
+// below its search bar, and where on the screen that element is.
+function captureReferenceLocation() {
+  const panel = document.querySelector('.lookup-panel');
+  const header = document.querySelector('.lookup-sticky-top');
+  if (!panel || !header) return null;
+  const panelRect = panel.getBoundingClientRect();
+  if (panelRect.width < 50) return null;
+
+  const x = panelRect.left + panelRect.width / 2;
+  const y = Math.min(Math.max(header.getBoundingClientRect().bottom + 24, 0), window.innerHeight - 8);
+  const hit = document.elementFromPoint(x, y);
+  if (!hit || !panel.contains(hit)) return null;
+  const el = hit.closest('summary, p, li, h4, h5, tr, details');
+  if (!el || !panel.contains(el)) return null;
+  return { el: el, top: el.getBoundingClientRect().top };
+}
+
+// Scrolls the Reference pane back so that remembered element is at the same
+// place on the screen again. Returns false if that isn't possible any more.
+function restoreReferenceLocation(anchor) {
+  if (!anchor || !anchor.el.isConnected || anchor.el.getClientRects().length === 0) return false;
+  for (let i = 0; i < 3; i++) {
+    const delta = anchor.el.getBoundingClientRect().top - anchor.top;
+    if (Math.abs(delta) < 1) break;
+    nudgeReferenceScroll(delta);
+  }
+  return true;
 }
 
 // Scrolls the page so that "target" ends up in the vertical middle of
@@ -3554,18 +3741,15 @@ function updateStickyColumns() {
 // it could scroll the wrong distance. This works out where the target
 // would normally sit and scrolls to centre THAT.
 function scrollTargetToCenter(target) {
-  updateStickyColumns();
-
-  let shift = 0;
-  const column = target.closest('.column');
-  if (column && column.parentElement && window.getComputedStyle(column).position === 'sticky') {
-    shift = column.getBoundingClientRect().top - column.parentElement.getBoundingClientRect().top;
-    if (shift < 0) shift = 0;
-  }
-
+  const pane = isPaneScrollLayout() ? target.closest('#paneLookup, #paneGroup') : null;
   const rect = target.getBoundingClientRect();
-  const normalCenter = rect.top + rect.height / 2 - shift;
-  const delta = normalCenter - document.documentElement.clientHeight / 2;
+  if (pane) {
+    const paneRect = pane.getBoundingClientRect();
+    const delta = rect.top + rect.height / 2 - (paneRect.top + pane.clientHeight / 2);
+    pane.scrollBy({ top: delta, behavior: 'smooth' });
+    return;
+  }
+  const delta = rect.top + rect.height / 2 - document.documentElement.clientHeight / 2;
   window.scrollBy({ top: delta, behavior: 'smooth' });
 }
 
@@ -3677,13 +3861,17 @@ function updateScrollNav() {
   const downBtn = document.getElementById('scrollDownBtn');
   if (!nav || !upBtn || !downBtn) return;
 
-  const scrollY = window.scrollY;
-  const viewportH = window.innerHeight;
-  const docH = document.documentElement.scrollHeight;
   const EPS = 4;
-
-  const canScrollUp = scrollY > EPS;
-  const canScrollDown = scrollY + viewportH < docH - EPS;
+  const scrollers = getPaneScrollers();
+  let canScrollUp;
+  let canScrollDown;
+  if (scrollers.length > 0) {
+    canScrollUp = scrollers.some((pane) => pane.scrollTop > EPS);
+    canScrollDown = scrollers.some((pane) => pane.scrollTop + pane.clientHeight < pane.scrollHeight - EPS);
+  } else {
+    canScrollUp = window.scrollY > EPS;
+    canScrollDown = window.scrollY + window.innerHeight < document.documentElement.scrollHeight - EPS;
+  }
 
   upBtn.classList.toggle('shown', canScrollUp);
   downBtn.classList.toggle('shown', canScrollDown);
@@ -3955,6 +4143,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('roundUp').addEventListener('click', incrementRound);
   document.getElementById('roundDown').addEventListener('click', decrementRound);
   document.getElementById('resetRoundBtn').addEventListener('click', resetRound);
+  document.getElementById('nextCombatantBtn').addEventListener('click', selectNextCombatant);
 
   // Date tracker: year/month/day fields (typing directly)
   document.getElementById('dateYearInput').addEventListener('focusout', commitDateYearInput);
@@ -4074,6 +4263,14 @@ document.addEventListener('DOMContentLoaded', () => {
     handleStatClick(el);
   });
   window.addEventListener('resize', syncRollDock);
+  const rollClearAllBtn = document.getElementById('rollDockClearAll');
+  if (rollClearAllBtn) {
+    rollClearAllBtn.addEventListener('click', () => {
+      const cardsEl = document.getElementById('rollCards');
+      if (cardsEl) cardsEl.innerHTML = '';
+      updateRollDock();
+    });
+  }
 
   // Reference pane: Reset button
   document.getElementById('resetReferenceBtn').addEventListener('click', resetReferencePane);
@@ -4173,11 +4370,58 @@ document.addEventListener('DOMContentLoaded', () => {
     updateScrollNav();
     window.addEventListener('scroll', updateScrollNav);
     window.addEventListener('resize', updateScrollNav);
+    ['paneGroup', 'paneLookup'].forEach((id) => {
+      const pane = document.getElementById(id);
+      if (pane) pane.addEventListener('scroll', updateScrollNav);
+    });
+    // On a wide screen the arrows move BOTH panes; on a narrow screen, the page.
     scrollUpBtn.addEventListener('click', () => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const scrollers = getPaneScrollers();
+      if (scrollers.length > 0) scrollers.forEach((pane) => pane.scrollTo({ top: 0, behavior: 'smooth' }));
+      else window.scrollTo({ top: 0, behavior: 'smooth' });
     });
     scrollDownBtn.addEventListener('click', () => {
-      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+      const scrollers = getPaneScrollers();
+      if (scrollers.length > 0) {
+        scrollers.forEach((pane) => pane.scrollTo({ top: pane.scrollHeight, behavior: 'smooth' }));
+      } else {
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+      }
     });
+
+    // Scroll wheel on a wide screen: over a pane, only that pane scrolls (the
+    // browser does that by itself). Anywhere else (the gap between the panes,
+    // the top bar, the page edges), BOTH panes scroll together.
+    document.addEventListener(
+      'wheel',
+      (e) => {
+        if (e.ctrlKey || !isPaneScrollLayout()) return;
+        const target = e.target;
+        if (!target || !target.closest) return;
+        if (target.closest('.modal-overlay:not(.hidden)')) return;
+
+        let delta = e.deltaY;
+        if (e.deltaMode === 1) delta *= 40;
+        else if (e.deltaMode === 2) delta *= window.innerHeight;
+        if (delta === 0) return;
+
+        // The dice roll cards float over the Combat pane, so they count as it.
+        if (target.closest('#rollDock')) {
+          const combat = document.getElementById('paneGroup');
+          if (combat) {
+            e.preventDefault();
+            combat.scrollTop += delta;
+          }
+          return;
+        }
+        if (target.closest('#paneGroup, #paneLookup')) return;
+
+        e.preventDefault();
+        getPaneScrollers().forEach((pane) => {
+          pane.scrollTop += delta;
+        });
+      },
+      { passive: false }
+    );
   }
 });

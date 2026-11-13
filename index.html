@@ -111,6 +111,8 @@
             <button id="resetRoundBtn" class="btn-danger round-reset-btn" type="button">Reset round</button>
           </div>
 
+          <button id="nextCombatantBtn" class="btn-primary next-combatant-btn" type="button">Next combatant</button>
+
           <button class="pane-maximize-btn" data-column="paneGroup" type="button" aria-label="Maximize pane">
             <svg class="icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
             <svg class="icon-minimize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4a1 1 0 0 1-1 1H4M15 3v4a1 1 0 0 0 1 1h4M9 21v-4a1 1 0 0 0-1-1H4M15 21v-4a1 1 0 0 1 1-1h4"/></svg>
@@ -952,7 +954,10 @@
     </div>
   </div>
 
-  <div id="rollDock" class="roll-dock" aria-live="polite"></div>
+  <div id="rollDock" class="roll-dock" aria-live="polite">
+    <button id="rollDockClearAll" class="btn-secondary roll-dock-clear hidden" type="button" aria-label="Close all dice rolls">&times; Close all</button>
+    <div id="rollCards" class="roll-cards"></div>
+  </div>
 
   <p id="toast" class="toast hidden"></p>
 

@@ -34,7 +34,7 @@ html {
     --page-pad-x: 8px;
     --page-pad-top: 12px;
     --page-pad-bottom: 20px;
-    --initiative-col-min: 440px;
+    --initiative-col-min: 450px;
     --dice-col-min: 320px;
     --tracker-cols: 40px 1fr 38px 48px 24px 22px 24px;
     --font-display: 'Cinzel', Georgia, 'Times New Roman', serif;
@@ -426,20 +426,30 @@ body {
     flex: 1 1 100%;
 }
 
-/* Wide screens: the two panes sit side by side, and everything is
-   sticky: both panes, plus the Initiative and Dice columns inside the
-   left pane. The exact "top" value of each is worked out by
-   updateStickyColumns() in dm-screen.js:
-     - something shorter than the screen sticks to the top of the
-       viewport (just under the site header);
-     - something taller than the screen scrolls until ITS OWN bottom
-       is in view, then stays fixed there while the rest keeps
-       scrolling.
-   The value below is only the fallback used until that script runs.
+/* Wide screens: the two panes sit side by side and each one is its own
+   scrolling area. Hover over a pane and scroll, and only that pane scrolls.
+   Scroll anywhere else (the gap between the panes, the top bar) and BOTH
+   scroll together (the wheel listener in dm-screen.js does that part).
+   The row of panes is exactly as tall as the space under the top bar, so the
+   page itself never scrolls. A pane that has less content than that simply
+   ends sooner.
    The 1100px here must match STICKY_LAYOUT_QUERY in dm-screen.js. */
 @media (min-width: 1100px) {
+    html {
+        overflow: hidden;
+    }
+
     .columns-wrap {
         flex-wrap: nowrap;
+        height: calc(100vh - var(--header-h) - var(--gap) - var(--page-pad-bottom));
+        height: calc(100dvh - var(--header-h) - var(--gap) - var(--page-pad-bottom));
+    }
+
+    /* While a pane is maximized the top bar is hidden, so the panes get
+       its space as well. */
+    body.pane-maximized .columns-wrap {
+        height: calc(100vh - var(--page-pad-top) - var(--page-pad-bottom));
+        height: calc(100dvh - var(--page-pad-top) - var(--page-pad-bottom));
     }
 
     /* Both panes START at exactly half of the row: half of the width,
@@ -465,11 +475,62 @@ body {
         flex-wrap: nowrap;
     }
 
+    /* Each pane is its own scrolling area: as tall as its content, but never
+       taller than the row, and scrolling when it is taller. */
     .column-group,
-    .column {
-        position: sticky;
-        top: calc(var(--header-h) + var(--gap));
+    .column-lookup {
         align-self: flex-start;
+        max-height: 100%;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border) transparent;
+    }
+
+    /* The Reference pane's visible box is the pane itself (so the box stays
+       put while its contents scroll); the section inside is see-through. */
+    .column-lookup {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+
+    .column-lookup > section.lookup-panel {
+        flex-shrink: 0;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+    }
+
+    .column-lookup .lookup-sticky-top {
+        top: 0;
+    }
+
+    .lookup-header-mask {
+        display: none;
+    }
+
+    /* The Combat pane's title row (round counter, Next combatant button)
+       stays at the top while the rest of the pane scrolls. (The pane's own
+       padding is moved onto its contents so the title row can reach the very
+       top edge of the pane.) */
+    .column-group {
+        padding: 0;
+    }
+
+    .column-group > .group-header-row {
+        position: sticky;
+        top: 0;
+        z-index: 6;
+        margin: 0;
+        padding: var(--gap);
+        background: var(--surface);
+    }
+
+    .column-group > .column-group-body,
+    .column-group > section {
+        margin-left: var(--gap);
+        margin-right: var(--gap);
     }
 }
 
@@ -733,7 +794,7 @@ button {
     border: 1px solid var(--border);
     border-left: 3px solid var(--gold);
     border-radius: 6px;
-    padding: 7px 9px;
+    padding: 18px 9px;
     cursor: pointer;
 }
 
@@ -1419,11 +1480,30 @@ input.row-ini {
     left: 8px;
     z-index: 44;
     display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    max-width: calc(100vw - 16px);
+    pointer-events: none;
+}
+
+.roll-cards {
+    display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
     gap: 8px;
-    max-width: calc(100vw - 16px);
-    pointer-events: none;
+}
+
+.roll-dock-clear {
+    pointer-events: auto;
+    padding: 3px 9px;
+    font-size: 0.68rem;
+    background: var(--surface);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.roll-dock-clear.hidden {
+    display: none;
 }
 
 .roll-dock.hidden {
@@ -1456,6 +1536,40 @@ input.row-ini {
 
 .roll-card-close:hover {
     color: var(--danger);
+}
+
+/* Who made the roll and what it was: deliberately tiny. */
+.roll-card-who,
+.roll-card-what {
+    padding: 0 12px;
+    font-size: 0.58rem;
+    line-height: 1.25;
+    overflow: hidden;
+}
+
+.roll-card-who {
+    color: var(--text-muted);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.roll-card-what {
+    margin-bottom: 4px;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.roll-card-who:empty,
+.roll-card-what:empty {
+    display: none;
+}
+
+.next-combatant-btn {
+    padding: 9px 16px;
+    font-size: 0.82rem;
+    white-space: nowrap;
 }
 
 .roll-card-total {
