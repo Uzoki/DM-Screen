@@ -161,6 +161,7 @@
                 <button id="swapBtn" class="btn-primary hidden" type="button">Swap</button>
                 <button id="undoBtn" class="btn-secondary" type="button">Undo</button>
                 <button id="copyBtn" class="btn-secondary">Copy list</button>
+                <button id="saveEncounterBtn" class="btn-secondary" type="button">Save encounter</button>
                 <button id="clearBtn" class="btn-danger">Clear list</button>
               </div>
             </section>
@@ -270,6 +271,16 @@
           </div>
 
           <div class="dropdown-group">
+
+            <details class="dropdown" id="dropSavedEncounters">
+              <summary>Saved Encounters</summary>
+              <div class="dropdown-body" id="savedEncountersContainer">
+                <div class="saved-encounters-actions">
+                  <button id="saveEncounterBtn2" class="btn-primary" type="button">Save encounter</button>
+                </div>
+                <div class="condition-list" id="savedEncountersList"></div>
+              </div>
+            </details>
 
             <details class="dropdown" id="dropRules">
               <summary>Rules</summary>

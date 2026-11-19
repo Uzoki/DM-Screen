@@ -361,6 +361,7 @@ function selectNextCombatant() {
   }
 
   selectedIds = new Set([sorted[nextIndex].id]);
+  resetReactionBoxes(sorted[nextIndex]);
   if (wrapped) incrementRound();
   render();
 }
@@ -1836,6 +1837,7 @@ function openAndFlashTarget(target) {
   }
 
   fillLazyEntry(target);
+  enrichSpellEntry(target);
 
   // Remember this newly opened state so a page refresh keeps it —
   // but only when there's no active search filter, since a
@@ -2532,36 +2534,1228 @@ function getMonsterTitle(id) {
   return summaryEl ? summaryEl.textContent.trim() : id;
 }
 
+// ---- STAT BLOCKS IN THE COMBAT PANE: ONE PER SELECTED COMBATANT ----
+// Every selected combatant that was added from a stat block gets its own copy of that stat block
+// (with a gap between them), followed by that combatant's own row(s) of checkboxes (see further down).
+
+function getCombatStatBlockEntries() {
+  return sortedCombatants().filter((c) => selectedIds.has(c.id) && c.statBlockId && lazyEntryHtml.has(c.statBlockId));
+}
+
+// A short text that changes whenever something shown in the panel changes (who is selected, their names,
+// their checkboxes), so the panel is only rebuilt when it has to be.
+function computeCombatStatBlockKey() {
+  return getCombatStatBlockEntries()
+    .map((c) => [c.id, c.name, c.statBlockId, JSON.stringify(c.counters || {})].join('~'))
+    .join('|');
+}
+
+function buildCombatStatBlockEntryHtml(c) {
+  const monsterTitle = getMonsterTitle(c.statBlockId);
+  const baseName = String(c.name).replace(/\s+\d+$/, '').trim().toLowerCase();
+  const showTitle = baseName !== monsterTitle.toLowerCase() && String(c.name).trim().toLowerCase() !== monsterTitle.toLowerCase();
+  const heading = escapeHtml(c.name) + (showTitle ? ' <span class="combat-statblock-monster">(' + escapeHtml(monsterTitle) + ')</span>' : '');
+  return (
+    '<div class="combat-statblock-entry" data-combatant-id="' + escapeHtml(c.id) + '">' +
+    '<h4 data-combatant-id="' + escapeHtml(c.id) + '" data-statblock-id="' + escapeHtml(c.statBlockId) + '">' + heading + '</h4>' +
+    lazyEntryHtml.get(c.statBlockId) +
+    buildCounterPanelHtml(c) +
+    '</div>'
+  );
+}
+
 function renderCombatStatBlocks() {
   const panel = document.getElementById('combatStatBlockPanel');
   const body = document.getElementById('combatStatBlockBody');
   if (!panel || !body) return;
 
-  const ids = [];
-  selectedIds.forEach((combatantId) => {
-    const c = combatants.find((x) => x.id === combatantId);
-    if (c && c.statBlockId && lazyEntryHtml.has(c.statBlockId) && ids.indexOf(c.statBlockId) === -1) {
-      ids.push(c.statBlockId);
-    }
-  });
-
-  const key = ids.join('|');
+  const entries = getCombatStatBlockEntries();
+  const key = computeCombatStatBlockKey();
   if (key === combatStatBlockKey) return;
   combatStatBlockKey = key;
 
-  if (ids.length === 0) {
+  if (entries.length === 0) {
     panel.classList.add('hidden');
     body.innerHTML = '';
     clearReferencePopups();
     return;
   }
 
-  body.innerHTML = ids
-    .map((id) => '<h4 data-statblock-id="' + escapeHtml(id) + '">' + escapeHtml(getMonsterTitle(id)) + '</h4>' + lazyEntryHtml.get(id))
-    .join('');
+  body.innerHTML = entries.map(buildCombatStatBlockEntryHtml).join('');
   enrichStatBlocks(body);
   panel.classList.remove('hidden');
 }
+
+// ---- LIMITED-USE CHECKBOXES (under each stat block in the Combat pane) ----
+// A ticked box means "used". What gets boxes is worked out automatically from the stat block's text
+// (see the reader above). Each combatant remembers its own ticks in combatant.counters, so they are saved
+// with the page, with Undo, and with saved encounters.
+
+let counterGroupCache = new Map(); // stat block id -> its list of checkbox rows
+let counterSpellIndex = null;      // the spell names found in the Spells section, so spell lists can be read
+
+function getCounterSpellIndex() {
+  if (!counterSpellIndex) {
+    const names = [];
+    document.querySelectorAll('details[id^="spell-"]').forEach((el) => {
+      if (el.id.indexOf('spell-school-') === 0) return;
+      const summaryEl = el.querySelector(':scope > summary');
+      if (summaryEl) names.push(summaryEl.textContent.trim());
+    });
+    counterSpellIndex = scMakeSpellIndex(names);
+  }
+  return counterSpellIndex;
+}
+
+// Every stat block gets a Reaction row first (one box, or as many as the stat block says it has).
+function getCounterGroups(statBlockId) {
+  let groups = counterGroupCache.get(statBlockId);
+  if (!groups) {
+    const html = lazyEntryHtml.get(statBlockId) || '';
+    const reactions = scReactionCount(html);
+    groups = [
+      { key: 'reactions', kind: 'reaction', label: reactions > 1 ? 'Reactions' : 'Reaction', count: reactions, usedByDefault: 0, tag: '' }
+    ].concat(scExtractGroups(html, getCounterSpellIndex()));
+    counterGroupCache.set(statBlockId, groups);
+  }
+  return groups;
+}
+
+// The ticks a row starts with (for example 5 Legendary Resistance boxes where 1 only counts in the lair:
+// the last box starts ticked).
+function getCounterDefaultState(group) {
+  const state = [];
+  for (let i = 0; i < group.count; i++) state.push(i >= group.count - group.usedByDefault);
+  return state;
+}
+
+function getCounterState(combatant, group) {
+  const state = getCounterDefaultState(group);
+  const saved = combatant.counters && combatant.counters[group.key];
+  if (Array.isArray(saved)) {
+    for (let i = 0; i < state.length; i++) {
+      if (typeof saved[i] === 'boolean') state[i] = saved[i];
+    }
+  }
+  return state;
+}
+
+function buildCounterPanelHtml(c) {
+  const groups = getCounterGroups(c.statBlockId);
+  let rows = '';
+  groups.forEach((g) => {
+    const state = getCounterState(c, g);
+    const boxes = state
+      .map(
+        (used, i) =>
+          '<input type="checkbox" class="counter-box" data-key="' + escapeHtml(g.key) + '" data-index="' + i + '"' +
+          (used ? ' checked' : '') +
+          ' aria-label="' + escapeHtml(g.label) + ' ' + (i + 1) + '" />'
+      )
+      .join('');
+    rows +=
+      '<div class="counter-row"><span class="counter-label">' + escapeHtml(g.label) +
+      (g.tag ? ' <span class="counter-tag">' + escapeHtml(g.tag) + '</span>' : '') +
+      '</span><span class="counter-boxes">' + boxes + '</span></div>';
+  });
+  return (
+    '<div class="counter-panel" data-combatant-id="' + escapeHtml(c.id) + '">' +
+    '<div class="counter-head"><span class="counter-title">Uses (ticked = used)</span>' +
+    '<button type="button" class="btn-secondary counter-reset-btn">Reset boxes</button></div>' +
+    rows +
+    '</div>'
+  );
+}
+
+// Pressing "Next combatant" gives that combatant its reaction back.
+function resetReactionBoxes(combatant) {
+  if (combatant && combatant.counters && combatant.counters.reactions) delete combatant.counters.reactions;
+}
+
+function handleCounterBoxChange(box) {
+  const panelEl = box.closest('.counter-panel');
+  const rowEl = box.closest('.counter-row');
+  if (!panelEl || !rowEl) return;
+  const combatant = combatants.find((c) => c.id === panelEl.dataset.combatantId);
+  if (!combatant) return;
+  if (!combatant.counters) combatant.counters = {};
+  combatant.counters[box.dataset.key] = Array.from(rowEl.querySelectorAll('.counter-box')).map((b) => b.checked);
+  combatStatBlockKey = computeCombatStatBlockKey(); // the boxes on screen are already up to date: no rebuild needed
+  save();
+}
+
+async function handleCounterReset(button) {
+  const panelEl = button.closest('.counter-panel');
+  if (!panelEl) return;
+  const combatant = combatants.find((c) => c.id === panelEl.dataset.combatantId);
+  if (!combatant) return;
+  const confirmed = await confirmAction('Reset all checkboxes for ' + combatant.name + '?', 'Reset');
+  if (!confirmed) return;
+  delete combatant.counters;
+  combatStatBlockKey = '';
+  renderCombatStatBlocks();
+  save();
+}
+
+// ---- SAVED ENCOUNTERS ----
+// "Save encounter" stores every combatant in the turn order (with initiative, AC, HP, hidden state and
+// checkbox ticks) under a name, in this browser's local storage. In the Reference pane, "Saved Encounters"
+// lists them; adding one puts its combatants back into the turn order (without clearing what is there).
+
+const SAVED_ENCOUNTERS_KEY = 'dmScreenSavedEncounters';
+let savedEncounters = []; // { id, name, savedAt, combatants: [...] }
+let lastEncounterName = '';
+let encounterIdCounter = 0;
+
+function loadSavedEncounters() {
+  try {
+    const raw = localStorage.getItem(SAVED_ENCOUNTERS_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    savedEncounters = Array.isArray(data.encounters) ? data.encounters : [];
+    lastEncounterName = typeof data.lastName === 'string' ? data.lastName : '';
+    encounterIdCounter = savedEncounters.length;
+  } catch (err) {
+    console.warn('Could not load saved encounters:', err);
+  }
+}
+
+function persistSavedEncounters() {
+  try {
+    localStorage.setItem(SAVED_ENCOUNTERS_KEY, JSON.stringify({ encounters: savedEncounters, lastName: lastEncounterName }));
+  } catch (err) {
+    showToast('Could not store the saved encounters in this browser');
+  }
+}
+
+function renderSavedEncounters() {
+  const list = document.getElementById('savedEncountersList');
+  if (!list) return;
+  if (savedEncounters.length === 0) {
+    list.innerHTML = '<p class="saved-empty">No saved encounters yet. Press "Save encounter" to save the current turn order.</p>';
+    return;
+  }
+  const sorted = [...savedEncounters].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+  list.innerHTML = sorted
+    .map((enc) => {
+      const members = [...enc.combatants]
+        .sort((a, b) => b.initiative - a.initiative)
+        .map((c) => {
+          const bits = ['Init ' + c.initiative];
+          if (typeof c.ac === 'number') bits.push('AC ' + c.ac);
+          if (typeof c.hp === 'number') bits.push('HP ' + c.hp);
+          return '<li>' + escapeHtml(c.name) + (c.isHidden ? ' (hidden)' : '') + ' \u2014 ' + escapeHtml(bits.join(', ')) + '</li>';
+        })
+        .join('');
+      const count = enc.combatants.length;
+      return (
+        '<details class="condition-dropdown saved-encounter" id="saved-encounter-' + escapeHtml(enc.id) + '">' +
+        '<summary>' + escapeHtml(enc.name) + ' <span class="saved-encounter-count">(' + count + (count === 1 ? ' combatant' : ' combatants') + ')</span></summary>' +
+        '<div class="condition-body">' +
+        '<div class="saved-encounter-actions">' +
+        '<button type="button" class="btn-primary" data-enc-action="load" data-enc-id="' + escapeHtml(enc.id) + '">Add to initiative order</button>' +
+        '<button type="button" class="btn-secondary" data-enc-action="rename" data-enc-id="' + escapeHtml(enc.id) + '">Rename</button>' +
+        '<button type="button" class="btn-danger" data-enc-action="delete" data-enc-id="' + escapeHtml(enc.id) + '">Delete</button>' +
+        '</div>' +
+        '<ul class="saved-encounter-members">' + members + '</ul>' +
+        '</div>' +
+        '</details>'
+      );
+    })
+    .join('');
+}
+
+// A small pop-up with a text box. Resolves with the text, or null if cancelled.
+function showTextPrompt(message, defaultValue, confirmLabel) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('modalOverlay');
+    const messageEl = document.getElementById('modalMessage');
+    const buttonsEl = document.getElementById('modalButtons');
+
+    messageEl.textContent = message;
+    buttonsEl.innerHTML = '';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'modal-input';
+    input.value = defaultValue || '';
+    messageEl.insertAdjacentElement('afterend', input);
+
+    const finish = (value) => {
+      input.remove();
+      overlay.classList.add('hidden');
+      resolve(value);
+    };
+
+    const okBtn = document.createElement('button');
+    okBtn.textContent = confirmLabel || 'OK';
+    okBtn.className = 'btn-primary';
+    okBtn.addEventListener('click', () => finish(input.value));
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.className = 'btn-secondary';
+    cancelBtn.addEventListener('click', () => finish(null));
+    buttonsEl.appendChild(okBtn);
+    buttonsEl.appendChild(cancelBtn);
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        finish(input.value);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        finish(null);
+      }
+    });
+
+    overlay.classList.remove('hidden');
+    input.focus();
+    input.select();
+  });
+}
+
+function findSavedEncounterByName(name, exceptId) {
+  const wanted = String(name).trim().toLowerCase();
+  return savedEncounters.find((e) => e.id !== exceptId && e.name.trim().toLowerCase() === wanted);
+}
+
+async function saveCurrentEncounter() {
+  if (combatants.length === 0) {
+    showToast('There are no combatants to save yet');
+    return;
+  }
+  const answer = await showTextPrompt('Name this encounter:', lastEncounterName, 'Save');
+  if (answer === null) return;
+  const name = answer.trim();
+  if (!name) {
+    showToast('Enter a name to save the encounter');
+    return;
+  }
+
+  const existing = findSavedEncounterByName(name);
+  if (existing) {
+    const replace = await confirmAction('An encounter called "' + existing.name + '" is already saved. Replace it?', 'Replace');
+    if (!replace) return;
+  }
+
+  const snapshot = JSON.parse(JSON.stringify(combatants));
+  if (existing) {
+    existing.name = name;
+    existing.savedAt = Date.now();
+    existing.combatants = snapshot;
+  } else {
+    encounterIdCounter += 1;
+    savedEncounters.push({ id: 'enc-' + Date.now() + '-' + encounterIdCounter, name: name, savedAt: Date.now(), combatants: snapshot });
+  }
+  lastEncounterName = name;
+  persistSavedEncounters();
+  renderSavedEncounters();
+  showToast('Encounter saved as "' + name + '"');
+}
+
+// The name a loaded combatant gets: its saved name, unless someone in the turn order already has it
+// (then it is numbered, exactly like adding a second copy of the same monster).
+function nameForLoadedCombatant(name) {
+  const taken = combatants.some((c) => c.name.trim().toLowerCase() === String(name).trim().toLowerCase());
+  if (!taken) return name;
+  const base = String(name).replace(/\s+\d+$/, '').trim() || name;
+  return claimCombatantName(base);
+}
+
+function loadSavedEncounter(encId) {
+  const enc = savedEncounters.find((e) => e.id === encId);
+  if (!enc) return;
+
+  pushUndoSnapshot();
+  let added = 0;
+  let skipped = 0;
+  enc.combatants.forEach((saved) => {
+    const copy = JSON.parse(JSON.stringify(saved));
+    if (copy.statBlockId) {
+      copy.name = nameForLoadedCombatant(copy.name);
+    } else if (combatants.some((c) => c.name.trim().toLowerCase() === String(copy.name).trim().toLowerCase())) {
+      skipped += 1; // a player that is already in the turn order is not added twice
+      return;
+    }
+    idCounter += 1;
+    copy.id = 'c-' + Date.now() + '-' + idCounter;
+    combatants.push(copy);
+    added += 1;
+  });
+
+  if (added === 0) undoStack.pop();
+  lastEncounterName = enc.name;
+  persistSavedEncounters();
+  render();
+
+  let message = added + (added === 1 ? ' combatant' : ' combatants') + ' added from "' + enc.name + '"';
+  if (skipped > 0) message += ' (' + skipped + ' already in the list, skipped)';
+  showToast(message, 4000);
+}
+
+async function renameSavedEncounter(encId) {
+  const enc = savedEncounters.find((e) => e.id === encId);
+  if (!enc) return;
+  const answer = await showTextPrompt('Rename this encounter:', enc.name, 'Rename');
+  if (answer === null) return;
+  const name = answer.trim();
+  if (!name || name === enc.name) return;
+  if (findSavedEncounterByName(name, enc.id)) {
+    showToast('An encounter with that name already exists');
+    return;
+  }
+  enc.name = name;
+  persistSavedEncounters();
+  renderSavedEncounters();
+}
+
+async function deleteSavedEncounter(encId) {
+  const enc = savedEncounters.find((e) => e.id === encId);
+  if (!enc) return;
+  const confirmed = await confirmAction('Delete the saved encounter "' + enc.name + '"?', 'Delete');
+  if (!confirmed) return;
+  savedEncounters = savedEncounters.filter((e) => e.id !== encId);
+  persistSavedEncounters();
+  renderSavedEncounters();
+}
+
+function setupCounterAndEncounterEvents() {
+  const statBlockBody = document.getElementById('combatStatBlockBody');
+  if (statBlockBody) {
+    statBlockBody.addEventListener('change', (e) => {
+      const box = e.target.closest ? e.target.closest('.counter-box') : null;
+      if (box) handleCounterBoxChange(box);
+    });
+    statBlockBody.addEventListener('click', (e) => {
+      const btn = e.target.closest ? e.target.closest('.counter-reset-btn') : null;
+      if (btn) handleCounterReset(btn);
+    });
+  }
+
+  ['saveEncounterBtn', 'saveEncounterBtn2'].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', saveCurrentEncounter);
+  });
+
+  const list = document.getElementById('savedEncountersList');
+  if (list) {
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest ? e.target.closest('[data-enc-action]') : null;
+      if (!btn) return;
+      const id = btn.dataset.encId;
+      if (btn.dataset.encAction === 'load') loadSavedEncounter(id);
+      else if (btn.dataset.encAction === 'rename') renameSavedEncounter(id);
+      else if (btn.dataset.encAction === 'delete') deleteSavedEncounter(id);
+    });
+  }
+}
+
+// ---- ROLLABLE DICE IN SPELLS ----
+// Spell entries in the Reference pane (and the copies of them shown in the Combat pane) get the same
+// clickable dice as stat blocks: every dice expression such as "8d6" or "1d4 + 1" can be rolled.
+// (Only dice are made clickable here; stat blocks additionally make "+7" style modifiers clickable.)
+
+const SPELL_DICE_SOURCE = '(\\d*d\\d+(?:\\s*[+\\-\\u2212]\\s*\\d+)?)';
+
+function enrichDiceIn(root) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => {
+      if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      const parent = node.parentElement;
+      if (parent && parent.closest('.stat-click, a, button, input, textarea, select, option, script, style, .dropdown-search-row, .add-to-combat-row')) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const nodes = [];
+  let node;
+  while ((node = walker.nextNode())) nodes.push(node);
+  nodes.forEach((n) => enrichTextNode(n, null, true));
+}
+
+function enrichSpellEntry(detailsEl) {
+  if (!detailsEl || !detailsEl.id || detailsEl.id.indexOf('spell-') !== 0 || detailsEl.id.indexOf('spell-school-') === 0) return;
+  const body = detailsEl.querySelector(':scope > .condition-body, :scope > .dropdown-body');
+  if (!body || body.dataset.diceEnriched === '1') return;
+  body.dataset.diceEnriched = '1';
+  enrichDiceIn(body);
+}
+
+// What a spell roll was: "Fire damage", "Damage", "Healing", "Temporary hit points".
+function describeSpellRoll(el) {
+  const block = el.closest('p, li, td, th') || el.parentElement;
+  if (!block) return '';
+  const range = document.createRange();
+  range.selectNodeContents(block);
+  range.setStartAfter(el);
+  const after = range.toString().slice(0, 80);
+  range.selectNodeContents(block);
+  range.setEndBefore(el);
+  const before = range.toString().slice(-70);
+
+  if (/^[^.;]{0,25}\btemporary hit points?\b/i.test(after)) return 'Temporary hit points';
+  const typed = /^[^.;]{0,30}?\b(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\b[^.;]{0,25}?\bdamage\b/i.exec(after);
+  if (typed) return capitalizeWord(typed[1].toLowerCase()) + ' damage';
+  if (/^[^.;]{0,25}\bdamage\b/i.test(after)) return 'Damage';
+  if (/\b(regains?|restores?|heals?|recovers?|healing)\b[^.;]{0,50}$/i.test(before) || /^[^.;]{0,25}\bhit points?\b/i.test(after)) return 'Healing';
+  return '';
+}
+
+
+// ---- LIMITED-USE CHECKBOXES: READING A STAT BLOCK ----
+// Everything in this block reads the HTML of one monster's stat block and works out
+// which abilities have a limited number of uses (spell slots, spells with "3/Day",
+// legendary actions, legendary resistance, recharge abilities, charges, and so on).
+// It only READS text; it never changes anything on the page.
+// Result: a list of "groups". Each group is one row of checkboxes:
+//   { key, label, count, usedByDefault, kind, tag }
+
+const SC_PERIOD = '(?:short or long rest|short\\/long rest|short rest|long rest|rest|day|week|hour|month|turn|round)';
+const SC_NUMBER_WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, once: 1, twice: 2, thrice: 3 };
+const SC_ORDINAL_WORDS = { first: '1st', second: '2nd', third: '3rd', fourth: '4th', fifth: '5th', sixth: '6th', seventh: '7th', eighth: '8th', ninth: '9th' };
+
+function scDecode(str) {
+  return String(str)
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (m, n) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&amp;/g, '&');
+}
+
+// HTML -> plain text. A literal "<br>" (written as &lt;br&gt; in some stat blocks)
+// becomes a line break, which always ends a spell list.
+function scPlain(html) {
+  return scDecode(String(html).replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|li|div|h\d)>/gi, '\n').replace(/<[^>]*>/g, ''))
+    .replace(/\u00a0/g, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/[ \t\r]+/g, ' ')
+    .replace(/ ?\n ?/g, '\n')
+    .trim();
+}
+
+function scNorm(str) {
+  return String(str).replace(/[\u2019\u2018]/g, "'").replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function scNumberFrom(word) {
+  const w = String(word).toLowerCase();
+  if (/^\d+$/.test(w)) return parseInt(w, 10);
+  return SC_NUMBER_WORDS[w] || null;
+}
+
+// Splits a stat block into its paragraphs and list items, remembering which heading
+// (Traits, Actions, ...) each one sits under, and the bold feature name if it has one.
+function scParseBlocks(html) {
+  const out = [];
+  let section = 'Header';
+  const re = /<h4>([\s\S]*?)<\/h4>|<(p|li)((?: [^>]*)?)>([\s\S]*?)<\/\2>/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    if (m[1] !== undefined) {
+      section = scPlain(m[1]);
+      continue;
+    }
+    if (m[3] && m[3].indexOf('stat-source') !== -1) continue;
+    const tag = m[2];
+    const inner = m[4];
+    const named = tag === 'p' ? /^<strong><em>([\s\S]*?)<\/em><\/strong>([\s\S]*)$/.exec(inner) : null;
+    out.push({
+      section: section,
+      tag: tag,
+      name: named ? scPlain(named[1]) : null,
+      text: scPlain(named ? named[2] : inner)
+    });
+  }
+  return out;
+}
+
+// ---------- usage parentheticals: "(3/Day)", "(Recharge 5-6)", ... ----------
+
+// Reads the text inside one pair of brackets. Returns null if it is not a usage note.
+function scUsageFromParen(paren) {
+  if (/\brecharge/i.test(paren)) return { kind: 'recharge' };
+
+  const lair = /(\d+)\s*\/\s*day\s+in\s+(?:its\s+|the\s+|their\s+)?lair/i.exec(paren);
+  const re = new RegExp('(\\d+)\\s*\\/\\s*(' + SC_PERIOD.slice(3, -1) + ')\\b', 'gi');
+  const found = [];
+  let m;
+  while ((m = re.exec(paren)) !== null) {
+    found.push({ n: parseInt(m[1], 10), period: m[2].toLowerCase(), index: m.index });
+  }
+  if (found.length === 0) return null;
+
+  if (lair) {
+    const lairN = parseInt(lair[1], 10);
+    const base = found.find((f) => f.index !== lair.index);
+    const baseN = base ? base.n : lairN;
+    return { kind: 'uses', total: Math.max(lairN, baseN), base: Math.min(lairN, baseN), period: 'day' };
+  }
+  return { kind: 'uses', total: found[0].n, base: found[0].n, period: found[0].period };
+}
+
+// Looks at a feature name (and the start of its text) for a usage note.
+// Returns { label, usage } or null.
+function scNameUsage(rawName, bodyText) {
+  const name = rawName.replace(/[.\s]+$/, '');
+  const parens = [];
+  const re = /\(([^)]*)(?:\)|$)/g;
+  let m;
+  while ((m = re.exec(name)) !== null) parens.push({ text: m[1], full: m[0] });
+
+  // Some stat blocks put the note right after the name: "Spellcasting. (3/Day)The ..."
+  const lead = /^\s*\(([^)]*)\)/.exec(bodyText || '');
+  if (lead) parens.push({ text: lead[1], full: lead[0].trim() });
+
+  const usages = [];
+  parens.forEach((p) => {
+    const u = scUsageFromParen(p.text);
+    if (u) usages.push({ u: u, text: p.text, full: p.full });
+  });
+  if (usages.length === 0) return null;
+
+  let chosen = usages.find((x) => x.u.kind === 'uses' && x.u.total !== x.u.base);
+  if (!chosen) chosen = usages.find((x) => x.u.kind === 'uses');
+  if (!chosen) chosen = usages[0];
+
+  let base = name;
+  usages.forEach((x) => {
+    if (x.full.charAt(0) === '(' && name.indexOf(x.full) !== -1) base = base.replace(x.full, '');
+  });
+  base = base.replace(/\s+/g, ' ').trim();
+  return { label: (base + ' (' + chosen.text.trim() + ')').trim(), usage: chosen.u };
+}
+
+// ---------- spells ----------
+
+// Builds the list of spell names the checkbox reader can recognise.
+// "names" is a plain array of spell names (from the Spells section of the page).
+function scMakeSpellIndex(names) {
+  const set = new Set();
+  (names || []).forEach((n) => {
+    const base = scNorm(n);
+    set.add(base);
+    if (base.indexOf(' / ') !== -1) {
+      set.add(base.replace(/\s*\/\s*/g, '/'));
+      base.split(' / ').forEach((p) => set.add(p.trim()));
+    }
+  });
+  const sorted = Array.from(set).sort((a, b) => b.length - a.length);
+  return { set: set, sorted: sorted };
+}
+
+function scCleanSpellToken(tok) {
+  return tok
+    .replace(/[_*]/g, '')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^(?:and|or)\s+/i, '')
+    .replace(/[.;:]+$/, '')
+    .trim();
+}
+
+// Splits "a, b (c, d), e" at the commas that are not inside brackets.
+function scSplitTopLevel(text) {
+  const parts = [];
+  let depth = 0;
+  let cur = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text.charAt(i);
+    if (ch === '(') depth++;
+    if (ch === ')') depth = Math.max(0, depth - 1);
+    if ((ch === ',' || ch === ';') && depth === 0) {
+      parts.push(cur);
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  parts.push(cur);
+  return parts;
+}
+
+// Cuts a spell list off where the sentence ends (first full stop outside brackets, or a line break).
+function scCutListEnd(text) {
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text.charAt(i);
+    if (ch === '(') depth++;
+    if (ch === ')') depth = Math.max(0, depth - 1);
+    if (ch === '\n') return text.slice(0, i);
+    if (ch === '.' && depth === 0 && (i === text.length - 1 || /\s/.test(text.charAt(i + 1)))) return text.slice(0, i);
+  }
+  return text;
+}
+
+function scTitleCaseSpell(name) {
+  const small = { of: 1, and: 1, the: 1, to: 1, in: 1, on: 1, a: 1, an: 1, with: 1, from: 1, for: 1, as: 1, or: 1 };
+  const m = /^([^(]*?)(\s*\(.*)?$/.exec(name);
+  const base = m ? m[1] : name;
+  const rest = m && m[2] ? m[2] : '';
+  const words = base.split(' ').map((w, i) => {
+    if (!w) return w;
+    const lower = w.toLowerCase();
+    if (i > 0 && small[lower]) return lower;
+    return w
+      .split('/')
+      .map((seg) => seg.split('-').map((s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)).join('-'))
+      .join('/')
+      .replace(/(^|')(\w)/g, (x, a, b) => (a === "'" ? "'" + b.toLowerCase() : x))
+      .replace(/^(.)/, (c) => c.toUpperCase());
+  });
+  return words.join(' ') + rest;
+}
+
+// One piece of a spell list -> a clean spell name, or null if it does not look like a spell.
+function scSpellFromToken(raw, spellIndex) {
+  let tok = scCleanSpellToken(raw);
+  if (!tok) return null;
+  // repair a list item whose first letter got lost ("eath ward" -> "death ward")
+  if (spellIndex && !spellIndex.set.has(scNorm(tok.replace(/\([^)]*\)/g, '').trim()))) {
+    const fixes = [];
+    for (let c = 97; c <= 122; c++) {
+      const cand = String.fromCharCode(c) + scNorm(tok.replace(/\([^)]*\)/g, '').trim());
+      if (spellIndex.set.has(cand)) fixes.push(cand);
+    }
+    if (fixes.length === 1 && /^[a-z]/.test(tok)) tok = fixes[0].charAt(0) + tok;
+  }
+
+  // keep a spell name followed by notes in brackets, drop any other text glued on at the end
+  const idx = spellIndex ? spellIndex.sorted : [];
+  const low = scNorm(tok);
+  for (let i = 0; i < idx.length; i++) {
+    const nm = idx[i];
+    if (low.indexOf(nm) !== 0) continue;
+    const after = low.slice(nm.length);
+    if (after !== '' && !/^[\s(]/.test(after)) continue;
+    // the spell name (keeping its capital letters from the stat block)
+    let keep = tok.slice(0, nm.length);
+    let rest = tok.slice(nm.length);
+    const par = /^\s*\([^)]*\)/.exec(rest);
+    if (par) keep += par[0];
+    return keep.replace(/\s+/g, ' ').trim();
+  }
+
+  // unknown to the site: accept only if it still looks like a spell name
+  const plain = tok.replace(/\([^)]*\)/g, '').trim();
+  const words = plain.split(' ').filter(Boolean);
+  if (words.length === 0 || words.length > 6) return null;
+  if (/\d/.test(plain)) return null;
+  if (/\b(can|must|is|are|has|have|takes?|uses?|casts?|deals?|spent|while|when|that|which|without|requires?|per)\b/i.test(plain)) return null;
+  return tok;
+}
+
+// Finds the lines in one paragraph/list item that give a number of uses per day to spells,
+// like "3/Day Each: misty step, mirror image" or "At will: ... 1/day: geas".
+// Every spell in the list gets its own number of uses.
+function scSpellSegments(text, spellIndex) {
+  const out = [];
+  const re = /(?:^|[\s,;.:])(?:(at[ -]will)|(\d+)\s*\/\s*(day|week|month|hour|short or long rest|short rest|long rest|rest))\b(\s+each\b)?(\s*\([^)]*\))?\s*([:\u2013\u2014-])?/gi;
+  const heads = [];
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const start = m.index + (m[0].length - m[0].replace(/^[\s,;.:]/, '').length);
+    const before = text.slice(0, start).replace(/^[^:]{0,40}?,\s*/, '').trim();
+    const atStart = start === 0 || before === '';
+    const hasColon = !!m[6];
+    heads.push({
+      atWill: !!m[1],
+      n: m[2] ? parseInt(m[2], 10) : 0,
+      period: m[3] ? scPeriodLabel(m[3]) : '',
+      start: start,
+      end: m.index + m[0].length,
+      note: m[5] ? m[5].replace(/^\s*\(|\)\s*$/g, '').trim() : '',
+      ok: hasColon || (atStart && !m[5]),
+      colon: hasColon
+    });
+  }
+
+  heads.forEach((h, i) => {
+    if (!h.ok || h.atWill) return;
+    const nextStart = i + 1 < heads.length ? heads[i + 1].start : text.length;
+    const listText = scCutListEnd(text.slice(h.end, nextStart));
+    const items = [];
+    scSplitTopLevel(listText).forEach((piece) => {
+      const spell = scSpellFromToken(piece, spellIndex);
+      if (spell) {
+        items.push(spell);
+      } else {
+        // "plane shift and teleport": accept if every part is a known spell
+        const parts = scCleanSpellToken(piece).split(/\s+and\s+/i);
+        if (parts.length > 1 && spellIndex && parts.every((p) => spellIndex.set.has(scNorm(p.replace(/\([^)]*\)/g, '').trim())))) {
+          parts.forEach((p) => items.push(p.trim()));
+        }
+      }
+    });
+    if (items.length === 0) return;
+
+    let qualifier = h.note;
+    if (!qualifier && i === 0) {
+      const pre = text.slice(0, h.start).replace(/[\s,:;]+$/, '').trim();
+      if (pre && pre.length <= 30 && !/[.:]/.test(pre)) qualifier = pre;
+    }
+    out.push({ n: h.n, period: h.period, items: items, qualifier: qualifier });
+  });
+  return out;
+}
+
+// "Name (2/day)" written inside a list of spells.
+function scInlineSpellUses(text, spellIndex) {
+  const out = [];
+  const re = /(?:^|[,;:]\s*)([A-Za-z][A-Za-z\u2019' \/-]{1,40}?)\s*\(\s*(\d+)\s*\/\s*day\s*\)/gi;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const spell = scSpellFromToken(m[1], spellIndex);
+    if (spell) out.push({ n: parseInt(m[2], 10), name: spell });
+  }
+  return out;
+}
+
+// ---------- spell slots ----------
+
+function scOrdinal(word) {
+  const w = String(word).toLowerCase();
+  return SC_ORDINAL_WORDS[w] || w;
+}
+
+function scSlotLines(text) {
+  const out = [];
+  const re = /\b(\d+(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)(?:[\s-]*level)?(?:\s*[\u2013-]\s*(\d+(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)(?:[\s-]*level)?)?\s*\(\s*(\d+)\s+(?:(\d+(?:st|nd|rd|th))[- ]level\s+)?(?:spell\s+)?slots?\s*\)/gi;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const low = scOrdinal(m[1]);
+    const high = m[2] ? scOrdinal(m[2]) : (m[4] ? scOrdinal(m[4]) : null);
+    out.push({ level: high || low, range: m[2] ? low + '\u2013' + high : '', n: parseInt(m[3], 10) });
+  }
+  return out;
+}
+
+// ---------- legendary actions ----------
+
+// How many legendary actions the text promises, if it says so.
+function scLegendaryCountFromText(text) {
+  const re = /\b(?:can|may|could)\s+(?:only\s+)?take\s+(?:up to\s+)?(\d+|one|two|three|four|five|six)\s+legendary\s+actions?\b|\bhas\s+(\d+|one|two|three|four|five|six)\s+legendary\s+actions?\s+it\s+can\s+take/i;
+  const m = re.exec(text);
+  if (!m) return null;
+  return scNumberFrom(m[1] || m[2]);
+}
+
+// Some stat blocks have lore text pasted under the "Legendary Actions" heading (before, after, or around
+// the real actions). This decides whether one paragraph reads like a real legendary action.
+function scLegendaryBlockLooksReal(b) {
+  const modal = /\b(might|may|can|could|would|should|will|must)\b/i;
+  const action = /^((?:[A-Za-z\u2019'-]+\s+){0,5}?)(makes?|uses?|moves?|casts?|attacks?|regains?|swims?|teleports?|exhales?|releases?|summons?|targets?)\b/;
+  if (b.name && /\(\s*(costs?\s+)?\d+(?:-\d+)?\s+actions?\s*\)|\(\s*costs?\b/i.test(b.name)) return true;
+  if (/can(?:'|\u2019)?t (?:take|use) this (?:legendary )?(?:action|option) again/i.test(b.text)) return true;
+  if (scLegendaryCountFromText((b.name ? b.name + '. ' : '') + b.text) !== null) return true;
+  if (b.name && /^legendary actions/i.test(b.name)) return true;
+  if (b.name && b.text.length <= 600) {
+    const m = action.exec(b.text);
+    if (m && !modal.test(m[1])) return true;
+  }
+  return false;
+}
+
+function scLegendaryBlockIsLore(b) {
+  return ((!b.name && b.text.length > 150) || (b.name && b.text.length > 700)) && !/legendary action/i.test((b.name || '') + ' ' + b.text);
+}
+
+// Keeps only the real legendary actions of each "Legendary Actions" section.
+function scTrimLoreFromLegendary(blocks) {
+  const out = [];
+  let i = 0;
+  while (i < blocks.length) {
+    if (blocks[i].section !== 'Legendary Actions') {
+      out.push(blocks[i]);
+      i++;
+      continue;
+    }
+    let j = i;
+    while (j < blocks.length && blocks[j].section === 'Legendary Actions') j++;
+    const sec = blocks.slice(i, j);
+    const start = sec.findIndex((b) => scLegendaryBlockLooksReal(b) && !scLegendaryBlockIsLore(b));
+    if (start !== -1) {
+      for (let k = start; k < sec.length; k++) {
+        if (k > start && scLegendaryBlockIsLore(sec[k])) break;
+        out.push(sec[k]);
+      }
+    }
+    i = j;
+  }
+  return out;
+}
+
+function scLegendarySectionIsReal(blocks) {
+  return blocks.some((b) => b.section === 'Legendary Actions');
+}
+
+// ---------- more ways a stat block can describe limited uses ----------
+
+// "Summon Demon (1/Day): ..." written without bold, or "Flamecharm (Recharges after a Short or Long Rest). ..."
+function scPlainNameUsage(text) {
+  const out = [];
+  const lead = /^([A-Z][A-Za-z\u2019' -]{1,60}?)\s*\(([^)]*)\)(?=\s*(?:[.:]|$)|[A-Z]|\s+[A-Z])/.exec(text);
+  if (lead) {
+    const u = scUsageFromParen(lead[2]);
+    if (u) out.push({ label: lead[1].trim() + ' (' + lead[2].trim() + ')', usage: u });
+  }
+  return out;
+}
+
+function scMidNameUsage(text) {
+  const out = [];
+  const re = /(?:^|[.!?]\s+)([A-Z][\w\u2019'-]*(?:\s+(?:of|the|and|in|to|a|an|[A-Z][\w\u2019'-]*)){0,5})\s*\(([^)]*)\)\s*[.:]/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const u = scUsageFromParen(m[2]);
+    if (u) out.push({ label: m[1].trim() + ' (' + m[2].trim() + ')', usage: u });
+  }
+  return out;
+}
+
+const SC_COUNT_RE = '(once|twice|thrice|(?:\\d+|one|two|three|four|five|six)\\s+times?)';
+const SC_PER_RE = '(?:per|a|each|every)\\s+(day|week|month|short or long rest|long rest|short rest|rest)';
+
+function scCountFromWord(word) {
+  const w = word.toLowerCase().replace(/\s*times?$/, '');
+  return scNumberFrom(w);
+}
+
+function scPeriodLabel(period) {
+  const p = period.toLowerCase();
+  if (p === 'day') return 'Day';
+  if (p === 'week') return 'Week';
+  if (p === 'month') return 'Month';
+  if (p === 'short or long rest') return 'Short or Long Rest';
+  if (p === 'long rest') return 'Long Rest';
+  if (p === 'short rest') return 'Short Rest';
+  return 'Rest';
+}
+
+// "a, b (c, d) and e" -> ["a", "b (c, d)", "e"]  (splits only outside brackets)
+function scSplitClause(clause) {
+  const parts = [];
+  let depth = 0;
+  let cur = '';
+  let i = 0;
+  while (i < clause.length) {
+    const ch = clause.charAt(i);
+    if (ch === '(') depth++;
+    if (ch === ')') depth = Math.max(0, depth - 1);
+    if (depth === 0) {
+      const rest = clause.slice(i);
+      const sep = /^(?:\s*,\s*(?:and\s+|or\s+)?|\s+and\s+|\s+or\s+)/.exec(rest);
+      if (sep) {
+        parts.push(cur);
+        cur = '';
+        i += sep[0].length;
+        continue;
+      }
+    }
+    cur += ch;
+    i++;
+  }
+  parts.push(cur);
+  return parts;
+}
+
+function scSpellsFromClause(clause, spellIndex) {
+  if (!spellIndex) return null;
+  const parts = scSplitClause(clause).map((p) => scCleanSpellToken(p)).filter(Boolean);
+  if (parts.length === 0) return null;
+  const spells = [];
+  for (let i = 0; i < parts.length; i++) {
+    const base = scNorm(parts[i].replace(/\([^)]*\)/g, '').replace(/^the\s+/, ''));
+    if (!spellIndex.set.has(base)) return null;
+    spells.push(parts[i].replace(/^the\s+/i, ''));
+  }
+  return spells;
+}
+
+// Sentences that state a limit in plain words: "Once per long rest, the guard can reroll ...",
+// "can cast Blur and Major Image once each per long rest", "can't use it again until it finishes a short rest".
+function scProseGroups(text, owner, spellIndex, unnamed, hasSpellLines) {
+  const out = [];
+  const sentences = text.replace(/([.!?])\s+/g, '$1\u0001').split('\u0001');
+  sentences.forEach((s, si) => {
+    const limitNoise = /\bat least\b|\bno more than\b|\bone to\b|\bto (?:one|two|three|four|five|six) (?:times|wishes)\b|\bnever\b/i.test(s);
+
+    // "Once the djinni has cast it three times, the djinni can't do so again for 365 days."
+    const wish = /\bonce\b[^.]{0,40}\bhas cast it (\w+) times?\b[^.]*can(?:'|\u2019)?t do so again for (\d+) days/i.exec(s);
+    if (wish && scNumberFrom(wish[1])) {
+      const n = scNumberFrom(wish[1]);
+      out.push({ key: 'prose:' + scNorm(owner) + ':' + n + '/' + wish[2] + 'days', kind: 'ability', label: (owner || 'Limited use') + ' (' + n + '/' + wish[2] + ' Days)', count: n, usedByDefault: 0 });
+      return;
+    }
+
+    // "can cast fly and lightning bolt once each without expending a spell slot, but can't do so again until he finishes a short or long rest"
+    const slotFree = /\bcan cast ([^.]{3,120}?)\s+(?:once each\s+)?without expending (?:a|an) (?:spell )?slot(?: slot)?,? but (?:(?:he|she|it|they) )?can(?:'|\u2019)?t do so again until (?:(?:he|she|it|they) )?finish(?:es)? a (short or long|long|short) rest/i.exec(s);
+    if (slotFree) {
+      const spells = scSpellsFromClause(slotFree[1], spellIndex);
+      if (spells) {
+        const per = scPeriodLabel(slotFree[2] + ' rest');
+        spells.forEach((sp) => {
+          const label = scTitleCaseSpell(sp);
+          out.push({ key: 'spell:' + scNorm(label) + ':1', kind: 'spell', label: label, count: 1, usedByDefault: 0, tag: '1/' + per });
+        });
+        return;
+      }
+    }
+
+    // "Once this property is used, it can't be used again until the next dawn." and similar "can't use it again" limits
+    const cant = /\bcan(?:'|\u2019)?t\s+(?:use|do so|make|perform|cast|breathe|activate|create|change|assume|transform|take on|be used)\b[^.]{0,90}?\bagain\s+(until|for)\s+([^.]*)/i.exec(s);
+    if (cant && /\bonce (?:a|an|any) creature\b|\breceived\b/i.test(s)) return;
+    if (cant && !/\bnext turn\b|\bstart of (?:its|her|his|their|the)\b|\bend of (?:its|her|his|their|the)\b/i.test(cant[2])) {
+      const when = cant[1] + ' ' + cant[2];
+      let period = '';
+      const rest = /finish(?:es)? a (short or long|long|short)? ?rest/i.exec(when);
+      if (rest) period = '1/' + scPeriodLabel((rest[1] ? rest[1] + ' ' : '') + 'rest');
+      else if (/next dawn|next sunrise/i.test(when)) period = '1/Day';
+      else {
+        const hrs = /for (\d+) (hours|days)/i.exec(when);
+        period = hrs ? '1 per ' + hrs[1] + ' ' + hrs[2] : '1 use';
+      }
+      let base = owner;
+      const first = sentences[0].replace(/^[\u2022\s-]+/, '').replace(/[.]+$/, '');
+      if (unnamed && si > 0 && first.length <= 45 && /^[A-Z]/.test(first)) base = (owner ? owner + ': ' : '') + first;
+      else if (!base) base = first.slice(0, 60);
+      out.push({ key: 'prose:' + scNorm(base) + ':' + period, kind: 'ability', label: base + ' (' + period + ')', count: 1, usedByDefault: 0 });
+      return;
+    }
+
+    // "once before the next sunrise"
+    const dawn = /\bonce (?:before|until) the next (?:sunrise|dawn)\b/i.exec(s);
+    if (dawn && /\b(can|may)\b/i.test(s)) {
+      out.push({ key: 'prose:' + scNorm(owner) + ':1/day', kind: 'ability', label: (owner || 'Limited use') + ' (1/Day)', count: 1, usedByDefault: 0 });
+      return;
+    }
+
+    // "once per day", "3 times per long rest", "once each per long rest", "three times each day"
+    const re = new RegExp('\\b(?:(each)\\s+)?' + SC_COUNT_RE + '\\s+(each\\s+)?' + SC_PER_RE + '(\\s+each)?\\b', 'i');
+    if (limitNoise) return;
+    const m = re.exec(s);
+    if (!m) {
+      // "once per 30 days", and "N/day" written inside a sentence ("can use both plane shift and teleport 1/day")
+      const long = /\bonce per (\d+) days\b/i.exec(s);
+      if (long && /\b(can|may)\b/i.test(s)) {
+        out.push({ key: 'prose:' + scNorm(owner) + ':1/' + long[1] + 'days', kind: 'ability', label: (owner || 'Limited use') + ' (1/' + long[1] + ' Days)', count: 1, usedByDefault: 0 });
+        return;
+      }
+      const slash = /\b(\d+)\s*\/\s*(day|week|month)\b/i.exec(s);
+      if (slash && /\b(can|may)\b/i.test(s) && !/\brate of\b/i.test(s) && !hasSpellLines && s.indexOf(':') === -1 && !/\bfollowing spells\b/i.test(s)) {
+        const n2 = parseInt(slash[1], 10);
+        let count2 = 1;
+        let each2 = /\beach\b/i.test(s.slice(slash.index, slash.index + 20));
+        if (/\bthese spells\b/i.test(s)) {
+          let sum = 0;
+          (text.match(/\b(one|two|three|four|five|six|\d+)\s+(?:\d+(?:st|nd|rd|th)[- ]level\s+)?spells?\b/gi) || []).forEach((x) => { sum += scNumberFrom(x.split(/\s+/)[0]) || 0; });
+          if (sum > 0) count2 = sum;
+        }
+        out.push({ key: 'prose:' + scNorm(owner) + ':' + n2 + '/' + slash[2], kind: 'ability', label: (owner || 'Limited use') + (/\bthese spells\b/i.test(s) ? ' spells' : '') + ' (' + n2 + '/' + scPeriodLabel(slash[2]) + (each2 ? ' each' : '') + ')', count: /\bthese spells\b/i.test(s) ? count2 : n2, usedByDefault: 0 });
+      }
+      return;
+    }
+    const atStart = m.index === 0 || /^(?:as an? [a-z ]+ )?$/i.test(s.slice(0, m.index));
+    const gateOpen = /\b(can|may)\b/i.test(s) || atStart;
+    if (/\beach one\b|\beach of (?:these|those)\b/i.test(s)) return;
+    const n = scCountFromWord(m[2]);
+    if (!n) return;
+    const eachFlag = !!(m[1] || m[3] || m[5]);
+    const per = scPeriodLabel(m[4]);
+
+    // is it a list of known spells ("can innately cast Blur, Disguise Self, and Major Image once each per long rest")?
+    const before = s.slice(0, m.index);
+    let clause = before;
+    const castMatches = Array.from(before.matchAll(/\bcast\s+(?:the\s+)?/gi));
+    if (castMatches.length > 0) {
+      const last = castMatches[castMatches.length - 1];
+      clause = before.slice(last.index + last[0].length);
+    }
+    clause = clause
+      .replace(/^.*\bat will\b[,\s]*(?:and\s+)?/i, '')
+      .replace(/\s+(?:spells?|innately)$/i, '')
+      .replace(/^.*\bas a cantrip\b[,\s]*(?:and\s+)?/i, '')
+      .trim();
+    const spells = clause ? scSpellsFromClause(clause, spellIndex) : null;
+    if (spells && spells.length > 0 && (castMatches.length > 0 || eachFlag)) {
+      const joinedByOr = /\sor\s/i.test(clause) && !/\sand\s/i.test(clause);
+      if (spells.length === 1 || !joinedByOr) {
+        spells.forEach((sp) => {
+          const label = scTitleCaseSpell(sp);
+          out.push({ key: 'spell:' + scNorm(label) + ':' + n, kind: 'spell', label: label, count: n, usedByDefault: 0, tag: n + '/' + per, via: 'prose' });
+        });
+      } else {
+        const label = spells.map(scTitleCaseSpell).join(' or ');
+        out.push({ key: 'spell:' + scNorm(label) + ':' + n, kind: 'spell', label: label, count: n, usedByDefault: 0, tag: n + '/' + per + ' total', via: 'prose' });
+      }
+      return;
+    }
+
+    if (!gateOpen) return;
+    const label = (owner || 'Limited use') + ' (' + n + '/' + per + ')';
+    out.push({ key: 'prose:' + scNorm(owner) + ':' + n + '/' + per, kind: 'ability', label: label, count: n, usedByDefault: 0 });
+  });
+  return out;
+}
+
+// "The staff has 7 charges" -> a row of 7 checkboxes.
+function scChargeGroups(text, owner) {
+  const out = [];
+  const re = /\b(?:has|have|with)\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+charges?\b/gi;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const n = scNumberFrom(m[1]);
+    if (!n) continue;
+    out.push({ key: 'charges:' + scNorm(owner) + ':' + n, kind: 'ability', label: (owner ? owner + ': ' : '') + 'charges', count: n, usedByDefault: 0 });
+  }
+  return out;
+}
+
+// ---------- reactions ----------
+
+// How many reactions the stat block says it has. Normally 1.
+function scReactionCount(html) {
+  const text = scPlain(html.replace(/<h4>[\s\S]*?<\/h4>/g, ' '));
+  let best = 1;
+  let m;
+  const re1 = /\b(?:can|may)\s+take\s+(\d+|one|two|three|four|five|six)\s+reactions?\s+(?:per|each|every)\s+round/gi;
+  while ((m = re1.exec(text)) !== null) best = Math.max(best, scNumberFrom(m[1]) || 1);
+  const re2 = /\b(?:has|have)\s+(\d+|one|two|three|four|five|six)\s+reactions?\b/gi;
+  while ((m = re2.exec(text)) !== null) best = Math.max(best, scNumberFrom(m[1]) || 1);
+  const re3 = /\b(?:gets|gains|has|have)\s+(?:up to\s+)?(\d+|one|two|three|four|five|six)\s+extra\s+reactions?\b/gi;
+  while ((m = re3.exec(text)) !== null) best = Math.max(best, 1 + (scNumberFrom(m[1]) || 0));
+  return best;
+}
+
+// ---------- the main reader ----------
+
+function scOwnerForProse(b, ctxName) {
+  return b.name ? b.name.replace(/[.\s]+$/, '') : ctxName;
+}
+
+function scSectionIsUsable(section, legendaryReal) {
+  if (section === 'Traits' || section === 'Actions' || section === 'Bonus Actions' || section === 'Reactions') return true;
+  if (section === 'Legendary Actions') return legendaryReal;
+  return false;
+}
+
+function scExtractGroups(html, spellIndex) {
+  const blocks = scTrimLoreFromLegendary(scParseBlocks(html));
+  const groups = [];
+  const keyCount = {};
+  let ctxName = '';
+  let ctxSection = '';
+  let curBlock = -1;
+
+  function add(group) {
+    group.owner = ctxName;
+    group.block = curBlock;
+    group.section = ctxSection;
+    if (keyCount[group.key]) return; // the same checkbox row is never listed twice
+    keyCount[group.key] = 1;
+    groups.push(group);
+  }
+
+  const legendaryReal = scLegendarySectionIsReal(blocks);
+
+  // legendary action count: from a sentence, or from a name like "Legendary Actions (3/Turn)"
+  let legendaryCount = null;
+  blocks.forEach((b) => {
+    if (!scSectionIsUsable(b.section, legendaryReal)) return;
+    const n = scLegendaryCountFromText((b.name ? b.name + '. ' : '') + b.text);
+    if (n !== null && legendaryCount === null) legendaryCount = n;
+    if (b.name && /^legendary actions?\b/i.test(b.name)) {
+      const u = scNameUsage(b.name, b.text);
+      if (u && u.usage.kind === 'uses' && legendaryCount === null) legendaryCount = u.usage.total;
+    }
+  });
+  if (legendaryCount === null && legendaryReal) legendaryCount = 3;
+  let legendaryAdded = false;
+
+  blocks.forEach((b, bi) => {
+    curBlock = bi;
+    if (b.section !== ctxSection) {
+      ctxSection = b.section;
+      ctxName = '';
+    }
+    if (!scSectionIsUsable(b.section, legendaryReal)) return;
+    if (b.name) ctxName = b.name.replace(/[.\s]+$/, '');
+
+    if (b.section === 'Legendary Actions' && !legendaryAdded && legendaryCount !== null) {
+      add({ key: 'legendary-actions', kind: 'legendary', label: 'Legendary Actions', count: legendaryCount, usedByDefault: 0, tag: '' });
+      legendaryAdded = true;
+    }
+
+    let handledAsNameCounter = false;
+
+    // 1. a usage note in the feature's name: "Legendary Resistance (3/Day)", "Fire Breath (Recharge 5-6)"
+    if (b.name) {
+      const nu = scNameUsage(b.name, b.text);
+      if (nu && !/^legendary actions?\b/i.test(b.name)) {
+        handledAsNameCounter = true;
+        if (nu.usage.kind === 'recharge') {
+          add({ key: 'ability:' + scNorm(nu.label), kind: 'recharge', label: nu.label, count: 1, usedByDefault: 0, tag: '' });
+        } else {
+          add({ key: 'ability:' + scNorm(nu.label), kind: 'ability', label: nu.label, count: nu.usage.total, usedByDefault: nu.usage.total - nu.usage.base, tag: '' });
+        }
+      }
+    }
+
+    // 1b. usage notes written without bold, or in the middle of a paragraph
+    if (!handledAsNameCounter) {
+      const found = [];
+      if (!b.name) scPlainNameUsage(b.text).forEach((x) => found.push(x));
+      scMidNameUsage(b.text).forEach((x) => found.push(x));
+      found.forEach((nu) => {
+        if (nu.usage.kind === 'recharge') {
+          add({ key: 'ability:' + scNorm(nu.label), kind: 'recharge', label: nu.label, count: 1, usedByDefault: 0, tag: '' });
+        } else {
+          add({ key: 'ability:' + scNorm(nu.label), kind: 'ability', label: nu.label, count: nu.usage.total, usedByDefault: nu.usage.total - nu.usage.base, tag: '' });
+        }
+      });
+      if (found.length > 0) handledAsNameCounter = true;
+    }
+
+    // 2. spell slots
+    scSlotLines(b.text).forEach((s) => {
+      add({
+        key: 'slots:' + s.level + (s.range ? ':' + s.range : ''),
+        kind: 'slots',
+        label: s.level + ' level slots' + (s.range ? ' (' + s.range + ')' : ''),
+        count: s.n,
+        usedByDefault: 0,
+        tag: ''
+      });
+    });
+
+    // 3. spells with uses per day (the list may even start in the bold name: "1/day each.")
+    const spellText = b.name && /^\d+\s*\/\s*(?:day|week|month|hour|rest|short rest|long rest)(?:\s+each)?\.?$/i.test(b.name) ? b.name.replace(/\.$/, '') + ': ' + b.text : b.text;
+    if (/\(\s*\d+\s*\/\s*day\s*\)/i.test(b.text) && /spell|magic|cast/i.test(ctxName + ' ' + b.text)) {
+      scInlineSpellUses(b.text, spellIndex).forEach((u) => {
+        const label = scTitleCaseSpell(u.name);
+        add({ key: 'spell:' + scNorm(label) + ':' + u.n + 'Day', kind: 'spell', label: label, count: u.n, usedByDefault: 0, tag: u.n + '/Day' });
+      });
+    }
+    const spellSegments = scSpellSegments(spellText, spellIndex);
+    spellSegments.forEach((seg) => {
+      seg.items.forEach((spell) => {
+        const label = scTitleCaseSpell(spell) + (seg.qualifier ? ' (' + seg.qualifier + ')' : '');
+        add({ key: 'spell:' + scNorm(label) + ':' + seg.n + seg.period, kind: 'spell', label: label, count: seg.n, usedByDefault: 0, tag: seg.n + '/' + seg.period });
+      });
+    });
+    // 4. limits written in plain words, and charges
+    if (!handledAsNameCounter && !b.name || (b.name && !handledAsNameCounter)) {
+      scProseGroups(b.text, scOwnerForProse(b, ctxName), spellIndex, !b.name, spellSegments.length > 0).forEach((g) => add(g));
+    }
+    scChargeGroups(b.text, scOwnerForProse(b, ctxName)).forEach((g) => add(g));
+  });
+
+  return groups;
+}
+
 
 // ---- AC / HP FIELDS IN THE TURN ORDER ----
 
@@ -2704,13 +3898,13 @@ function formatRollModifier(modifier) {
 
 // Finds the dice, spell names and condition names inside one piece of text
 // and wraps each in a clickable <span class="stat-click ...">.
-function enrichTextNode(node, refIndex) {
+function enrichTextNode(node, refIndex, diceOnly) {
   const text = node.nodeValue;
   const norm = text.replace(/\u2019/g, "'"); // same length as text, so positions line up
   const found = [];
   let m;
 
-  const diceRe = new RegExp(STAT_DICE_SOURCE, 'gi');
+  const diceRe = new RegExp(diceOnly ? SPELL_DICE_SOURCE : STAT_DICE_SOURCE, 'gi');
   while ((m = diceRe.exec(norm)) !== null) {
     const first = m[0].charAt(0);
     const startsWithDie = /[0-9dD]/.test(first);
@@ -2720,7 +3914,7 @@ function enrichTextNode(node, refIndex) {
     found.push({ start: m.index, end: m.index + m[0].length, kind: 'roll', value: m[0] });
   }
 
-  if (refIndex.regexSource) {
+  if (!diceOnly && refIndex.regexSource) {
     const refRe = new RegExp(refIndex.regexSource, 'gi');
     while ((m = refRe.exec(norm)) !== null) {
       const id = refIndex.targets.get(m[0].toLowerCase());
@@ -2797,23 +3991,72 @@ function enrichStatBlocks(rootEl) {
 // the individual dice, and a Reroll button. If the Combat pane is hidden (or
 // scrolled out of reach) the result is shown as a message instead.
 
-function updateRollCard(card, parsed, result) {
-  card.querySelector('.roll-card-total').textContent = result.total;
-  card.querySelector('.roll-card-expr').textContent =
-    'Rolled ' + parsed.count + 'd' + parsed.sides + formatRollModifier(parsed.modifier);
-  const rollsEl = card.querySelector('.roll-card-rolls');
-  rollsEl.innerHTML = '';
-  result.rolls.forEach((value) => {
+// Rolls the expression once, or twice for advantage / disadvantage (keeping the higher / lower total).
+// The discarded roll is kept so the pop-up can show it.
+function rollWithMode(parsed, mode) {
+  const first = rollParsedExpression(parsed);
+  if (mode !== 'advantage' && mode !== 'disadvantage') return first;
+  const second = rollParsedExpression(parsed);
+  const keepFirst = mode === 'advantage' ? first.total >= second.total : first.total <= second.total;
+  const kept = keepFirst ? first : second;
+  const dropped = keepFirst ? second : first;
+  return { rolls: kept.rolls, total: kept.total, mode: mode, dropped: dropped };
+}
+
+function appendRollChips(container, parsed, rolls, total) {
+  rolls.forEach((value) => {
     const chip = document.createElement('span');
     chip.className = 'roll-chip';
     if (value === parsed.sides) chip.classList.add('roll-chip-max');
     if (value === 1) chip.classList.add('roll-chip-min');
     chip.textContent = value;
-    rollsEl.appendChild(chip);
+    container.appendChild(chip);
   });
   const calc = document.createElement('span');
-  calc.textContent = (formatRollModifier(parsed.modifier).trim() + ' = ' + result.total).trim();
-  rollsEl.appendChild(calc);
+  calc.textContent = (formatRollModifier(parsed.modifier).trim() + ' = ' + total).trim();
+  container.appendChild(calc);
+}
+
+function updateRollCard(card, parsed, result) {
+  card.querySelector('.roll-card-total').textContent = result.total;
+  const modeText = result.mode === 'advantage' ? ' (advantage)' : result.mode === 'disadvantage' ? ' (disadvantage)' : '';
+  card.querySelector('.roll-card-expr').textContent =
+    'Rolled ' + parsed.count + 'd' + parsed.sides + formatRollModifier(parsed.modifier) + modeText;
+
+  const rollsEl = card.querySelector('.roll-card-rolls');
+  rollsEl.innerHTML = '';
+  appendRollChips(rollsEl, parsed, result.rolls, result.total);
+
+  const droppedEl = card.querySelector('.roll-card-dropped');
+  droppedEl.innerHTML = '';
+  if (result.dropped) {
+    const label = document.createElement('span');
+    label.className = 'roll-card-dropped-label';
+    label.textContent = 'Discarded:';
+    droppedEl.appendChild(label);
+    appendRollChips(droppedEl, parsed, result.dropped.rolls, result.dropped.total);
+  }
+}
+
+// How many roll pop-ups fit side by side across the screen (always at least 4). When the window gets
+// narrower, the oldest pop-ups are closed to make room (see trimRollCards).
+const ROLL_CARD_WIDTH = 150; // keep in step with .roll-card in styles.css
+const ROLL_CARD_GAP = 8;     // keep in step with .roll-cards in styles.css
+
+function getMaxRollCards() {
+  const dock = document.getElementById('rollDock');
+  const left = dock ? parseFloat(dock.style.left) : NaN;
+  const startX = isNaN(left) ? 8 : left;
+  const available = window.innerWidth - startX - 8;
+  return Math.max(4, Math.floor((available + ROLL_CARD_GAP) / (ROLL_CARD_WIDTH + ROLL_CARD_GAP)));
+}
+
+function trimRollCards() {
+  const cardsEl = document.getElementById('rollCards');
+  if (!cardsEl) return;
+  const max = getMaxRollCards();
+  while (cardsEl.children.length > max) cardsEl.removeChild(cardsEl.firstChild);
+  updateRollDock();
 }
 
 // Lines the roll cards up with the left edge of the Combat pane. Returns
@@ -2831,18 +4074,24 @@ function syncRollDock() {
 
 const ABILITY_NAMES = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
 
-// Who made a roll: the creature whose stat block it is in. In the Combat pane,
-// if exactly one of the selected combatants is linked to that stat block, that
-// combatant's own name is used (for example "Goblin 2").
+// Who made a roll: the creature whose stat block it is in (or the spell / entry the dice are in). In the
+// Combat pane, each stat block belongs to one combatant, so that combatant's own name is used
+// (for example "Goblin 2").
 function getRollOwnerName(el) {
+  const refCard = el.closest('.combat-ref-card');
+  if (refCard) {
+    const titleEl = refCard.querySelector('.combat-ref-title');
+    return titleEl ? titleEl.textContent.trim() : '';
+  }
+  const spell = el.closest('details[id^="spell-"]');
+  if (spell) return getMonsterTitle(spell.id);
   const monster = el.closest('details[id^="monster-"]');
   if (monster) return getMonsterTitle(monster.id);
   const block = el.closest('.stat-block');
   const head = block ? block.previousElementSibling : null;
   if (head && head.tagName === 'H4') {
-    const statBlockId = head.dataset.statblockId;
-    const linked = combatants.filter((c) => selectedIds.has(c.id) && c.statBlockId === statBlockId);
-    return linked.length === 1 ? linked[0].name : head.textContent.trim();
+    const owner = head.dataset.combatantId ? combatants.find((c) => c.id === head.dataset.combatantId) : null;
+    return owner ? owner.name : head.textContent.trim();
   }
   return '';
 }
@@ -2851,6 +4100,8 @@ function getRollOwnerName(el) {
 // "Dexterity save", "Arcana check", "Initiative", "Scimitar attack",
 // "Scimitar damage", ...
 function getRollDescription(el, expression) {
+  if (el.closest('details[id^="spell-"], .combat-ref-card')) return describeSpellRoll(el);
+
   const cell = el.closest('td');
   if (cell && cell.closest('.stat-abilities')) {
     let abilityCell = null;
@@ -2950,7 +4201,12 @@ function rollFromStatBlock(expression, sourceEl) {
     '<div class="roll-card-total"></div>' +
     '<div class="roll-card-expr"></div>' +
     '<div class="roll-card-rolls"></div>' +
-    '<button type="button" class="btn-secondary roll-card-reroll">Reroll</button>';
+    '<div class="roll-card-dropped"></div>' +
+    '<div class="roll-card-actions">' +
+    '<button type="button" class="btn-secondary roll-card-reroll">Reroll</button>' +
+    '<button type="button" class="roll-card-adv" title="Reroll with advantage" aria-label="Reroll with advantage">A</button>' +
+    '<button type="button" class="roll-card-dis" title="Reroll with disadvantage" aria-label="Reroll with disadvantage">D</button>' +
+    '</div>';
   const whoEl = card.querySelector('.roll-card-who');
   const whatEl = card.querySelector('.roll-card-what');
   whoEl.textContent = source.who;
@@ -2963,12 +4219,17 @@ function rollFromStatBlock(expression, sourceEl) {
     updateRollDock();
   });
   card.querySelector('.roll-card-reroll').addEventListener('click', () => {
-    updateRollCard(card, parsed, rollParsedExpression(parsed));
+    updateRollCard(card, parsed, rollWithMode(parsed, ''));
+  });
+  card.querySelector('.roll-card-adv').addEventListener('click', () => {
+    updateRollCard(card, parsed, rollWithMode(parsed, 'advantage'));
+  });
+  card.querySelector('.roll-card-dis').addEventListener('click', () => {
+    updateRollCard(card, parsed, rollWithMode(parsed, 'disadvantage'));
   });
 
   cardsEl.appendChild(card);
-  while (cardsEl.children.length > 4) cardsEl.removeChild(cardsEl.firstChild);
-  updateRollDock();
+  trimRollCards();
 }
 
 // ---- REFERENCE POP-UPS IN THE COMBAT PANE ----
@@ -2994,6 +4255,7 @@ function showReferencePopup(targetId) {
     return;
   }
   fillLazyEntry(target, true);
+  enrichSpellEntry(target);
 
   const summaryEl = target.querySelector(':scope > summary');
   const bodyEl = target.querySelector(':scope > .condition-body, :scope > .dropdown-body');
@@ -3950,6 +5212,9 @@ document.addEventListener('DOMContentLoaded', () => {
   computeCarryingEncumbrance();
   computeBuyMagicItemSearchBonus();
   computeResearchGoldBonus();
+  loadSavedEncounters();
+  renderSavedEncounters();
+  setupCounterAndEncounterEvents();
 
   // Restore the Reference pane's open/closed dropdowns from this
   // browser session (if any), then start tracking further changes so
@@ -3968,7 +5233,10 @@ document.addEventListener('DOMContentLoaded', () => {
       (e) => {
         const el = e.target;
         if (!el || el.tagName !== 'DETAILS') return;
-        if (el.open) fillLazyEntry(el);
+        if (el.open) {
+          fillLazyEntry(el);
+          enrichSpellEntry(el);
+        }
         scheduleReferenceHousekeeping();
       },
       true
@@ -4262,7 +5530,10 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     handleStatClick(el);
   });
-  window.addEventListener('resize', syncRollDock);
+  window.addEventListener('resize', () => {
+    syncRollDock();
+    trimRollCards();
+  });
   const rollClearAllBtn = document.getElementById('rollDockClearAll');
   if (rollClearAllBtn) {
     rollClearAllBtn.addEventListener('click', () => {
